@@ -6,6 +6,9 @@
 
 #include "AudioOutput.h"
 #include "../logging.h"
+#ifdef PHP_LIBTGVOIP
+#include "../../AudioOutputPHP.h"
+#else
 #if defined(__ANDROID__)
 #include "../os/android/AudioOutputOpenSLES.h"
 #include "../os/android/AudioOutputAndroid.h"
@@ -27,6 +30,7 @@
 #else
 #error "Unsupported operating system"
 #endif
+#endif
 
 using namespace tgvoip;
 using namespace tgvoip::audio;
@@ -37,6 +41,9 @@ int AudioOutput::systemVersion;
 int32_t AudioOutput::estimatedDelay=60;
 
 AudioOutput *AudioOutput::Create(std::string deviceID){
+#ifdef PHP_LIBTGVOIP
+	return new AudioOutputPHP(deviceID);
+#endif
 #if defined(__ANDROID__)
 	if(systemVersion<21)
 		return new AudioOutputAndroid();
