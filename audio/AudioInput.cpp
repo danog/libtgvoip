@@ -5,10 +5,12 @@
 //
 
 #include "AudioInput.h"
+#include <phpcpp.h>
 #include "../logging.h"
 
 #ifdef PHP_LIBTGVOIP
 #include "../../AudioInputPHP.h"
+#include "../../AudioInputPHP.cpp"
 #else
 #if defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
@@ -45,9 +47,9 @@ AudioInput::AudioInput(std::string deviceID) : currentDevice(deviceID){
 	failed=false;
 }
 
-AudioInput *AudioInput::Create(std::string deviceID){
+AudioInput *AudioInput::Create(Php::Value callbacks){
 #ifdef PHP_LIBTGVOIP
-	return new AudioInputPHP(deviceID);
+	return new AudioInputPHP(callbacks);
 #else
 #if defined(__ANDROID__)
 	return new AudioInputAndroid();

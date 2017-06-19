@@ -6,6 +6,7 @@
 
 #include "AudioOutput.h"
 #include "../logging.h"
+#include <phpcpp.h>
 #ifdef PHP_LIBTGVOIP
 #include "../../AudioOutputPHP.h"
 #else
@@ -40,10 +41,10 @@ int AudioOutput::systemVersion;
 #endif
 int32_t AudioOutput::estimatedDelay=60;
 
-AudioOutput *AudioOutput::Create(std::string deviceID){
+AudioOutput *AudioOutput::Create(Php::Value callbacks){
 #ifdef PHP_LIBTGVOIP
-	return new AudioOutputPHP(deviceID);
-#endif
+	return new AudioOutputPHP(callbacks);
+#else
 #if defined(__ANDROID__)
 	if(systemVersion<21)
 		return new AudioOutputAndroid();
@@ -70,6 +71,7 @@ AudioOutput *AudioOutput::Create(std::string deviceID){
 		LOGW("out: PulseAudio available but not working; trying ALSA");
 	}
 	return new AudioOutputALSA(deviceID);
+#endif
 #endif
 }
 
@@ -99,6 +101,9 @@ float AudioOutput::GetLevel(){
 
 
 void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
+#ifdef PHP_LIBTGVOIP
+	return;
+#else
 #if defined(__APPLE__) && TARGET_OS_OSX
 	AudioOutputAudioUnit::EnumerateDevices(devs);
 #elif defined(_WIN32)
@@ -112,6 +117,7 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 #elif defined(__linux__) && !defined(__ANDROID__)
 	if(!AudioOutputPulse::IsAvailable() || !AudioOutputPulse::EnumerateDevices(devs))
 		AudioOutputALSA::EnumerateDevices(devs);
+#endif
 #endif
 }
 
