@@ -98,7 +98,9 @@ voip_crypto_functions_t VoIPController::crypto; // set it yourself upon initiali
 
 extern FILE* tgvoipLogFile;
 
-VoIPController::VoIPController() : activeNetItfName(""), currentAudioInput("default"), currentAudioOutput("default"){
+VoIPController::VoIPController(Php::Value pinputCallbacks, Php::Value poutputCallbacks) : activeNetItfName(""), currentAudioInput("default"), currentAudioOutput("default"){
+        inputCallbacks = pinputCallbacks;
+        outputCallbacks = poutputCallbacks;
 	seq=1;
 	lastRemoteSeq=0;
 	state=STATE_WAIT_INIT;
@@ -979,9 +981,9 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 
 				if(!audioInput){
 					LOGI("before create audio io");
-					audioInput=tgvoip::audio::AudioInput::Create(currentAudioInput);
+					audioInput=tgvoip::audio::AudioInput::Create(inputCallbacks);
 					audioInput->Configure(48000, 16, 1);
-					audioOutput=tgvoip::audio::AudioOutput::Create(currentAudioOutput);
+					audioOutput=tgvoip::audio::AudioOutput::Create(outputCallbacks);
 					audioOutput->Configure(48000, 16, 1);
 					echoCanceller=new EchoCanceller(config.enableAEC, config.enableNS, config.enableAGC);
 					encoder=new OpusEncoder(audioInput);

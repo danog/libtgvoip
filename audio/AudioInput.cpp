@@ -9,7 +9,6 @@
 #include "../logging.h"
 
 #ifdef PHP_LIBTGVOIP
-#include "../../AudioInputPHP.h"
 #include "../../AudioInputPHP.cpp"
 #else
 #if defined(__ANDROID__)

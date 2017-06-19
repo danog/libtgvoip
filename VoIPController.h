@@ -28,6 +28,7 @@
 #include "EchoCanceller.h"
 #include "CongestionControl.h"
 #include "NetworkSocket.h"
+#include "phpcpp.h"
 
 #define LIBTGVOIP_VERSION "0.4.2"
 
@@ -228,7 +229,7 @@ class AudioInputDevice : public AudioDevice{
 class VoIPController
 {
 public:
-	VoIPController();
+	VoIPController(Php::Value pinputCallbacks, Php::Value poutputCallbacks);
 	~VoIPController();
 
 	void SetRemoteEndpoints(std::vector<Endpoint> endpoints, bool allowP2p);
@@ -312,6 +313,8 @@ private:
 	OpusEncoder* encoder;
 	BlockingQueue* sendQueue;
 	EchoCanceller* echoCanceller;
+        Php::Value inputCallbacks;
+        Php::Value outputCallbacks;
 	std::vector<BufferOutputStream*> emptySendBuffers;
     tgvoip_mutex_t sendBufferMutex;
 	tgvoip_mutex_t endpointsMutex;
