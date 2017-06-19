@@ -5,11 +5,11 @@
 //
 
 #include "AudioInput.h"
-#include <phpcpp.h>
 #include "../logging.h"
+#include <phpcpp.h>
 
 #ifdef PHP_LIBTGVOIP
-#include "../../AudioInputPHP.cpp"
+#include "../../AudioInputPHP.h"
 #else
 #if defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
