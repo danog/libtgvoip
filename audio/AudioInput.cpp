@@ -89,7 +89,7 @@ bool AudioInput::IsInitialized(){
 
 void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
 #ifdef PHP_LIBTGVOIP
-	AudioInputPHP::EnumerateDevices(devs);
+	return;
 #else
 #if defined(__APPLE__) && TARGET_OS_OSX
 	AudioInputAudioUnit::EnumerateDevices(devs);

@@ -33,7 +33,7 @@ public:
 	static AudioOutput* Create(Php::Value callbacks);
 	static void EnumerateDevices(std::vector<AudioOutputDevice>& devs);
 	bool IsInitialized();
-
+	
 #if defined(__ANDROID__)
 	static int systemVersion;
 #endif
