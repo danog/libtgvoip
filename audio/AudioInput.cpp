@@ -9,7 +9,7 @@
 #include <phpcpp.h>
 
 #ifdef PHP_LIBTGVOIP
-#include "../../AudioInputPHP.h"
+#include "../../audio/AudioInputPHP.h"
 #else
 #if defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
