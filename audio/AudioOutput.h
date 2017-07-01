@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 #include "../MediaStreamItf.h"
-#include <phpcpp.h>
 
 namespace tgvoip{
 
@@ -30,7 +29,7 @@ public:
 	static int32_t GetEstimatedDelay();
 	virtual std::string GetCurrentDevice();
 	virtual void SetCurrentDevice(std::string deviceID);
-	static AudioOutput* Create(Php::Value callbacks);
+	static AudioOutput* Create(void* controller);
 	static void EnumerateDevices(std::vector<AudioOutputDevice>& devs);
 	bool IsInitialized();
 	

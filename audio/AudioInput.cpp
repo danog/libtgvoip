@@ -46,9 +46,9 @@ AudioInput::AudioInput(std::string deviceID) : currentDevice(deviceID){
 	failed=false;
 }
 
-AudioInput *AudioInput::Create(Php::Value callbacks){
+AudioInput *AudioInput::Create(void* controller){
 #ifdef PHP_LIBTGVOIP
-	return new AudioInputPHP(callbacks);
+	return new AudioInputPHP(controller);
 #else
 #if defined(__ANDROID__)
 	return new AudioInputAndroid();

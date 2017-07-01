@@ -42,9 +42,9 @@ int AudioOutput::systemVersion;
 #endif
 int32_t AudioOutput::estimatedDelay=60;
 
-AudioOutput *AudioOutput::Create(Php::Value callbacks){
+AudioOutput *AudioOutput::Create(void* controller){
 #ifdef PHP_LIBTGVOIP
-	return new AudioOutputPHP(callbacks);
+	return new AudioOutputPHP(controller);
 #else
 #if defined(__ANDROID__)
 	if(systemVersion<21)
