@@ -1129,9 +1129,9 @@ simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedA
 
 				if(!audioInput){
 					LOGI("before create audio io");
-					audioInput=tgvoip::audio::AudioInput::Create(this);
+					audioInput=tgvoip::audio::AudioInput::Create(currentAudioInput);
 					audioInput->Configure(48000, 16, 1);
-					audioOutput=tgvoip::audio::AudioOutput::Create(this);
+					audioOutput=tgvoip::audio::AudioOutput::Create(currentAudioOutput);
 					audioOutput->Configure(48000, 16, 1);
 					echoCanceller=new EchoCanceller(config.enableAEC, config.enableNS, config.enableAGC);
 					encoder=new OpusEncoder(audioInput);

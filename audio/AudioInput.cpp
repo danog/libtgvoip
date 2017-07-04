@@ -6,11 +6,10 @@
 
 #include "AudioInput.h"
 #include "../logging.h"
-#include <phpcpp.h>
 
-#ifdef PHP_LIBTGVOIP
-#include "../../audio/AudioInputPHP.h"
-#else
+#ifdef LIBTGVOIP_CUSTOM
+#include AUDIOINPUT_HEADER
+#elif
 #if defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
 #elif defined(__APPLE__)
@@ -31,7 +30,6 @@
 #else
 #error "Unsupported operating system"
 #endif
-#endif
 
 using namespace tgvoip;
 using namespace tgvoip::audio;
@@ -46,11 +44,10 @@ AudioInput::AudioInput(std::string deviceID) : currentDevice(deviceID){
 	failed=false;
 }
 
-AudioInput *AudioInput::Create(void* controller){
-#ifdef PHP_LIBTGVOIP
-	return new AudioInputPHP(controller);
-#else
-#if defined(__ANDROID__)
+AudioInput *AudioInput::Create(std::string deviceID){
+#ifdef LIBTGVOIP_CUSTOM
+	return new AUDIOINPUT_CLASS(deviceID);
+#elif defined(__ANDROID__)
 	return new AudioInputAndroid();
 #elif defined(__APPLE__)
 #if TARGET_OS_OSX
@@ -75,7 +72,6 @@ AudioInput *AudioInput::Create(void* controller){
 	}
 	return new AudioInputALSA(deviceID);
 #endif
-#endif
 }
 
 
@@ -88,10 +84,9 @@ bool AudioInput::IsInitialized(){
 }
 
 void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
-#ifdef PHP_LIBTGVOIP
-	return;
-#else
-#if defined(__APPLE__) && TARGET_OS_OSX
+#ifdef LIBTGVOIP_CUSTOM
+	AUDIOINPUT_CLASS::EnumerateDevices(devs);
+#elif defined(__APPLE__) && TARGET_OS_OSX
 	AudioInputAudioUnit::EnumerateDevices(devs);
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
@@ -104,7 +99,6 @@ void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
 #elif defined(__linux__) && !defined(__ANDROID__)
 	if(!AudioInputPulse::IsAvailable() || !AudioInputPulse::EnumerateDevices(devs))
 		AudioInputALSA::EnumerateDevices(devs);
-#endif
 #endif
 }
 

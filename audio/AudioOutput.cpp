@@ -6,12 +6,10 @@
 
 #include "AudioOutput.h"
 #include "../logging.h"
-#include <phpcpp.h>
 
-#ifdef PHP_LIBTGVOIP
-#include "../../audio/AudioOutputPHP.h"
-#else
-#if defined(__ANDROID__)
+#ifdef LIBTGVOIP_CUSTOM
+#include AUDIOOUTPUT_HEADER
+#elif defined(__ANDROID__)
 #include "../os/android/AudioOutputOpenSLES.h"
 #include "../os/android/AudioOutputAndroid.h"
 #elif defined(__APPLE__)
@@ -32,7 +30,6 @@
 #else
 #error "Unsupported operating system"
 #endif
-#endif
 
 using namespace tgvoip;
 using namespace tgvoip::audio;
@@ -42,11 +39,10 @@ int AudioOutput::systemVersion;
 #endif
 int32_t AudioOutput::estimatedDelay=60;
 
-AudioOutput *AudioOutput::Create(void* controller){
-#ifdef PHP_LIBTGVOIP
-	return new AudioOutputPHP(controller);
-#else
-#if defined(__ANDROID__)
+AudioOutput *AudioOutput::Create(std::string deviceID){
+#ifdef LIBTGVOIP_CUSTOM
+	return new AUDIOOUTPUT_CLASS(deviceID);
+#elif defined(__ANDROID__)
 	if(systemVersion<21)
 		return new AudioOutputAndroid();
 	return new AudioOutputOpenSLES();
@@ -72,7 +68,6 @@ AudioOutput *AudioOutput::Create(void* controller){
 		LOGW("out: PulseAudio available but not working; trying ALSA");
 	}
 	return new AudioOutputALSA(deviceID);
-#endif
 #endif
 }
 
@@ -102,10 +97,9 @@ float AudioOutput::GetLevel(){
 
 
 void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
-#ifdef PHP_LIBTGVOIP
-	return;
-#else
-#if defined(__APPLE__) && TARGET_OS_OSX
+#ifdef LIBTGVOIP_CUSTOM
+       AUDIOOUTPUT_CLASS::EnumerateDevices(devs);
+#elif defined(__APPLE__) && TARGET_OS_OSX
 	AudioOutputAudioUnit::EnumerateDevices(devs);
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
@@ -118,7 +112,6 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 #elif defined(__linux__) && !defined(__ANDROID__)
 	if(!AudioOutputPulse::IsAvailable() || !AudioOutputPulse::EnumerateDevices(devs))
 		AudioOutputALSA::EnumerateDevices(devs);
-#endif
 #endif
 }
 
