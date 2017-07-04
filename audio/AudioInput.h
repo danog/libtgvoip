@@ -22,13 +22,14 @@ class AudioInput : public MediaStreamItf{
 public:
 	AudioInput();
 	AudioInput(std::string deviceID);
+	AudioInput(std::string deviceID, void* controller);
 	virtual ~AudioInput();
 
 	virtual void Configure(uint32_t sampleRate, uint32_t bitsPerSample, uint32_t channels)=0;
 	bool IsInitialized();
 	virtual std::string GetCurrentDevice();
 	virtual void SetCurrentDevice(std::string deviceID);
-	static AudioInput* Create(std::string deviceID);
+	static AudioInput* Create(std::string deviceID, void* controller);
 	static void EnumerateDevices(std::vector<AudioInputDevice>& devs);
 	static int32_t GetEstimatedDelay();
 

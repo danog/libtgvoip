@@ -8,7 +8,7 @@
 #include "../logging.h"
 
 #ifdef LIBTGVOIP_CUSTOM
-#include AUDIOOUTPUT_HEADER
+#include "../../audio/AudioOutputModule.h"
 #elif defined(__ANDROID__)
 #include "../os/android/AudioOutputOpenSLES.h"
 #include "../os/android/AudioOutputAndroid.h"
@@ -39,9 +39,9 @@ int AudioOutput::systemVersion;
 #endif
 int32_t AudioOutput::estimatedDelay=60;
 
-AudioOutput *AudioOutput::Create(std::string deviceID){
+AudioOutput *AudioOutput::Create(std::string deviceID, void* controller){
 #ifdef LIBTGVOIP_CUSTOM
-	return new AUDIOOUTPUT_CLASS(deviceID);
+	return new AudioOutputModule(deviceID, controller);
 #elif defined(__ANDROID__)
 	if(systemVersion<21)
 		return new AudioOutputAndroid();
@@ -98,7 +98,7 @@ float AudioOutput::GetLevel(){
 
 void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 #ifdef LIBTGVOIP_CUSTOM
-       AUDIOOUTPUT_CLASS::EnumerateDevices(devs);
+       AudioOutputModule::EnumerateDevices(devs);
 #elif defined(__APPLE__) && TARGET_OS_OSX
 	AudioOutputAudioUnit::EnumerateDevices(devs);
 #elif defined(_WIN32)

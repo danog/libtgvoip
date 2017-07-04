@@ -8,9 +8,8 @@
 #include "../logging.h"
 
 #ifdef LIBTGVOIP_CUSTOM
-#include AUDIOINPUT_HEADER
-#elif
-#if defined(__ANDROID__)
+#include "../../audio/AudioInputModule.h"
+#elif defined(__ANDROID__)
 #include "../os/android/AudioInputAndroid.h"
 #elif defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -44,9 +43,9 @@ AudioInput::AudioInput(std::string deviceID) : currentDevice(deviceID){
 	failed=false;
 }
 
-AudioInput *AudioInput::Create(std::string deviceID){
+AudioInput *AudioInput::Create(std::string deviceID, void* controller){
 #ifdef LIBTGVOIP_CUSTOM
-	return new AUDIOINPUT_CLASS(deviceID);
+	return new AudioInputModule(deviceID, controller);
 #elif defined(__ANDROID__)
 	return new AudioInputAndroid();
 #elif defined(__APPLE__)
@@ -85,7 +84,7 @@ bool AudioInput::IsInitialized(){
 
 void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
 #ifdef LIBTGVOIP_CUSTOM
-	AUDIOINPUT_CLASS::EnumerateDevices(devs);
+	AudioInputModule::EnumerateDevices(devs);
 #elif defined(__APPLE__) && TARGET_OS_OSX
 	AudioInputAudioUnit::EnumerateDevices(devs);
 #elif defined(_WIN32)
