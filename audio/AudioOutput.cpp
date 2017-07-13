@@ -39,7 +39,7 @@ int AudioOutput::systemVersion;
 #endif
 int32_t AudioOutput::estimatedDelay=60;
 
-AudioOutput *AudioOutput::Create(std::string deviceID, void* controller){
+AudioOutput *AudioOutput::Create(std::string deviceID, VoIPController* controller){
 #ifdef LIBTGVOIP_CUSTOM
 	return new AudioOutputModule(deviceID, controller);
 #elif defined(__ANDROID__)

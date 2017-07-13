@@ -43,7 +43,7 @@ AudioInput::AudioInput(std::string deviceID) : currentDevice(deviceID){
 	failed=false;
 }
 
-AudioInput *AudioInput::Create(std::string deviceID, void* controller){
+AudioInput *AudioInput::Create(std::string deviceID, VoIPController* controller){
 #ifdef LIBTGVOIP_CUSTOM
 	return new AudioInputModule(deviceID, controller);
 #elif defined(__ANDROID__)

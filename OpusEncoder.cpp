@@ -12,7 +12,7 @@
 tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source):queue(11), bufferPool(960*2, 10){
 	this->source=source;
 	source->SetCallback(tgvoip::OpusEncoder::Callback, this);
-	enc=opus_encoder_create(48000, 1, OPUS_APPLICATION_VOIP, NULL);
+	enc=opus_encoder_create(48000, 1, OPUS_APPLICATION_AUDIO, NULL);
 	opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(10));
 	opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC(15));
 	opus_encoder_ctl(enc, OPUS_SET_INBAND_FEC(1));
