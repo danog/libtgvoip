@@ -16,7 +16,7 @@ tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source):queue(11), bufferPool(9
 	opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(10));
 	opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC(15));
 	opus_encoder_ctl(enc, OPUS_SET_INBAND_FEC(1));
-	opus_encoder_ctl(enc, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
+	opus_encoder_ctl(enc, OPUS_SET_SIGNAL(OPUS_SIGNAL_MUSIC));
 	opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_FULLBAND));
 	requestedBitrate=32000;
 	currentBitrate=0;

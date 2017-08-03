@@ -161,7 +161,7 @@ VoIPController::VoIPController() : activeNetItfName(""),
 								   proxyAddress(""),
 								   proxyUsername(""),
 								   proxyPassword(""),
-									outgoingPacketsBufferPool(1024, 20){
+									outgoingPacketsBufferPool(1024, 64){
 	seq=1;
 	lastRemoteSeq=0;
 	state=STATE_WAIT_INIT;
@@ -276,6 +276,7 @@ VoIPController::~VoIPController(){
 	sendQueue->Put(PendingOutgoingPacket{0});
 	if(openingTcpSocket)
 		openingTcpSocket->Close();
+		
 	LOGD("before join sendThread");
 	join_thread(sendThread);
 	LOGD("before join recvThread");
