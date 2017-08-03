@@ -14,9 +14,8 @@
 #include "../os/android/AudioOutputAndroid.h"
 #elif defined(__APPLE__)
 #include <TargetConditionals.h>
-#if TARGET_OS_IPHONE
 #include "../os/darwin/AudioOutputAudioUnit.h"
-#else
+#if TARGET_OS_OSX
 #include "../os/darwin/AudioOutputAudioUnitOSX.h"
 #endif
 #elif defined(_WIN32)
@@ -48,10 +47,10 @@ AudioOutput *AudioOutput::Create(std::string deviceID, VoIPController* controlle
 	return new AudioOutputOpenSLES();
 #elif defined(__APPLE__)
 #if TARGET_OS_OSX
-	return new AudioOutputAudioUnit(deviceID);
-#else
-	return new AudioOutputAudioUnit();
+	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)
+		return new AudioOutputAudioUnitLegacy(deviceID);
 #endif
+	return new AudioOutputAudioUnit(deviceID);
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
 	if(LOBYTE(LOWORD(GetVersion()))<6)
@@ -100,7 +99,7 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 #ifdef LIBTGVOIP_CUSTOM
        AudioOutputModule::EnumerateDevices(devs);
 #elif defined(__APPLE__) && TARGET_OS_OSX
-	AudioOutputAudioUnit::EnumerateDevices(devs);
+	AudioOutputAudioUnitLegacy::EnumerateDevices(devs);
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
 	if(LOBYTE(LOWORD(GetVersion()))<6){
