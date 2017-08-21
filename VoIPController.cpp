@@ -74,6 +74,9 @@
 #define TLID_UDP_REFLECTOR_SELF_INFO 0xc01572c7
 #define PAD4(x) (4-(x+(x<=253 ? 1 : 0))%4)
 
+#define MAX(a,b) (a>b ? a : b)
+#define MIN(a,b) (a<b ? a : b)
+
 inline int pad4(int x){
 	int r=PAD4(x);
 	if(r==4)
@@ -222,6 +225,9 @@ VoIPController::VoIPController() : activeNetItfName(""),
 	proxyProtocol=PROXY_NONE;
 	proxyPort=0;
 	resolvedProxyAddress=NULL;
+
+	signalBarCount=0;
+	signalBarCountCallback=NULL;
 
 	selectCanceller=SocketSelectCanceller::Create();
 	udpSocket=NetworkSocket::Create(PROTO_UDP);
@@ -1370,10 +1376,14 @@ void VoIPController::RunTickThread(){
 #else
 		Sleep(100);
 #endif
+		int prevSignalBarCount=signalBarCount;
+		signalBarCount=4;
 		tickCount++;
 		if(connectionInitTime==0)
 			continue;
 		double time=GetCurrentTime();
+		if(state==STATE_RECONNECTING)
+			signalBarCount=1;
 		if(tickCount%5==0 && (state==STATE_ESTABLISHED || state==STATE_RECONNECTING)){
 			memmove(&rttHistory[1], rttHistory, 31*sizeof(double));
 			rttHistory[0]=GetAverageRTT();
@@ -1388,6 +1398,7 @@ void VoIPController::RunTickThread(){
 			v=v/32;
 			if(rttHistory[0]>10.0 && rttHistory[8]>10.0 && (networkType==NET_TYPE_EDGE || networkType==NET_TYPE_GPRS)){
 				waitingForAcks=true;
+				signalBarCount=1;
 			}else{
 				waitingForAcks=false;
 			}
@@ -1470,6 +1481,11 @@ void VoIPController::RunTickThread(){
 				}else{
 					encoder->SetPacketLoss(15);
 				}
+
+				if(encoder->GetPacketLoss()>30)
+					signalBarCount=MIN(signalBarCount, 2);
+				else if(encoder->GetPacketLoss()>20)
+					signalBarCount=MIN(signalBarCount, 3);
 			}
 		}
 
@@ -1538,8 +1554,24 @@ void VoIPController::RunTickThread(){
 		}
 		unlock_mutex(queuedPacketsMutex);
 
-		if(jitterBuffer)
+		if(jitterBuffer){
 			jitterBuffer->Tick();
+			double avgDelay=jitterBuffer->GetAverageDelay();
+			double avgLateCount[3];
+			jitterBuffer->GetAverageLateCount(avgLateCount);
+			if(avgDelay>=5)
+				signalBarCount=1;
+			else if(avgDelay>=4)
+				signalBarCount=MIN(signalBarCount, 2);
+			else if(avgDelay>=3)
+				signalBarCount=MIN(signalBarCount, 3);
+
+			if(avgLateCount[2]>=0.2)
+				signalBarCount=1;
+			else if(avgLateCount[2]>=0.1)
+				signalBarCount=MIN(signalBarCount, 2);
+
+		}
 
 		lock_mutex(endpointsMutex);
 		if(state==STATE_ESTABLISHED || state==STATE_RECONNECTING){
@@ -1677,6 +1709,12 @@ void VoIPController::RunTickThread(){
 		if(state!=STATE_ESTABLISHED && setEstablishedAt>0 && time>=setEstablishedAt){
 			SetState(STATE_ESTABLISHED);
 			setEstablishedAt=0;
+		}
+
+		if(signalBarCount!=prevSignalBarCount){
+			LOGD("SIGNAL BAR COUNT CHANGED: %d", signalBarCount);
+			if(signalBarCountCallback)
+				signalBarCountCallback(this, signalBarCount);
 		}
 
 
@@ -2419,6 +2457,14 @@ void VoIPController::SendUdpPing(Endpoint *endpoint){
 	pkt.data=p.GetBuffer();
 	pkt.length=p.GetLength();
 	udpSocket->Send(&pkt);
+}
+
+int VoIPController::GetSignalBarsCount(){
+	return signalBarCount;
+}
+
+void VoIPController::SetSignalBarsCountCallback(void (*f)(VoIPController *, int)){
+	signalBarCountCallback=f;
 }
 
 Endpoint::Endpoint(int64_t id, uint16_t port, IPv4Address& _address, IPv6Address& _v6address, char type, unsigned char peerTag[16]) : address(_address), v6address(_v6address){
