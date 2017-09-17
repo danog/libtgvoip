@@ -213,6 +213,7 @@ VoIPController::VoIPController() : activeNetItfName(""),
 	receivedInit=false;
 	receivedInitAck=false;
 	peerPreferredRelay=NULL;
+	preferredRelay=NULL;
 	statsDump=NULL;
 	useTCP=false;
 	useUDP=true;
