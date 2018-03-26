@@ -42,9 +42,7 @@ AudioOutput *AudioOutput::Create(std::string deviceID, VoIPController* controlle
 #ifdef LIBTGVOIP_CUSTOM
 	return new AudioOutputModule(deviceID, controller);
 #elif defined(__ANDROID__)
-	if(systemVersion<21)
-		return new AudioOutputAndroid();
-	return new AudioOutputOpenSLES();
+	return new AudioOutputAndroid();
 #elif defined(__APPLE__)
 #if TARGET_OS_OSX
 	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)

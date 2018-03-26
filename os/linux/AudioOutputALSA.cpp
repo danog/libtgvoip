@@ -12,7 +12,7 @@
 #include "../../VoIPController.h"
 
 #define BUFFER_SIZE 960
-#define CHECK_ERROR(res, msg) if(res<0){LOGE(msg ": %s", _snd_strerror(res));}
+#define CHECK_ERROR(res, msg) if(res<0){LOGE(msg ": %s", _snd_strerror(res)); failed=true; return;}
 #define CHECK_DL_ERROR(res, msg) if(!res){LOGE(msg ": %s", dlerror()); failed=true; return;}
 #define LOAD_FUNCTION(lib, name, ref) {ref=(typeof(ref))dlsym(lib, name); CHECK_DL_ERROR(ref, "Error getting entry point for " name);}
 
@@ -74,6 +74,7 @@ bool AudioOutputALSA::IsPlaying(){
 
 void* AudioOutputALSA::StartThread(void* arg){
 	((AudioOutputALSA*)arg)->RunThread();
+	return NULL;
 }
 
 void AudioOutputALSA::RunThread(){

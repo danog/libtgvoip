@@ -14,6 +14,12 @@
 #define CHECK_AU_ERROR(res, msg) if(res!=noErr){ LOGE(msg": OSStatus=%d", (int)res); failed=true; return; }
 #define BUFFER_SIZE 960 // 20 ms
 
+#if TARGET_OS_OSX
+#define INPUT_BUFFER_SIZE 20480
+#else
+#define INPUT_BUFFER_SIZE 10240
+#endif
+
 #define kOutputBus 0
 #define kInputBus 1
 
@@ -30,8 +36,8 @@ AudioUnitIO::AudioUnitIO(){
 	outputEnabled=false;
 	failed=false;
 	started=false;
-	inBufferList.mBuffers[0].mData=malloc(10240);
-	inBufferList.mBuffers[0].mDataByteSize=10240;
+	inBufferList.mBuffers[0].mData=malloc(INPUT_BUFFER_SIZE);
+	inBufferList.mBuffers[0].mDataByteSize=INPUT_BUFFER_SIZE;
 	inBufferList.mNumberBuffers=1;
 	
 	OSStatus status;
@@ -109,10 +115,6 @@ AudioUnitIO::AudioUnitIO(){
 }
 
 AudioUnitIO::~AudioUnitIO(){
-	AudioOutputUnitStop(unit);
-	AudioUnitUninitialize(unit);
-	AudioComponentInstanceDispose(unit);
-	free(inBufferList.mBuffers[0].mData);
 #if TARGET_OS_OSX
 	AudioObjectPropertyAddress propertyAddress;
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
@@ -122,6 +124,10 @@ AudioUnitIO::~AudioUnitIO(){
 	propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
 	AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress, AudioUnitIO::DefaultDeviceChangedCallback, this);
 #endif
+	AudioOutputUnitStop(unit);
+	AudioUnitUninitialize(unit);
+	AudioComponentInstanceDispose(unit);
+	free(inBufferList.mBuffers[0].mData);
 }
 
 AudioUnitIO* AudioUnitIO::Get(){
@@ -159,7 +165,7 @@ void AudioUnitIO::BufferCallback(AudioUnitRenderActionFlags *ioActionFlags, cons
 			memset(ioData->mBuffers[0].mData, 0, ioData->mBuffers[0].mDataByteSize);
 		}
 	}else if(bus==kInputBus){
-		inBufferList.mBuffers[0].mDataByteSize=10240;
+		inBufferList.mBuffers[0].mDataByteSize=INPUT_BUFFER_SIZE;
 		AudioUnitRender(unit, ioActionFlags, inTimeStamp, bus, numFrames, &inBufferList);
 		if(input && inputEnabled){
 			input->HandleBufferCallback(&inBufferList);

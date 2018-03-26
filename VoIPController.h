@@ -29,7 +29,7 @@
 #include "CongestionControl.h"
 #include "NetworkSocket.h"
 
-#define LIBTGVOIP_VERSION "1.0"
+#define LIBTGVOIP_VERSION "1.0.3"
 
 #define STATE_CREATED 0
 #define STATE_WAIT_INIT 1
@@ -342,6 +342,7 @@ public:
 		 * @param enabled I usually pick argument names to be self-explanatory
 		 */
 		void SetAudioOutputGainControlEnabled(bool enabled);
+		void SetEchoCancellationStrength(int strength);
 
 private:
 	struct PendingOutgoingPacket{
@@ -465,6 +466,7 @@ private:
 	int udpConnectivityState;
 	double lastUdpPingTime;
 	int udpPingCount;
+	int echoCancellationStrength;
 
 	int proxyProtocol;
 	std::string proxyAddress;
