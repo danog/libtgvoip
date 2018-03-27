@@ -68,8 +68,8 @@ void tgvoip::OpusEncoder::Encode(unsigned char *data, size_t len){
 	}else if(r==1){
 		LOGW("DTX");
 	}else if(running){
-		//LOGV("Packet size = %d", r);
-		InvokeCallback(buffer, (size_t)r);
+		//LOGV("OPUS Packet size = %d", r);
+		InvokeCallback(buffer, r);
 	}
 }
 

@@ -165,7 +165,7 @@ VoIPController::VoIPController() : activeNetItfName(""),
 								   proxyAddress(""),
 								   proxyUsername(""),
 								   proxyPassword(""),
-									outgoingPacketsBufferPool(1024, 64){
+									outgoingPacketsBufferPool(1024, 1024){
 	seq=1;
 	lastRemoteSeq=0;
 	state=STATE_WAIT_INIT;
@@ -267,9 +267,9 @@ VoIPController::VoIPController() : activeNetItfName(""),
 	stm->type=STREAM_TYPE_AUDIO;
 	stm->codec=CODEC_OPUS;
 	stm->enabled=1;
-	stm->frameDuration=60;
+	stm->frameDuration=60; //ServerConfig::GetSharedInstance()->GetInt("audio_frame_size", 100);
 	outgoingStreams.push_back(stm);
-										
+
 	memset(signalBarsHistory, 0, sizeof(signalBarsHistory));
 }
 
@@ -414,7 +414,7 @@ void* VoIPController::StartTickThread(void* controller){
 
 void VoIPController::Start(){
 	int res;
-	LOGW("Starting voip controller");
+	LOGW("========= Starting voip controller =========");
 	int32_t cfgFrameSize=60; //ServerConfig::GetSharedInstance()->GetInt("audio_frame_size", 60);
 	if(cfgFrameSize==20 || cfgFrameSize==40 || cfgFrameSize==60)
 		outgoingStreams[0]->frameDuration=(uint16_t) cfgFrameSize;
@@ -450,6 +450,7 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len){
 		LOGV("waiting for RLC, dropping outgoing audio packet");
 		return;
 	}
+	//LOGE("GOT PACKET OF SIZE %i", len);
 
 	unsigned char* buf=outgoingPacketsBufferPool.Get();
 	if(buf){
@@ -472,6 +473,8 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len){
 				/*.endpoint=*/NULL,
 		};
 		sendQueue->Put(p);
+	} else {
+		LOGE("============ COULD NOT GET BUFFER ========");
 	}
 
 	audioTimestampOut+=outgoingStreams[0]->frameDuration;
@@ -700,16 +703,14 @@ void VoIPController::RunRecvThread(){
 		readSockets.push_back(realUdpSocket);
 		errorSockets.push_back(realUdpSocket);
 
-		//if(useTCP){
-			for(std::vector<Endpoint*>::iterator itr=endpoints.begin();itr!=endpoints.end();++itr){
-				if((*itr)->type==EP_TYPE_TCP_RELAY){
-					if((*itr)->socket){
-						readSockets.push_back((*itr)->socket);
-						errorSockets.push_back((*itr)->socket);
-					}
+		for(std::vector<Endpoint*>::iterator itr=endpoints.begin();itr!=endpoints.end();++itr){
+			if((*itr)->type==EP_TYPE_TCP_RELAY){
+				if((*itr)->socket){
+					readSockets.push_back((*itr)->socket);
+					errorSockets.push_back((*itr)->socket);
 				}
 			}
-		//}
+		}
 
 		bool selRes=NetworkSocket::Select(readSockets, errorSockets, selectCanceller);
 		if(!selRes){
@@ -790,13 +791,13 @@ void VoIPController::RunRecvThread(){
 			stats.bytesRecvdMobile+=(uint64_t)len;
 		else
 			stats.bytesRecvdWifi+=(uint64_t)len;
-		BufferInputStream in(buffer, (size_t)len);
 		try{
 		if(memcmp(buffer, srcEndpoint->type==EP_TYPE_UDP_RELAY || srcEndpoint->type==EP_TYPE_TCP_RELAY ? (void*)srcEndpoint->peerTag : (void*)callID, 16)!=0){
 			LOGW("Received packet has wrong peerTag");
 
 			continue;
 		}
+		BufferInputStream in(buffer, (size_t)len);
 		in.Seek(16);
 		if(in.Remaining()>=16 && (srcEndpoint->type==EP_TYPE_UDP_RELAY || srcEndpoint->type==EP_TYPE_TCP_RELAY)
 		   && *reinterpret_cast<uint64_t*>(buffer+16)==0xFFFFFFFFFFFFFFFFLL && *reinterpret_cast<uint32_t*>(buffer+24)==0xFFFFFFFF){
@@ -811,7 +812,7 @@ void VoIPController::RunRecvThread(){
 					unsigned char myIP[16];
 					in.ReadBytes(myIP, 16);
 					int32_t myPort=in.ReadInt32();
-					udpConnectivityState=UDP_AVAILABIE;
+					udpConnectivityState=UDP_AVAILABLE;
 					//LOGV("Received UDP ping reply from %s:%d: date=%d, queryID=%lld, my IP=%s, my port=%d", srcEndpoint->address.ToString().c_str(), srcEndpoint->port, date, queryID, IPv6Address(myIP).ToString().c_str(), myPort);
 				}
 			}else if(tlid==TLID_UDP_REFLECTOR_PEER_INFO){
@@ -879,9 +880,9 @@ void VoIPController::RunRecvThread(){
 		}
 		unsigned char key[32], iv[32];
 		KDF(msgHash, isOutgoing ? 8 : 0, key, iv);
-        unsigned char aesOut[MSC_STACK_FALLBACK(in.Remaining(), 1024)];
+		unsigned char aesOut[MSC_STACK_FALLBACK(in.Remaining(), 1024)];
 		crypto.aes_ige_decrypt((unsigned char *) buffer+in.GetOffset(), aesOut, in.Remaining(), key, iv);
-        memcpy(buffer+in.GetOffset(), aesOut, in.Remaining());
+		memcpy(buffer+in.GetOffset(), aesOut, in.Remaining());
 		unsigned char sha[SHA1_LENGTH];
 		uint32_t _len=(uint32_t) in.ReadInt32();
 		if(_len>in.Remaining())
@@ -1797,7 +1798,7 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint* ep){
 		out.WriteBytes(keyFingerprint, 8);
 		out.WriteBytes((msgHash+(SHA1_LENGTH-16)), 16);
 		KDF(msgHash+(SHA1_LENGTH-16), isOutgoing ? 0 : 8, key, iv);
-        unsigned char aesOut[MSC_STACK_FALLBACK(inner.GetLength(), 1500)];
+		unsigned char aesOut[MSC_STACK_FALLBACK(inner.GetLength(), 1500)];
 		crypto.aes_ige_encrypt(inner.GetBuffer(), aesOut, inner.GetLength(), key, iv);
 		out.WriteBytes(aesOut, inner.GetLength());
 	}
@@ -1808,6 +1809,7 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint* ep){
 		stats.bytesSentWifi+=(uint64_t)out.GetLength();
 
 	NetworkPacket pkt;
+	//LOGE("WILL SEND PACKET OF SIZE %i", out.GetLength());
 	pkt.address=(NetworkAddress*)&ep->address;
 	pkt.port=ep->port;
 	pkt.length=out.GetLength();
