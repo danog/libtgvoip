@@ -58,7 +58,11 @@ void tgvoip_log_file_write_header(FILE* file);
 
 #include <stdio.h>
 
+#ifndef _TGVOIP_ONLY_FILE_LOG
 #define _TGVOIP_LOG_PRINT(verb, msg, ...) {printf("%c/tgvoip: " msg "\n", verb, ##__VA_ARGS__); tgvoip_log_file_printf(verb, msg, ##__VA_ARGS__);}
+#else
+#define _TGVOIP_LOG_PRINT(verb, msg, ...) {tgvoip_log_file_printf(verb, msg, ##__VA_ARGS__);}
+#endif
 
 #define LOGV(msg, ...) _TGVOIP_LOG_PRINT('V', msg, ##__VA_ARGS__)
 #define LOGD(msg, ...) _TGVOIP_LOG_PRINT('D', msg, ##__VA_ARGS__)
