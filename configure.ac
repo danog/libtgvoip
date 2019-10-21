@@ -47,6 +47,9 @@ AM_CONDITIONAL(TARGET_OS_OSX, test "x$os_osx" == xyes)
 AC_ARG_ENABLE([audio-callback], [AS_HELP_STRING([--enable-audio-callback], [enable callback-based audio I/O])], [], [enable_audio_callback=no])
 AM_CONDITIONAL(ENABLE_AUDIO_CALLBACK, test "x$enable_audio_callback" == xyes)
 
+AC_ARG_ENABLE([production-logging], [AS_HELP_STRING([--enable-production-logging], [enable production logging (log only to file, disable webrtc stderr logs)])], [], [enable_production_logging=no])
+AM_CONDITIONAL(ENABLE_PRODUCTION_LOGGING, test "x$enable_production_logging" == xyes)
+
 AS_IF([test "x$os_osx" != xyes && test "x$enable_audio_callback" != xyes], [ # Linux
 	AC_CHECK_LIB([dl], [dlopen])
 

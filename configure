@@ -643,6 +643,8 @@ WITH_ALSA_FALSE
 WITH_ALSA_TRUE
 WITH_PULSE_FALSE
 WITH_PULSE_TRUE
+ENABLE_PRODUCTION_LOGGING_FALSE
+ENABLE_PRODUCTION_LOGGING_TRUE
 ENABLE_AUDIO_CALLBACK_FALSE
 ENABLE_AUDIO_CALLBACK_TRUE
 TARGET_OS_OSX_FALSE
@@ -798,6 +800,7 @@ with_gnu_ld
 with_sysroot
 enable_libtool_lock
 enable_audio_callback
+enable_production_logging
 with_pulse
 with_alsa
 enable_dsp
@@ -1450,6 +1453,9 @@ Optional Features:
                           speeds up one-time build
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --enable-audio-callback enable callback-based audio I/O
+  --enable-production-logging
+                          enable production logging (log only to file, disable
+                          webrtc stderr logs)
   --disable-dsp           disable signal processing (echo cancellation, noise
                           suppression, and automatic gain control)
 
@@ -17698,6 +17704,22 @@ else
 fi
 
 
+# Check whether --enable-production-logging was given.
+if test "${enable_production_logging+set}" = set; then :
+  enableval=$enable_production_logging;
+else
+  enable_production_logging=no
+fi
+
+ if test "x$enable_production_logging" == xyes; then
+  ENABLE_PRODUCTION_LOGGING_TRUE=
+  ENABLE_PRODUCTION_LOGGING_FALSE='#'
+else
+  ENABLE_PRODUCTION_LOGGING_TRUE='#'
+  ENABLE_PRODUCTION_LOGGING_FALSE=
+fi
+
+
 if test "x$os_osx" != xyes && test "x$enable_audio_callback" != xyes; then :
    # Linux
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for dlopen in -ldl" >&5
@@ -18752,6 +18774,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${ENABLE_AUDIO_CALLBACK_TRUE}" && test -z "${ENABLE_AUDIO_CALLBACK_FALSE}"; then
   as_fn_error $? "conditional \"ENABLE_AUDIO_CALLBACK\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ENABLE_PRODUCTION_LOGGING_TRUE}" && test -z "${ENABLE_PRODUCTION_LOGGING_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_PRODUCTION_LOGGING\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WITH_PULSE_TRUE}" && test -z "${WITH_PULSE_FALSE}"; then

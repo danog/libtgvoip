@@ -401,6 +401,11 @@ TGVOIP_HDRS += \
 audio/AudioIOCallback.h
 endif
 
+if ENABLE_PRODUCTION_LOGGING
+CFLAGS += -DWEBRTC_APM_DEBUG_DUMP=0 -DNDEBUG -D_TGVOIP_ONLY_FILE_LOG
+endif
+
+
 if TARGET_CPU_ARM
 SRC += \
 webrtc_dsp/common_audio/signal_processing/complex_bit_reverse_arm.S \
