@@ -24,3 +24,6 @@ DerivedData/
 
 xcuserdata/
 autom4te.cache/
+*.o
+*.Plo
+*.lo
