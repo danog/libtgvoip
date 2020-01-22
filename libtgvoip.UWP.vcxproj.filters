@@ -24,13 +24,13 @@
     <ClCompile Include="tools/BlockingQueue.cpp" />
     <ClCompile Include="tools/Buffers.cpp" />
     <ClCompile Include="controller/net/CongestionControl.cpp" />
-    <ClCompile Include="EchoCanceller.cpp" />
+    <ClCompile Include="controller/audio/EchoCanceller.cpp" />
     <ClCompile Include="controller/net/JitterBuffer.cpp" />
     <ClCompile Include="tools/logging.cpp" />
     <ClCompile Include="controller/MediaStreamItf.cpp" />
     <ClCompile Include="controller/net/NetworkSocket.cpp" />
-    <ClCompile Include="OpusDecoder.cpp" />
-    <ClCompile Include="OpusEncoder.cpp" />
+    <ClCompile Include="controller/audio/OpusDecoder.cpp" />
+    <ClCompile Include="controller/audio/OpusEncoder.cpp" />
     <ClCompile Include="audio\AudioInput.cpp">
       <Filter>audio</Filter>
     </ClCompile>
@@ -921,8 +921,8 @@
     <ClInclude Include="tools/logging.h" />
     <ClInclude Include="controller/MediaStreamItf.h" />
     <ClInclude Include="controller/net/NetworkSocket.h" />
-    <ClInclude Include="OpusDecoder.h" />
-    <ClInclude Include="OpusEncoder.h" />
+    <ClInclude Include="controller/audio/OpusDecoder.h" />
+    <ClInclude Include="controller/audio/OpusEncoder.h" />
     <ClInclude Include="tools/threading.h" />
     <ClInclude Include="audio\AudioInput.h">
       <Filter>audio</Filter>

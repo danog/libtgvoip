@@ -5,7 +5,7 @@
 #ifndef LIBTGVOIP_VIDEOFEC_H
 #define LIBTGVOIP_VIDEOFEC_H
 
-#include "../tools/tools/Buffers.h"
+#include "../tools/Buffers.h"
 #include <vector>
 
 namespace tgvoip{

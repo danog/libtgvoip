@@ -6,8 +6,8 @@
 #define LIBTGVOIP_VIDEOPACKETSENDER_H
 
 #include "../controller/PacketSender.h"
-#include "../tools/tools/Buffers.h"
-#include "../tools/tools/threading.h"
+#include "../tools/Buffers.h"
+#include "../tools/threading.h"
 #include <memory>
 #include <stdint.h>
 #include <vector>

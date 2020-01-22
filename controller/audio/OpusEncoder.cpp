@@ -4,7 +4,7 @@
 // you should have received with this source code distribution.
 //
 
-#include "OpusEncoder.h"
+#include "controller/audio/OpusEncoder.h"
 #include <assert.h>
 #include <algorithm>
 #include "tools/logging.h"

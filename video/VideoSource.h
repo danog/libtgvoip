@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 #include <stdint.h>
-#include "../tools/tools/Buffers.h"
+#include "../tools/Buffers.h"
 
 namespace tgvoip{
 	namespace video {

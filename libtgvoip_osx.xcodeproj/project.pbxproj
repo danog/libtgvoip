@@ -293,11 +293,11 @@
 		692AB8D11E6759DD00706ACC /* tools/Buffers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB88E1E6759DD00706ACC /* tools/Buffers.cpp */; };
 		692AB8D31E6759DD00706ACC /* VoIPGroupController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8901E6759DD00706ACC /* VoIPGroupController.cpp */; };
 		692AB8D81E6759DD00706ACC /* controller/net/CongestionControl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8971E6759DD00706ACC /* controller/net/CongestionControl.cpp */; };
-		692AB8DA1E6759DD00706ACC /* EchoCanceller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8991E6759DD00706ACC /* EchoCanceller.cpp */; };
+		692AB8DA1E6759DD00706ACC /* controller/audio/EchoCanceller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8991E6759DD00706ACC /* controller/audio/EchoCanceller.cpp */; };
 		692AB8E61E6759DD00706ACC /* controller/net/JitterBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8A81E6759DD00706ACC /* controller/net/JitterBuffer.cpp */; };
 		692AB8E91E6759DD00706ACC /* controller/MediaStreamItf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8AB1E6759DD00706ACC /* controller/MediaStreamItf.cpp */; };
-		692AB8EB1E6759DD00706ACC /* OpusDecoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8AD1E6759DD00706ACC /* OpusDecoder.cpp */; };
-		692AB8ED1E6759DD00706ACC /* OpusEncoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8AF1E6759DD00706ACC /* OpusEncoder.cpp */; };
+		692AB8EB1E6759DD00706ACC /* controller/audio/OpusDecoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8AD1E6759DD00706ACC /* controller/audio/OpusDecoder.cpp */; };
+		692AB8ED1E6759DD00706ACC /* controller/audio/OpusEncoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8AF1E6759DD00706ACC /* controller/audio/OpusEncoder.cpp */; };
 		692AB9021E6759DD00706ACC /* VoIPController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8C71E6759DD00706ACC /* VoIPController.cpp */; };
 		692AB9031E6759DD00706ACC /* VoIPController.h in Headers */ = {isa = PBXBuildFile; fileRef = 692AB8C81E6759DD00706ACC /* VoIPController.h */; };
 		692AB9041E6759DD00706ACC /* VoIPServerConfig.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 692AB8C91E6759DD00706ACC /* VoIPServerConfig.cpp */; };
@@ -1017,7 +1017,7 @@
 		692AB8911E6759DD00706ACC /* controller/PrivateDefines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = controller/PrivateDefines.h; sourceTree = SOURCE_ROOT; };
 		692AB8971E6759DD00706ACC /* controller/net/CongestionControl.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = controller/net/CongestionControl.cpp; sourceTree = SOURCE_ROOT; };
 		692AB8981E6759DD00706ACC /* controller/net/CongestionControl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = controller/net/CongestionControl.h; sourceTree = SOURCE_ROOT; };
-		692AB8991E6759DD00706ACC /* EchoCanceller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EchoCanceller.cpp; sourceTree = SOURCE_ROOT; };
+		692AB8991E6759DD00706ACC /* controller/audio/EchoCanceller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = controller/audio/EchoCanceller.cpp; sourceTree = SOURCE_ROOT; };
 		692AB89A1E6759DD00706ACC /* controller/audio/EchoCanceller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = controller/audio/EchoCanceller.h; sourceTree = SOURCE_ROOT; };
 		692AB8A71E6759DD00706ACC /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
 		692AB8A81E6759DD00706ACC /* controller/net/JitterBuffer.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = controller/net/JitterBuffer.cpp; sourceTree = SOURCE_ROOT; };
@@ -1025,10 +1025,10 @@
 		692AB8AA1E6759DD00706ACC /* tools/logging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tools/logging.h; sourceTree = SOURCE_ROOT; };
 		692AB8AB1E6759DD00706ACC /* controller/MediaStreamItf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = controller/MediaStreamItf.cpp; sourceTree = SOURCE_ROOT; };
 		692AB8AC1E6759DD00706ACC /* controller/MediaStreamItf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = controller/MediaStreamItf.h; sourceTree = SOURCE_ROOT; };
-		692AB8AD1E6759DD00706ACC /* OpusDecoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OpusDecoder.cpp; sourceTree = SOURCE_ROOT; };
+		692AB8AD1E6759DD00706ACC /* controller/audio/OpusDecoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = controller/audio/OpusDecoder.cpp; sourceTree = SOURCE_ROOT; };
 		692AB8AE1E6759DD00706ACC /* controller/audio/OpusDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = controller/audio/OpusDecoder.h; sourceTree = SOURCE_ROOT; };
-		692AB8AF1E6759DD00706ACC /* OpusEncoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OpusEncoder.cpp; sourceTree = SOURCE_ROOT; };
-		692AB8B01E6759DD00706ACC /* OpusEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OpusEncoder.h; sourceTree = SOURCE_ROOT; };
+		692AB8AF1E6759DD00706ACC /* controller/audio/OpusEncoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = controller/audio/OpusEncoder.cpp; sourceTree = SOURCE_ROOT; };
+		692AB8B01E6759DD00706ACC /* controller/audio/OpusEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = controller/audio/OpusEncoder.h; sourceTree = SOURCE_ROOT; };
 		692AB8C61E6759DD00706ACC /* tools/threading.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tools/threading.h; sourceTree = SOURCE_ROOT; };
 		692AB8C71E6759DD00706ACC /* VoIPController.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; path = VoIPController.cpp; sourceTree = SOURCE_ROOT; };
 		692AB8C81E6759DD00706ACC /* VoIPController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VoIPController.h; sourceTree = SOURCE_ROOT; };
@@ -2249,7 +2249,7 @@
 				692AB8911E6759DD00706ACC /* controller/PrivateDefines.h */,
 				692AB8971E6759DD00706ACC /* controller/net/CongestionControl.cpp */,
 				692AB8981E6759DD00706ACC /* controller/net/CongestionControl.h */,
-				692AB8991E6759DD00706ACC /* EchoCanceller.cpp */,
+				692AB8991E6759DD00706ACC /* controller/audio/EchoCanceller.cpp */,
 				692AB89A1E6759DD00706ACC /* controller/audio/EchoCanceller.h */,
 				692AB8A71E6759DD00706ACC /* Info.plist */,
 				692AB8A81E6759DD00706ACC /* controller/net/JitterBuffer.cpp */,
@@ -2263,10 +2263,10 @@
 				6976FD0220F6A7060019939E /* tools/MessageThread.h */,
 				690725C01EBBD5F2005D860B /* controller/net/NetworkSocket.cpp */,
 				690725C11EBBD5F2005D860B /* controller/net/NetworkSocket.h */,
-				692AB8AD1E6759DD00706ACC /* OpusDecoder.cpp */,
+				692AB8AD1E6759DD00706ACC /* controller/audio/OpusDecoder.cpp */,
 				692AB8AE1E6759DD00706ACC /* controller/audio/OpusDecoder.h */,
-				692AB8AF1E6759DD00706ACC /* OpusEncoder.cpp */,
-				692AB8B01E6759DD00706ACC /* OpusEncoder.h */,
+				692AB8AF1E6759DD00706ACC /* controller/audio/OpusEncoder.cpp */,
+				692AB8B01E6759DD00706ACC /* controller/audio/OpusEncoder.h */,
 				6971220D20C8107E00971C2C /* controller/PacketReassembler.cpp */,
 				6971220E20C8107F00971C2C /* controller/PacketReassembler.h */,
 				692AB8B11E6759DD00706ACC /* os */,
@@ -2735,7 +2735,7 @@
 				691E071C21A4FD7700F838EF /* aec_core.cc in Sources */,
 				691E069E21A4FD7600F838EF /* normalized_covariance_estimator.cc in Sources */,
 				692AB8D81E6759DD00706ACC /* controller/net/CongestionControl.cpp in Sources */,
-				692AB8EB1E6759DD00706ACC /* OpusDecoder.cpp in Sources */,
+				692AB8EB1E6759DD00706ACC /* controller/audio/OpusDecoder.cpp in Sources */,
 				69DF156D2237DEDC00C1F8ED /* TGVVideoRenderer.mm in Sources */,
 				691E071821A4FD7700F838EF /* echo_cancellation.cc in Sources */,
 				691E077821A4FD7700F838EF /* block_framer.cc in Sources */,
@@ -2859,7 +2859,7 @@
 				691E063F21A4FD7600F838EF /* get_hanning_window.c in Sources */,
 				691E07AF21A4FD7700F838EF /* comfort_noise_generator.cc in Sources */,
 				692AB8E91E6759DD00706ACC /* controller/MediaStreamItf.cpp in Sources */,
-				692AB8DA1E6759DD00706ACC /* EchoCanceller.cpp in Sources */,
+				692AB8DA1E6759DD00706ACC /* controller/audio/EchoCanceller.cpp in Sources */,
 				691E07BE21A4FD7700F838EF /* voice_activity_detector.cc in Sources */,
 				691E05F221A4FD7600F838EF /* real_fourier_ooura.cc in Sources */,
 				691E077521A4FD7700F838EF /* echo_path_delay_estimator.cc in Sources */,
@@ -2919,7 +2919,7 @@
 				691E069A21A4FD7600F838EF /* rms_level.cc in Sources */,
 				691E078E21A4FD7700F838EF /* reverb_model_estimator.cc in Sources */,
 				691E070121A4FD7600F838EF /* compute_interpolated_gain_curve.cc in Sources */,
-				692AB8ED1E6759DD00706ACC /* OpusEncoder.cpp in Sources */,
+				692AB8ED1E6759DD00706ACC /* controller/audio/OpusEncoder.cpp in Sources */,
 				691E06E721A4FD7600F838EF /* features_extraction.cc in Sources */,
 				691E061A21A4FD7600F838EF /* levinson_durbin.c in Sources */,
 				691E066921A4FD7600F838EF /* pitch_estimator.c in Sources */,

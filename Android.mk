@@ -30,14 +30,14 @@ LOCAL_SRC_FILES := \
 ./os/android/AudioInputOpenSLES.cpp \
 ./controller/MediaStreamItf.cpp \
 ./audio/AudioOutput.cpp \
-./OpusEncoder.cpp \
+./controller/audio/OpusEncoder.cpp \
 ./os/android/AudioOutputOpenSLES.cpp \
 ./controller/net/JitterBuffer.cpp \
-./OpusDecoder.cpp \
+./controller/audio/OpusDecoder.cpp \
 ./os/android/OpenSLEngineWrapper.cpp \
 ./os/android/AudioInputAndroid.cpp \
 ./os/android/AudioOutputAndroid.cpp \
-./EchoCanceller.cpp \
+./controller/audio/EchoCanceller.cpp \
 ./controller/net/CongestionControl.cpp \
 ./VoIPServerConfig.cpp \
 ./audio/Resampler.cpp \
