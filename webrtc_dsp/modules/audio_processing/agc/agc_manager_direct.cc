@@ -21,7 +21,7 @@
 #include "modules/audio_processing/agc2/adaptive_mode_level_estimator_agc.h"
 #include "modules/audio_processing/include/gain_control.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/tools/logging.h"
+#include "rtc_base/logging.h"
 #include "rtc_base/numerics/safe_minmax.h"
 #include "system_wrappers/include/metrics.h"
 

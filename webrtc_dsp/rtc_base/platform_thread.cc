@@ -19,7 +19,7 @@
 
 #include "rtc_base/atomicops.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/timetools/utils.h"
+#include "rtc_base/timeutils.h"
 
 namespace rtc {
 namespace {

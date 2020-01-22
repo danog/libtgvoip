@@ -18,7 +18,7 @@
 #include "modules/audio_processing/logging/apm_data_dumper.h"
 #include "rtc_base/atomicops.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/tools/logging.h"
+#include "rtc_base/logging.h"
 #include "system_wrappers/include/metrics.h"
 
 namespace {

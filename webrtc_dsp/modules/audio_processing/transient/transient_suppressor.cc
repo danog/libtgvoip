@@ -24,7 +24,7 @@
 #include "modules/audio_processing/transient/common.h"
 #include "modules/audio_processing/transient/transient_detector.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/tools/logging.h"
+#include "rtc_base/logging.h"
 
 namespace webrtc {
 

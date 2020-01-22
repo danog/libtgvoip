@@ -8,7 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "rtc_base/stringtools/utils.h"
+#include "rtc_base/stringutils.h"
 
 namespace rtc {
 

@@ -37,13 +37,13 @@ static const int kMaxLogLineSize = 1024 - 60;
 
 #include "rtc_base/checks.h"
 #include "rtc_base/criticalsection.h"
-#include "rtc_base/tools/logging.h"
+#include "rtc_base/logging.h"
 #include "rtc_base/platform_thread_types.h"
 #include "rtc_base/stringencode.h"
 #include "rtc_base/strings/string_builder.h"
-#include "rtc_base/stringtools/utils.h"
+#include "rtc_base/stringutils.h"
 #include "rtc_base/thread_annotations.h"
-#include "rtc_base/timetools/utils.h"
+#include "rtc_base/timeutils.h"
 
 namespace rtc {
 namespace {
@@ -183,7 +183,7 @@ LogMessage::LogMessage(const char* file,
 #endif
 
 // DEPRECATED. Currently only used by downstream projects that use
-// implementation details of tools/logging.h. Work is ongoing to remove those
+// implementation details of logging.h. Work is ongoing to remove those
 // dependencies.
 LogMessage::LogMessage(const char* file,
                        int line,

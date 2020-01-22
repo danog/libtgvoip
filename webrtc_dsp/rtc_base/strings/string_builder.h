@@ -18,7 +18,7 @@
 #include "absl/strings/string_view.h"
 #include "api/array_view.h"
 #include "rtc_base/stringencode.h"
-#include "rtc_base/stringtools/utils.h"
+#include "rtc_base/stringutils.h"
 
 namespace rtc {
 

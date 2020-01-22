@@ -19,7 +19,7 @@
 #include <string>
 
 #include "rtc_base/checks.h"
-#include "rtc_base/tools/logging.h"
+#include "rtc_base/logging.h"
 #include "rtc_base/sanitizer.h"
 #include "rtc_base/system/arch.h"
 

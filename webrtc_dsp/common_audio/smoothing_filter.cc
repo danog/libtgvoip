@@ -13,7 +13,7 @@
 #include <cmath>
 
 #include "rtc_base/checks.h"
-#include "rtc_base/timetools/utils.h"
+#include "rtc_base/timeutils.h"
 
 namespace webrtc {
 

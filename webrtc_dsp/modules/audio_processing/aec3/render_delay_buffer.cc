@@ -28,7 +28,7 @@
 #include "rtc_base/atomicops.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/constructormagic.h"
-#include "rtc_base/tools/logging.h"
+#include "rtc_base/logging.h"
 #include "system_wrappers/include/field_trial.h"
 
 namespace webrtc {

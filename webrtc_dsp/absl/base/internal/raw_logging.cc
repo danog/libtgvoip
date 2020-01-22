@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "absl/base/internal/raw_tools/logging.h"
+#include "absl/base/internal/raw_logging.h"
 
 #include <stddef.h>
 #include <cstdarg>

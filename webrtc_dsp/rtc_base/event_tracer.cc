@@ -20,12 +20,12 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/criticalsection.h"
 #include "rtc_base/event.h"
-#include "rtc_base/tools/logging.h"
+#include "rtc_base/logging.h"
 #include "rtc_base/platform_thread.h"
 #include "rtc_base/platform_thread_types.h"
 #include "rtc_base/thread_annotations.h"
 #include "rtc_base/thread_checker.h"
-#include "rtc_base/timetools/utils.h"
+#include "rtc_base/timeutils.h"
 #include "rtc_base/trace_event.h"
 
 // This is a guesstimate that should be enough in most cases.
