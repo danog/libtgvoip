@@ -1929,7 +1929,7 @@
     <ClInclude Include="video\VideoFEC.h">
       <Filter>video</Filter>
     </ClInclude>
-    <ClInclude Include="video\Videocontroller/PacketSender.h">
+    <ClInclude Include="video\VideoPacketSender.h">
       <Filter>video</Filter>
     </ClInclude>
   </ItemGroup>

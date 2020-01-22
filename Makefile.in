@@ -1437,10 +1437,9 @@ am__libtgvoip_la_SOURCES_DIST = TgVoip.cpp VoIPController.cpp \
 	controller/PacketReassembler.h VoIPServerConfig.h \
 	audio/AudioIO.h audio/AudioInput.h audio/AudioOutput.h \
 	audio/Resampler.h os/posix/NetworkSocketPosix.h \
-	video/VideoSource.h video/Videocontroller/PacketSender.h \
-	video/VideoFEC.h video/VideoRenderer.h \
-	video/ScreamCongestionController.h tools/json11.hpp \
-	tools/utils.h os/darwin/AudioInputAudioUnit.h \
+	video/VideoSource.h video/VideoPacketSender.h video/VideoFEC.h \
+	video/VideoRenderer.h video/ScreamCongestionController.h \
+	tools/json11.hpp tools/utils.h os/darwin/AudioInputAudioUnit.h \
 	os/darwin/AudioOutputAudioUnit.h os/darwin/AudioUnitIO.h \
 	os/darwin/AudioInputAudioUnitOSX.h \
 	os/darwin/AudioOutputAudioUnitOSX.h os/darwin/DarwinSpecific.h \
@@ -2185,10 +2184,9 @@ am__nobase_tgvoipinclude_HEADERS_DIST = TgVoip.h VoIPController.h \
 	controller/PacketReassembler.h VoIPServerConfig.h \
 	audio/AudioIO.h audio/AudioInput.h audio/AudioOutput.h \
 	audio/Resampler.h os/posix/NetworkSocketPosix.h \
-	video/VideoSource.h video/Videocontroller/PacketSender.h \
-	video/VideoFEC.h video/VideoRenderer.h \
-	video/ScreamCongestionController.h tools/json11.hpp \
-	tools/utils.h os/darwin/AudioInputAudioUnit.h \
+	video/VideoSource.h video/VideoPacketSender.h video/VideoFEC.h \
+	video/VideoRenderer.h video/ScreamCongestionController.h \
+	tools/json11.hpp tools/utils.h os/darwin/AudioInputAudioUnit.h \
 	os/darwin/AudioOutputAudioUnit.h os/darwin/AudioUnitIO.h \
 	os/darwin/AudioInputAudioUnitOSX.h \
 	os/darwin/AudioOutputAudioUnitOSX.h os/darwin/DarwinSpecific.h \
@@ -2401,11 +2399,10 @@ TGVOIP_HDRS = TgVoip.h VoIPController.h tools/Buffers.h \
 	controller/PacketReassembler.h VoIPServerConfig.h \
 	audio/AudioIO.h audio/AudioInput.h audio/AudioOutput.h \
 	audio/Resampler.h os/posix/NetworkSocketPosix.h \
-	video/VideoSource.h video/Videocontroller/PacketSender.h \
-	video/VideoFEC.h video/VideoRenderer.h \
-	video/ScreamCongestionController.h tools/json11.hpp \
-	tools/utils.h $(am__append_2) $(am__append_5) $(am__append_7) \
-	$(am__append_17)
+	video/VideoSource.h video/VideoPacketSender.h video/VideoFEC.h \
+	video/VideoRenderer.h video/ScreamCongestionController.h \
+	tools/json11.hpp tools/utils.h $(am__append_2) $(am__append_5) \
+	$(am__append_7) $(am__append_17)
 libtgvoip_la_SOURCES = $(SRC) $(TGVOIP_HDRS)
 tgvoipincludedir = $(includedir)/tgvoip
 nobase_tgvoipinclude_HEADERS = $(TGVOIP_HDRS)

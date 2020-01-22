@@ -262,7 +262,7 @@
     <ClInclude Include="tools/utils.h" />
     <ClInclude Include="video\ScreamCongestionController.h" />
     <ClInclude Include="video\VideoFEC.h" />
-    <ClInclude Include="video\Videocontroller/PacketSender.h" />
+    <ClInclude Include="video\VideoPacketSender.h" />
     <ClInclude Include="video\VideoRenderer.h" />
     <ClInclude Include="video\VideoSource.h" />
     <ClInclude Include="VoIPController.h" />

@@ -310,7 +310,7 @@
 		6970AF4E225FFEBE00F02034 /* VideoFEC.h in Headers */ = {isa = PBXBuildFile; fileRef = 6970AF4A225FFEBE00F02034 /* VideoFEC.h */; };
 		6970AF4F225FFEBE00F02034 /* VideoPacketSender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6970AF4B225FFEBE00F02034 /* VideoPacketSender.cpp */; };
 		6970AF50225FFEBE00F02034 /* VideoFEC.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6970AF4C225FFEBE00F02034 /* VideoFEC.cpp */; };
-		6970AF51225FFEBE00F02034 /* Videocontroller/PacketSender.h in Headers */ = {isa = PBXBuildFile; fileRef = 6970AF4D225FFEBE00F02034 /* Videocontroller/PacketSender.h */; };
+		6970AF51225FFEBE00F02034 /* VideoPacketSender.h in Headers */ = {isa = PBXBuildFile; fileRef = 6970AF4D225FFEBE00F02034 /* VideoPacketSender.h */; };
 		6971220F20C8107F00971C2C /* controller/PacketReassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6971220D20C8107E00971C2C /* controller/PacketReassembler.cpp */; };
 		6976FD0320F6A7060019939E /* tools/MessageThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6976FD0120F6A7050019939E /* tools/MessageThread.cpp */; };
 		697B6FC72136DBA4004C8E54 /* libtgvoipTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 697B6FC62136DBA4004C8E54 /* libtgvoipTests.mm */; };
@@ -1046,7 +1046,7 @@
 		6970AF4A225FFEBE00F02034 /* VideoFEC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoFEC.h; sourceTree = "<group>"; };
 		6970AF4B225FFEBE00F02034 /* VideoPacketSender.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoPacketSender.cpp; sourceTree = "<group>"; };
 		6970AF4C225FFEBE00F02034 /* VideoFEC.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoFEC.cpp; sourceTree = "<group>"; };
-		6970AF4D225FFEBE00F02034 /* Videocontroller/PacketSender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Videocontroller/PacketSender.h; sourceTree = "<group>"; };
+		6970AF4D225FFEBE00F02034 /* VideoPacketSender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoPacketSender.h; sourceTree = "<group>"; };
 		6971220D20C8107E00971C2C /* controller/PacketReassembler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = controller/PacketReassembler.cpp; sourceTree = SOURCE_ROOT; };
 		6971220E20C8107F00971C2C /* controller/PacketReassembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = controller/PacketReassembler.h; sourceTree = SOURCE_ROOT; };
 		6976FD0120F6A7050019939E /* tools/MessageThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = tools/MessageThread.cpp; sourceTree = SOURCE_ROOT; };
@@ -2372,7 +2372,7 @@
 				6970AF4C225FFEBE00F02034 /* VideoFEC.cpp */,
 				6970AF4A225FFEBE00F02034 /* VideoFEC.h */,
 				6970AF4B225FFEBE00F02034 /* VideoPacketSender.cpp */,
-				6970AF4D225FFEBE00F02034 /* Videocontroller/PacketSender.h */,
+				6970AF4D225FFEBE00F02034 /* VideoPacketSender.h */,
 				69DF15612237DEBB00C1F8ED /* ScreamCongestionController.cpp */,
 				69DF15602237DEBB00C1F8ED /* ScreamCongestionController.h */,
 			);
@@ -2432,7 +2432,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				69DF15622237DEBB00C1F8ED /* ScreamCongestionController.h in Headers */,
-				6970AF51225FFEBE00F02034 /* Videocontroller/PacketSender.h in Headers */,
+				6970AF51225FFEBE00F02034 /* VideoPacketSender.h in Headers */,
 				692AB9051E6759DD00706ACC /* VoIPServerConfig.h in Headers */,
 				69DF15722237DEDC00C1F8ED /* TGVVideoSource.h in Headers */,
 				69DF157E2237DFE700C1F8ED /* SampleBufferDisplayLayerRenderer.h in Headers */,

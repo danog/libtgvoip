@@ -55,7 +55,7 @@ audio/AudioOutput.h \
 audio/Resampler.h \
 os/posix/NetworkSocketPosix.h \
 video/VideoSource.h \
-video/Videocontroller/PacketSender.h \
+video/VideoPacketSender.h \
 video/VideoFEC.h \
 video/VideoRenderer.h \
 video/ScreamCongestionController.h \

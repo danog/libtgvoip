@@ -75,7 +75,7 @@
           '<(tgvoip_src_loc)/video/VideoRenderer.cpp',
           '<(tgvoip_src_loc)/video/VideoRenderer.h',
           '<(tgvoip_src_loc)/video/VideoPacketSender.cpp',
-          '<(tgvoip_src_loc)/video/Videocontroller/PacketSender.h',
+          '<(tgvoip_src_loc)/video/VideoPacketSender.h',
           '<(tgvoip_src_loc)/video/VideoFEC.cpp',
           '<(tgvoip_src_loc)/video/VideoFEC.h',
           '<(tgvoip_src_loc)/tools/json11.cpp',
