@@ -1917,7 +1917,7 @@
     <ClInclude Include="webrtc_dsp\modules\third_party\fft\fft.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
-    <ClInclude Include="json11.hpp" />
+    <ClInclude Include="tools/json11.hpp" />
     <ClInclude Include="video\ScreamCongestionController.h">
       <Filter>video</Filter>
     </ClInclude>

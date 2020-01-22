@@ -3,7 +3,7 @@
 //
 
 #include <algorithm>
-#include "Videocontroller/PacketSender.h"
+#include "VideoPacketSender.h"
 #include "VideoFEC.h"
 #include "../tools/logging.h"
 #include "../controller/PrivateDefines.h"

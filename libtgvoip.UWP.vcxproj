@@ -244,7 +244,7 @@
     <ClInclude Include="controller/net/CongestionControl.h" />
     <ClInclude Include="controller/audio/EchoCanceller.h" />
     <ClInclude Include="controller/net/JitterBuffer.h" />
-    <ClInclude Include="json11.hpp" />
+    <ClInclude Include="tools/json11.hpp" />
     <ClInclude Include="tools/logging.h" />
     <ClInclude Include="controller/MediaStreamItf.h" />
     <ClInclude Include="tools/MessageThread.h" />

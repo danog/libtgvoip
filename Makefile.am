@@ -59,7 +59,7 @@ video/Videocontroller/PacketSender.h \
 video/VideoFEC.h \
 video/VideoRenderer.h \
 video/ScreamCongestionController.h \
-json11.hpp \
+tools/json11.hpp \
 tools/utils.h
 
 if TARGET_OS_OSX

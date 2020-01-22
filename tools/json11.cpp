@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include "json11.hpp"
+#include "tools/json11.hpp"
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
@@ -750,7 +750,7 @@ Json Json::parse(const string &in, string &err, JsonParse strategy) {
     return result;
 }
 
-// Documented in json11.hpp
+// Documented in tools/json11.hpp
 vector<Json> Json::parse_multi(const string &in,
                                std::string::size_type &parser_stop_pos,
                                string &err,

@@ -19,9 +19,9 @@
 #include "controller/audio/OpusDecoder.h"
 #include "VoIPServerConfig.h"
 #include "controller/PrivateDefines.h"
-#include "json11.hpp"
+#include "tools/json11.hpp"
 #include "controller/PacketSender.h"
-#include "video/Videocontroller/PacketSender.h"
+#include "video/VideoPacketSender.h"
 #include <assert.h>
 #include <time.h>
 #include <math.h>

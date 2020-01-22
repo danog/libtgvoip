@@ -79,7 +79,7 @@
           '<(tgvoip_src_loc)/video/VideoFEC.cpp',
           '<(tgvoip_src_loc)/video/VideoFEC.h',
           '<(tgvoip_src_loc)/tools/json11.cpp',
-          '<(tgvoip_src_loc)/json11.hpp',
+          '<(tgvoip_src_loc)/tools/json11.hpp',
 
           # Windows
           '<(tgvoip_src_loc)/os/windows/NetworkSocketWinsock.cpp',
