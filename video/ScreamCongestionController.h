@@ -5,7 +5,7 @@
 #ifndef LIBTGVOIP_SCREAMCONGESTIONCONTROLLER_H
 #define LIBTGVOIP_SCREAMCONGESTIONCONTROLLER_H
 
-#include "../Buffers.h"
+#include "../tools/Buffers.h"
 #include <vector>
 #include <stdint.h>
 

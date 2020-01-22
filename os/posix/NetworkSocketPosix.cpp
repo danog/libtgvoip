@@ -14,14 +14,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <netinet/tcp.h>
-#include "../../logging.h"
+#include "../../tools/logging.h"
 #include "../../VoIPController.h"
-#include "../../Buffers.h"
+#include "../../tools/Buffers.h"
 
 #ifdef __ANDROID__
 #include <jni.h>
 #include <sys/system_properties.h>
-#include <NetworkSocket.h>
+#include <controller/net/NetworkSocket.h>
 
 extern JavaVM* sharedJVM;
 extern jclass jniUtilitiesClass;

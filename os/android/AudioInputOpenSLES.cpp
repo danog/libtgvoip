@@ -9,7 +9,7 @@
 #include <assert.h>
 
 #include "AudioInputOpenSLES.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 #include "OpenSLEngineWrapper.h"
 
 #define CHECK_SL_ERROR(res, msg) if(res!=SL_RESULT_SUCCESS){ LOGE(msg); return; }

@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "AudioInputWave.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 #include "../../VoIPController.h"
 
 using namespace tgvoip::audio;

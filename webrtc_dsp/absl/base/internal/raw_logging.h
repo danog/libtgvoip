@@ -64,7 +64,7 @@
 // except that if the richer log library is linked into the binary, we dispatch
 // to that instead.  This is potentially useful for internal logging and
 // assertions, where we are using RAW_LOG neither for its async-signal-safety
-// nor for its non-allocating nature, but rather because raw logging has very
+// nor for its non-allocating nature, but rather because raw tools/logging.has very
 // few other dependencies.
 //
 // The API is a subset of the above: each macro only takes two arguments.  Use

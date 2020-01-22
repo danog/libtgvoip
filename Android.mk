@@ -21,31 +21,31 @@ endif
 LOCAL_CFLAGS += $(TGVOIP_ADDITIONAL_CFLAGS)
 
 LOCAL_SRC_FILES := \
-./logging.cpp \
+./tools/logging.cpp \
 ./VoIPController.cpp \
 ./VoIPGroupController.cpp \
-./Buffers.cpp \
-./BlockingQueue.cpp \
+./tools/Buffers.cpp \
+./tools/BlockingQueue.cpp \
 ./audio/AudioInput.cpp \
 ./os/android/AudioInputOpenSLES.cpp \
-./MediaStreamItf.cpp \
+./controller/MediaStreamItf.cpp \
 ./audio/AudioOutput.cpp \
 ./OpusEncoder.cpp \
 ./os/android/AudioOutputOpenSLES.cpp \
-./JitterBuffer.cpp \
+./controller/net/JitterBuffer.cpp \
 ./OpusDecoder.cpp \
 ./os/android/OpenSLEngineWrapper.cpp \
 ./os/android/AudioInputAndroid.cpp \
 ./os/android/AudioOutputAndroid.cpp \
 ./EchoCanceller.cpp \
-./CongestionControl.cpp \
+./controller/net/CongestionControl.cpp \
 ./VoIPServerConfig.cpp \
 ./audio/Resampler.cpp \
-./NetworkSocket.cpp \
+./controller/net/NetworkSocket.cpp \
 ./os/posix/NetworkSocketPosix.cpp \
-./PacketReassembler.cpp \
-./MessageThread.cpp \
-./json11.cpp \
+./controller/PacketReassembler.cpp \
+./tools/MessageThread.cpp \
+./tools/json11.cpp \
 ./audio/AudioIO.cpp \
 ./video/VideoRenderer.cpp \
 ./video/VideoSource.cpp \

@@ -9,7 +9,7 @@
 #include <assert.h>
 #include "AudioUnitIO.h"
 #include "AudioInputAudioUnit.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 
 #define BUFFER_SIZE 960
 

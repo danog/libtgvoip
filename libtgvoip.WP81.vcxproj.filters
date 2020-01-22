@@ -18,13 +18,13 @@
   <ItemGroup>
     <ClCompile Include="VoIPController.cpp" />
     <ClCompile Include="VoIPServerConfig.cpp" />
-    <ClCompile Include="BlockingQueue.cpp" />
-    <ClCompile Include="CongestionControl.cpp" />
+    <ClCompile Include="tools/BlockingQueue.cpp" />
+    <ClCompile Include="controller/net/CongestionControl.cpp" />
     <ClCompile Include="EchoCanceller.cpp" />
-    <ClCompile Include="JitterBuffer.cpp" />
-    <ClCompile Include="logging.cpp" />
-    <ClCompile Include="MediaStreamItf.cpp" />
-    <ClCompile Include="NetworkSocket.cpp" />
+    <ClCompile Include="controller/net/JitterBuffer.cpp" />
+    <ClCompile Include="tools/logging.cpp" />
+    <ClCompile Include="controller/MediaStreamItf.cpp" />
+    <ClCompile Include="controller/net/NetworkSocket.cpp" />
     <ClCompile Include="OpusDecoder.cpp" />
     <ClCompile Include="OpusEncoder.cpp" />
     <ClCompile Include="audio\AudioInput.cpp">
@@ -270,21 +270,21 @@
     <ClCompile Include="os\windows\CXWrapper.cpp">
       <Filter>windows</Filter>
     </ClCompile>
-    <ClCompile Include="Buffers.cpp" />
+    <ClCompile Include="tools/Buffers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VoIPController.h" />
     <ClInclude Include="VoIPServerConfig.h" />
-    <ClInclude Include="BlockingQueue.h" />
-    <ClInclude Include="CongestionControl.h" />
-    <ClInclude Include="EchoCanceller.h" />
-    <ClInclude Include="JitterBuffer.h" />
-    <ClInclude Include="logging.h" />
-    <ClInclude Include="MediaStreamItf.h" />
-    <ClInclude Include="NetworkSocket.h" />
-    <ClInclude Include="OpusDecoder.h" />
+    <ClInclude Include="tools/BlockingQueue.h" />
+    <ClInclude Include="controller/net/CongestionControl.h" />
+    <ClInclude Include="controller/audio/EchoCanceller.h" />
+    <ClInclude Include="controller/net/JitterBuffer.h" />
+    <ClInclude Include="tools/logging.h" />
+    <ClInclude Include="controller/MediaStreamItf.h" />
+    <ClInclude Include="controller/net/NetworkSocket.h" />
+    <ClInclude Include="controller/audio/OpusDecoder.h" />
     <ClInclude Include="OpusEncoder.h" />
-    <ClInclude Include="threading.h" />
+    <ClInclude Include="tools/threading.h" />
     <ClInclude Include="audio\AudioInput.h">
       <Filter>audio</Filter>
     </ClInclude>
@@ -333,7 +333,7 @@
     <ClInclude Include="webrtc_dsp\webrtc\base\sanitizer.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
-    <ClInclude Include="webrtc_dsp\webrtc\base\stringutils.h">
+    <ClInclude Include="webrtc_dsp\webrtc\base\stringtools/utils.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
     <ClInclude Include="webrtc_dsp\webrtc\base\type_traits.h">
@@ -483,6 +483,6 @@
     <ClInclude Include="os\windows\CXWrapper.h">
       <Filter>windows</Filter>
     </ClInclude>
-    <ClInclude Include="Buffers.h" />
+    <ClInclude Include="tools/Buffers.h" />
   </ItemGroup>
 </Project>

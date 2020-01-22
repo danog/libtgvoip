@@ -5,7 +5,7 @@
 //
 
 #include "AudioInput.h"
-#include "../logging.h"
+#include "../tools/logging.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

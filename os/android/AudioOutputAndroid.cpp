@@ -6,7 +6,7 @@
 
 #include "AudioOutputAndroid.h"
 #include <stdio.h>
-#include "../../logging.h"
+#include "../../tools/logging.h"
 
 extern JavaVM* sharedJVM;
 

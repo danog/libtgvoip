@@ -6,7 +6,7 @@
 #define LIBTGVOIP_VIDEORENDERER_H
 
 #include <vector>
-#include "../Buffers.h"
+#include "../tools/tools/Buffers.h"
 
 namespace tgvoip{
 	namespace video{

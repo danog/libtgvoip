@@ -7,8 +7,8 @@
 #ifndef LIBTGVOIP_NETWORKSOCKETPOSIX_H
 #define LIBTGVOIP_NETWORKSOCKETPOSIX_H
 
-#include "../../NetworkSocket.h"
-#include "../../Buffers.h"
+#include "../../controller/net/NetworkSocket.h"
+#include "../../tools/Buffers.h"
 #include <vector>
 #include <sys/select.h>
 #include <pthread.h>

@@ -5,7 +5,7 @@
 //
 
 #include "AudioOutput.h"
-#include "../logging.h"
+#include "../tools/logging.h"
 #include <stdlib.h>
 
 #ifdef HAVE_CONFIG_H
@@ -44,40 +44,43 @@
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-int32_t AudioOutput::estimatedDelay=60;
+int32_t AudioOutput::estimatedDelay = 60;
 
-AudioOutput::AudioOutput() : currentDevice("default"){
-	failed=false;
+AudioOutput::AudioOutput() : currentDevice("default")
+{
+	failed = false;
 }
 
-AudioOutput::AudioOutput(std::string deviceID) : currentDevice(deviceID){
-	failed=false;
+AudioOutput::AudioOutput(std::string deviceID) : currentDevice(deviceID)
+{
+	failed = false;
 }
 
-AudioOutput::~AudioOutput(){
-
+AudioOutput::~AudioOutput()
+{
 }
 
-
-int32_t AudioOutput::GetEstimatedDelay(){
+int32_t AudioOutput::GetEstimatedDelay()
+{
 #if defined(__ANDROID__)
 	char sdkNum[PROP_VALUE_MAX];
 	__system_property_get("ro.build.version.sdk", sdkNum);
-	int systemVersion=atoi(sdkNum);
-	return systemVersion<21 ? 150 : 50;
+	int systemVersion = atoi(sdkNum);
+	return systemVersion < 21 ? 150 : 50;
 #endif
 	return estimatedDelay;
 }
 
-
-void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
+void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice> &devs)
+{
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
 	// not supported
 #elif defined(__APPLE__) && TARGET_OS_OSX
 	AudioOutputAudioUnitLegacy::EnumerateDevices(devs);
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
-	if(LOBYTE(LOWORD(GetVersion()))<6){
+	if (LOBYTE(LOWORD(GetVersion())) < 6)
+	{
 		AudioOutputWave::EnumerateDevices(devs);
 		return;
 	}
@@ -85,7 +88,7 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 	AudioOutputWASAPI::EnumerateDevices(devs);
 #elif defined(__linux__) && !defined(__ANDROID__)
 #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
-	if(!AudioOutputPulse::EnumerateDevices(devs))
+	if (!AudioOutputPulse::EnumerateDevices(devs))
 		AudioOutputALSA::EnumerateDevices(devs);
 #elif defined(WITHOUT_PULSE)
 	AudioOutputALSA::EnumerateDevices(devs);
@@ -95,15 +98,16 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
 #endif
 }
 
-
-std::string AudioOutput::GetCurrentDevice(){
+std::string AudioOutput::GetCurrentDevice()
+{
 	return currentDevice;
 }
 
-void AudioOutput::SetCurrentDevice(std::string deviceID){
-	
+void AudioOutput::SetCurrentDevice(std::string deviceID)
+{
 }
 
-bool AudioOutput::IsInitialized(){
+bool AudioOutput::IsInitialized()
+{
 	return !failed;
 }

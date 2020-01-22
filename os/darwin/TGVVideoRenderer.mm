@@ -6,7 +6,7 @@
 
 #import "TGVVideoRenderer.h"
 #include "SampleBufferDisplayLayerRenderer.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 
 @implementation TGVVideoRenderer{
 	AVSampleBufferDisplayLayer* layer;

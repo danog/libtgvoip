@@ -9,7 +9,7 @@
 #include <assert.h>
 #include <dlfcn.h>
 #include "AudioInputALSA.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 #include "../../VoIPController.h"
 
 using namespace tgvoip::audio;

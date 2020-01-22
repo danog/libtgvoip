@@ -6,17 +6,17 @@ lib_LTLIBRARIES = libtgvoip.la
 
 SRC = TgVoip.cpp \
 VoIPController.cpp \
-Buffers.cpp \
-CongestionControl.cpp \
+tools/Buffers.cpp \
+controller/net/CongestionControl.cpp \
 EchoCanceller.cpp \
-JitterBuffer.cpp \
-logging.cpp \
-MediaStreamItf.cpp \
-MessageThread.cpp \
-NetworkSocket.cpp \
+controller/net/JitterBuffer.cpp \
+tools/logging.cpp \
+controller/MediaStreamItf.cpp \
+tools/MessageThread.cpp \
+controller/net/NetworkSocket.cpp \
 OpusDecoder.cpp \
 OpusEncoder.cpp \
-PacketReassembler.cpp \
+controller/PacketReassembler.cpp \
 VoIPGroupController.cpp \
 VoIPServerConfig.cpp \
 audio/AudioIO.cpp \
@@ -29,25 +29,25 @@ video/VideoRenderer.cpp \
 video/VideoPacketSender.cpp \
 video/VideoFEC.cpp \
 video/ScreamCongestionController.cpp \
-json11.cpp
+tools/json11.cpp
 
 TGVOIP_HDRS = \
 TgVoip.h \
 VoIPController.h \
-Buffers.h \
-BlockingQueue.h \
-PrivateDefines.h \
-CongestionControl.h \
-EchoCanceller.h \
-JitterBuffer.h \
-logging.h \
-threading.h \
-MediaStreamItf.h \
-MessageThread.h \
-NetworkSocket.h \
+tools/Buffers.h \
+tools/BlockingQueue.h \
+controller/PrivateDefines.h \
+controller/net/CongestionControl.h \
+controller/audio/EchoCanceller.h \
+controller/net/JitterBuffer.h \
+tools/logging.h \
+tools/threading.h \
+controller/MediaStreamItf.h \
+tools/MessageThread.h \
+controller/net/NetworkSocket.h \
 OpusDecoder.h \
 OpusEncoder.h \
-PacketReassembler.h \
+controller/PacketReassembler.h \
 VoIPServerConfig.h \
 audio/AudioIO.h \
 audio/AudioInput.h \
@@ -55,12 +55,12 @@ audio/AudioOutput.h \
 audio/Resampler.h \
 os/posix/NetworkSocketPosix.h \
 video/VideoSource.h \
-video/VideoPacketSender.h \
+video/Videocontroller/PacketSender.h \
 video/VideoFEC.h \
 video/VideoRenderer.h \
 video/ScreamCongestionController.h \
 json11.hpp \
-utils.h
+tools/utils.h
 
 if TARGET_OS_OSX
 
@@ -454,7 +454,7 @@ webrtc_dsp/absl/base/internal/invoke.h \
 webrtc_dsp/absl/base/internal/inline_variable.h \
 webrtc_dsp/absl/base/internal/atomic_hook.h \
 webrtc_dsp/absl/base/internal/identity.h \
-webrtc_dsp/absl/base/internal/raw_logging.h \
+webrtc_dsp/absl/base/internal/raw_tools/logging.h \
 webrtc_dsp/absl/base/internal/throw_delegate.h \
 webrtc_dsp/absl/base/attributes.h \
 webrtc_dsp/absl/base/macros.h \
@@ -469,7 +469,7 @@ webrtc_dsp/rtc_base/stringencode.h \
 webrtc_dsp/rtc_base/memory/aligned_malloc.h \
 webrtc_dsp/rtc_base/event.h \
 webrtc_dsp/rtc_base/ignore_wundef.h \
-webrtc_dsp/rtc_base/stringutils.h \
+webrtc_dsp/rtc_base/stringtools/utils.h \
 webrtc_dsp/rtc_base/arraysize.h \
 webrtc_dsp/rtc_base/swap_queue.h \
 webrtc_dsp/rtc_base/trace_event.h \
@@ -477,8 +477,8 @@ webrtc_dsp/rtc_base/checks.h \
 webrtc_dsp/rtc_base/deprecation.h \
 webrtc_dsp/rtc_base/sanitizer.h \
 webrtc_dsp/rtc_base/scoped_ref_ptr.h \
-webrtc_dsp/rtc_base/logging.h \
-webrtc_dsp/rtc_base/timeutils.h \
+webrtc_dsp/rtc_base/tools/logging.h \
+webrtc_dsp/rtc_base/timetools/utils.h \
 webrtc_dsp/rtc_base/atomicops.h \
 webrtc_dsp/rtc_base/numerics/safe_minmax.h \
 webrtc_dsp/rtc_base/numerics/safe_conversions.h \
@@ -492,7 +492,7 @@ webrtc_dsp/rtc_base/system/rtc_export.h \
 webrtc_dsp/rtc_base/system/arch.h \
 webrtc_dsp/rtc_base/platform_thread.h \
 webrtc_dsp/rtc_base/platform_thread_types.h \
-webrtc_dsp/rtc_base/protobuf_utils.h \
+webrtc_dsp/rtc_base/protobuf_tools/utils.h \
 webrtc_dsp/rtc_base/thread_annotations.h \
 webrtc_dsp/rtc_base/gtest_prod_util.h \
 webrtc_dsp/rtc_base/function_view.h \
@@ -572,7 +572,7 @@ webrtc_dsp/modules/audio_processing/agc2/signal_classifier.h \
 webrtc_dsp/modules/audio_processing/agc2/vector_float_frame.h \
 webrtc_dsp/modules/audio_processing/agc2/rnn_vad/sequence_buffer.h \
 webrtc_dsp/modules/audio_processing/agc2/rnn_vad/rnn.h \
-webrtc_dsp/modules/audio_processing/agc2/rnn_vad/test_utils.h \
+webrtc_dsp/modules/audio_processing/agc2/rnn_vad/test_tools/utils.h \
 webrtc_dsp/modules/audio_processing/agc2/rnn_vad/pitch_info.h \
 webrtc_dsp/modules/audio_processing/agc2/rnn_vad/lp_residual.h \
 webrtc_dsp/modules/audio_processing/agc2/rnn_vad/ring_buffer.h \

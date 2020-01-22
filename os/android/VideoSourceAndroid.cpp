@@ -4,8 +4,8 @@
 
 #include "VideoSourceAndroid.h"
 #include "JNIUtilities.h"
-#include "../../logging.h"
-#include "../../PrivateDefines.h"
+#include "../../tools/logging.h"
+#include "../../controller/PrivateDefines.h"
 
 using namespace tgvoip;
 using namespace tgvoip::video;

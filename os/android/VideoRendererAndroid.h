@@ -6,10 +6,10 @@
 #define LIBTGVOIP_VIDEORENDERERANDROID_H
 
 #include "../../video/VideoRenderer.h"
-#include "../../MessageThread.h"
+#include "../../tools/MessageThread.h"
 
 #include <jni.h>
-#include "../../BlockingQueue.h"
+#include "../../tools/BlockingQueue.h"
 
 namespace tgvoip{
 	namespace video{

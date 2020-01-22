@@ -6,7 +6,7 @@
 
 #include "AudioPulse.h"
 #include <dlfcn.h>
-#include "../../logging.h"
+#include "../../tools/logging.h"
 
 #define DECLARE_DL_FUNCTION(name) typeof(name)* AudioPulse::_import_##name=NULL
 #define CHECK_DL_ERROR(res, msg) if(!res){LOGE(msg ": %s", dlerror()); return false;}

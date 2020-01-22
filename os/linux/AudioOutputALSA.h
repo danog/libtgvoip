@@ -8,7 +8,7 @@
 #define LIBTGVOIP_AUDIOOUTPUTALSA_H
 
 #include "../../audio/AudioOutput.h"
-#include "../../threading.h"
+#include "../../tools/threading.h"
 #include <alsa/asoundlib.h>
 
 namespace tgvoip{

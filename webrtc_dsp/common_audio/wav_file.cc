@@ -18,7 +18,7 @@
 #include "common_audio/include/audio_util.h"
 #include "common_audio/wav_header.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/logging.h"
+#include "rtc_base/tools/logging.h"
 #include "rtc_base/system/arch.h"
 
 namespace webrtc {

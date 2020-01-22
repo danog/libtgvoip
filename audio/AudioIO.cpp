@@ -4,9 +4,8 @@
 // you should have received with this source code distribution.
 //
 
-
 #include "AudioIO.h"
-#include "../logging.h"
+#include "../tools/logging.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -47,30 +46,32 @@ using namespace tgvoip;
 using namespace tgvoip::audio;
 using namespace std;
 
-AudioIO* AudioIO::Create(std::string inputDevice, std::string outputDevice){
+AudioIO *AudioIO::Create(std::string inputDevice, std::string outputDevice)
+{
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
 	return new AudioIOCallback();
 #elif defined(__ANDROID__)
 	return new ContextlessAudioIO<AudioInputAndroid, AudioOutputAndroid>();
 #elif defined(__APPLE__)
 #if TARGET_OS_OSX
-	if(kCFCoreFoundationVersionNumber<kCFCoreFoundationVersionNumber10_7)
+	if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber10_7)
 		return new ContextlessAudioIO<AudioInputAudioUnitLegacy, AudioOutputAudioUnitLegacy>(inputDevice, outputDevice);
 
 #endif
 	return new AudioUnitIO(inputDevice, outputDevice);
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
-	if(LOBYTE(LOWORD(GetVersion()))<6)
+	if (LOBYTE(LOWORD(GetVersion())) < 6)
 		return new ContextlessAudioIO<AudioInputWave, AudioOutputWave>(inputDevice, outputDevice);
 #endif
 	return new ContextlessAudioIO<AudioInputWASAPI, AudioOutputWASAPI>(inputDevice, outputDevice);
 #elif defined(__linux__)
 #ifndef WITHOUT_ALSA
 #ifndef WITHOUT_PULSE
-	if(AudioPulse::Load()){
-		AudioIO* io=new AudioPulse(inputDevice, outputDevice);
-		if(!io->Failed() && io->GetInput()->IsInitialized() && io->GetOutput()->IsInitialized())
+	if (AudioPulse::Load())
+	{
+		AudioIO *io = new AudioPulse(inputDevice, outputDevice);
+		if (!io->Failed() && io->GetInput()->IsInitialized() && io->GetOutput()->IsInitialized())
 			return io;
 		LOGW("PulseAudio available but not working; trying ALSA");
 		delete io;
@@ -83,10 +84,12 @@ AudioIO* AudioIO::Create(std::string inputDevice, std::string outputDevice){
 #endif
 }
 
-bool AudioIO::Failed(){
+bool AudioIO::Failed()
+{
 	return failed;
 }
 
-std::string AudioIO::GetErrorDescription(){
+std::string AudioIO::GetErrorDescription()
+{
 	return error;
 }

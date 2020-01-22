@@ -21,14 +21,14 @@
   <ItemGroup>
     <ClCompile Include="VoIPController.cpp" />
     <ClCompile Include="VoIPServerConfig.cpp" />
-    <ClCompile Include="BlockingQueue.cpp" />
-    <ClCompile Include="Buffers.cpp" />
-    <ClCompile Include="CongestionControl.cpp" />
+    <ClCompile Include="tools/BlockingQueue.cpp" />
+    <ClCompile Include="tools/Buffers.cpp" />
+    <ClCompile Include="controller/net/CongestionControl.cpp" />
     <ClCompile Include="EchoCanceller.cpp" />
-    <ClCompile Include="JitterBuffer.cpp" />
-    <ClCompile Include="logging.cpp" />
-    <ClCompile Include="MediaStreamItf.cpp" />
-    <ClCompile Include="NetworkSocket.cpp" />
+    <ClCompile Include="controller/net/JitterBuffer.cpp" />
+    <ClCompile Include="tools/logging.cpp" />
+    <ClCompile Include="controller/MediaStreamItf.cpp" />
+    <ClCompile Include="controller/net/NetworkSocket.cpp" />
     <ClCompile Include="OpusDecoder.cpp" />
     <ClCompile Include="OpusEncoder.cpp" />
     <ClCompile Include="audio\AudioInput.cpp">
@@ -56,8 +56,8 @@
       <Filter>windows</Filter>
     </ClCompile>
     <ClCompile Include="VoIPGroupController.cpp" />
-    <ClCompile Include="PacketReassembler.cpp" />
-    <ClCompile Include="MessageThread.cpp" />
+    <ClCompile Include="controller/PacketReassembler.cpp" />
+    <ClCompile Include="tools/MessageThread.cpp" />
     <ClCompile Include="audio\AudioIO.cpp">
       <Filter>audio</Filter>
     </ClCompile>
@@ -895,7 +895,7 @@
     <ClCompile Include="webrtc_dsp\modules\third_party\fft\fft.c">
       <Filter>webrtc_dsp</Filter>
     </ClCompile>
-    <ClCompile Include="json11.cpp" />
+    <ClCompile Include="tools/json11.cpp" />
     <ClCompile Include="video\ScreamCongestionController.cpp">
       <Filter>video</Filter>
     </ClCompile>
@@ -913,17 +913,17 @@
   <ItemGroup>
     <ClInclude Include="VoIPController.h" />
     <ClInclude Include="VoIPServerConfig.h" />
-    <ClInclude Include="BlockingQueue.h" />
-    <ClInclude Include="Buffers.h" />
-    <ClInclude Include="CongestionControl.h" />
-    <ClInclude Include="EchoCanceller.h" />
-    <ClInclude Include="JitterBuffer.h" />
-    <ClInclude Include="logging.h" />
-    <ClInclude Include="MediaStreamItf.h" />
-    <ClInclude Include="NetworkSocket.h" />
+    <ClInclude Include="tools/BlockingQueue.h" />
+    <ClInclude Include="tools/Buffers.h" />
+    <ClInclude Include="controller/net/CongestionControl.h" />
+    <ClInclude Include="controller/audio/EchoCanceller.h" />
+    <ClInclude Include="controller/net/JitterBuffer.h" />
+    <ClInclude Include="tools/logging.h" />
+    <ClInclude Include="controller/MediaStreamItf.h" />
+    <ClInclude Include="controller/net/NetworkSocket.h" />
     <ClInclude Include="OpusDecoder.h" />
     <ClInclude Include="OpusEncoder.h" />
-    <ClInclude Include="threading.h" />
+    <ClInclude Include="tools/threading.h" />
     <ClInclude Include="audio\AudioInput.h">
       <Filter>audio</Filter>
     </ClInclude>
@@ -948,12 +948,12 @@
     <ClInclude Include="os\windows\CXWrapper.h">
       <Filter>windows</Filter>
     </ClInclude>
-    <ClInclude Include="PacketReassembler.h" />
-    <ClInclude Include="MessageThread.h" />
+    <ClInclude Include="controller/PacketReassembler.h" />
+    <ClInclude Include="tools/MessageThread.h" />
     <ClInclude Include="audio\AudioIO.h">
       <Filter>audio</Filter>
     </ClInclude>
-    <ClInclude Include="utils.h" />
+    <ClInclude Include="tools/utils.h" />
     <ClInclude Include="os\windows\WindowsSpecific.h">
       <Filter>windows</Filter>
     </ClInclude>
@@ -999,7 +999,7 @@
     <ClInclude Include="webrtc_dsp\rtc_base\ignore_wundef.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
-    <ClInclude Include="webrtc_dsp\rtc_base\logging.h">
+    <ClInclude Include="webrtc_dsp\rtc_base\tools/logging.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
     <ClInclude Include="webrtc_dsp\rtc_base\logging_mac.h">
@@ -1026,7 +1026,7 @@
     <ClInclude Include="webrtc_dsp\rtc_base\platform_thread_types.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
-    <ClInclude Include="webrtc_dsp\rtc_base\protobuf_utils.h">
+    <ClInclude Include="webrtc_dsp\rtc_base\protobuf_tools/utils.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
     <ClInclude Include="webrtc_dsp\rtc_base\race_checker.h">
@@ -1053,7 +1053,7 @@
     <ClInclude Include="webrtc_dsp\rtc_base\strings\string_builder.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
-    <ClInclude Include="webrtc_dsp\rtc_base\stringutils.h">
+    <ClInclude Include="webrtc_dsp\rtc_base\stringtools/utils.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
     <ClInclude Include="webrtc_dsp\rtc_base\string_to_number.h">
@@ -1089,7 +1089,7 @@
     <ClInclude Include="webrtc_dsp\rtc_base\thread_checker_impl.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
-    <ClInclude Include="webrtc_dsp\rtc_base\timeutils.h">
+    <ClInclude Include="webrtc_dsp\rtc_base\timetools/utils.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
     <ClInclude Include="webrtc_dsp\rtc_base\trace_event.h">
@@ -1146,7 +1146,7 @@
     <ClInclude Include="webrtc_dsp\absl\base\internal\invoke.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
-    <ClInclude Include="webrtc_dsp\absl\base\internal\raw_logging.h">
+    <ClInclude Include="webrtc_dsp\absl\base\internal\raw_tools/logging.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
     <ClInclude Include="webrtc_dsp\absl\base\internal\throw_delegate.h">
@@ -1698,7 +1698,7 @@
     <ClInclude Include="webrtc_dsp\modules\audio_processing\agc2\rnn_vad\symmetric_matrix_buffer.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
-    <ClInclude Include="webrtc_dsp\modules\audio_processing\agc2\rnn_vad\test_utils.h">
+    <ClInclude Include="webrtc_dsp\modules\audio_processing\agc2\rnn_vad\test_tools/utils.h">
       <Filter>webrtc_dsp</Filter>
     </ClInclude>
     <ClInclude Include="webrtc_dsp\modules\audio_processing\agc2\saturation_protector.h">
@@ -1924,12 +1924,12 @@
     <ClInclude Include="audio\AudioIOCallback.h">
       <Filter>audio</Filter>
     </ClInclude>
-    <ClInclude Include="PrivateDefines.h" />
+    <ClInclude Include="controller/PrivateDefines.h" />
     <ClInclude Include="webrtc_dsp\rtc_base\platform_file.h" />
     <ClInclude Include="video\VideoFEC.h">
       <Filter>video</Filter>
     </ClInclude>
-    <ClInclude Include="video\VideoPacketSender.h">
+    <ClInclude Include="video\Videocontroller/PacketSender.h">
       <Filter>video</Filter>
     </ClInclude>
   </ItemGroup>

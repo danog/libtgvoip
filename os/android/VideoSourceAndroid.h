@@ -6,7 +6,7 @@
 #define LIBTGVOIP_VIDEOSOURCEANDROID_H
 
 #include "../../video/VideoSource.h"
-#include "../../Buffers.h"
+#include "../../tools/Buffers.h"
 #include <jni.h>
 #include <vector>
 

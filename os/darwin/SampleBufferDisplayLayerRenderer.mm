@@ -9,8 +9,8 @@
 #include <UIKit/UIKit.h>
 #endif
 #include "SampleBufferDisplayLayerRenderer.h"
-#include "../../PrivateDefines.h"
-#include "../../logging.h"
+#include "../../controller/PrivateDefines.h"
+#include "../../tools/logging.h"
 #include "TGVVideoRenderer.h"
 
 using namespace tgvoip;

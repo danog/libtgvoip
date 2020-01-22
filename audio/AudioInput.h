@@ -10,15 +10,18 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
-#include "../MediaStreamItf.h"
+#include "../controller/MediaStreamItf.h"
 
-namespace tgvoip{
+namespace tgvoip
+{
 
 class AudioInputDevice;
 class AudioOutputDevice;
-	
-namespace audio{
-class AudioInput : public MediaStreamItf{
+
+namespace audio
+{
+class AudioInput : public MediaStreamItf
+{
 public:
 	AudioInput();
 	AudioInput(std::string deviceID);
@@ -28,7 +31,7 @@ public:
 	virtual std::string GetCurrentDevice();
 	virtual void SetCurrentDevice(std::string deviceID);
 	//static AudioInput* Create(std::string deviceID, void* platformSpecific);
-	static void EnumerateDevices(std::vector<AudioInputDevice>& devs);
+	static void EnumerateDevices(std::vector<AudioInputDevice> &devs);
 	static int32_t GetEstimatedDelay();
 
 protected:
@@ -36,6 +39,7 @@ protected:
 	bool failed;
 	static int32_t estimatedDelay;
 };
-}}
+} // namespace audio
+} // namespace tgvoip
 
 #endif //LIBTGVOIP_AUDIOINPUT_H

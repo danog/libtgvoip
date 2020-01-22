@@ -7,7 +7,7 @@
 #ifndef LIBTGVOIP_NETWORKSOCKETWINSOCK_H
 #define LIBTGVOIP_NETWORKSOCKETWINSOCK_H
 
-#include "../../NetworkSocket.h"
+#include "../../controller/net/NetworkSocket.h"
 #include <stdint.h>
 #include <vector>
 

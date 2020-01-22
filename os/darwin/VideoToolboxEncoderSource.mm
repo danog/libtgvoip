@@ -7,8 +7,8 @@
 #import <Foundation/Foundation.h>
 #import "TGVVideoSource.h"
 #include "VideoToolboxEncoderSource.h"
-#include "../../PrivateDefines.h"
-#include "../../logging.h"
+#include "../../controller/PrivateDefines.h"
+#include "../../tools/logging.h"
 
 using namespace tgvoip;
 using namespace tgvoip::video;

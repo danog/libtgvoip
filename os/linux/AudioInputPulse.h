@@ -8,7 +8,7 @@
 #define LIBTGVOIP_AUDIOINPUTPULSE_H
 
 #include "../../audio/AudioInput.h"
-#include "../../threading.h"
+#include "../../tools/threading.h"
 #include <pulse/pulseaudio.h>
 
 #define DECLARE_DL_FUNCTION(name) typeof(name)* _import_##name

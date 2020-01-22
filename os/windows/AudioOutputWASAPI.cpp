@@ -7,7 +7,7 @@
 
 #include <assert.h>
 #include "AudioOutputWASAPI.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 #include "../../VoIPController.h"
 
 #define BUFFER_SIZE 960

@@ -19,7 +19,7 @@
 #include <cstdlib>
 
 #include "absl/base/config.h"
-#include "absl/base/internal/raw_logging.h"
+#include "absl/base/internal/raw_tools/logging.h"
 
 namespace absl {
 

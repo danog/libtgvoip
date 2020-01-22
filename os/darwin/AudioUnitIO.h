@@ -9,7 +9,7 @@
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
-#include "../../threading.h"
+#include "../../tools/threading.h"
 #include <string>
 #include <atomic>
 #include "../../audio/AudioIO.h"

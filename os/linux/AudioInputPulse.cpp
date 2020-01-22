@@ -9,7 +9,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include "AudioInputPulse.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 #include "../../VoIPController.h"
 #include "AudioPulse.h"
 #include "PulseFunctions.h"

@@ -14,7 +14,7 @@
 #define UNICODE
 #include <io.h>
 
-#include "rtc_base/stringutils.h"  // For ToUtf16
+#include "rtc_base/stringtools/utils.h"  // For ToUtf16
 #else
 #include <fcntl.h>
 #include <sys/stat.h>

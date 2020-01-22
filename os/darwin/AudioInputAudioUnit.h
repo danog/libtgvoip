@@ -9,7 +9,7 @@
 
 #include <AudioUnit/AudioUnit.h>
 #include "../../audio/AudioInput.h"
-#include "../../utils.h"
+#include "../../tools/utils.h"
 
 namespace tgvoip{ namespace audio{
 class AudioUnitIO;

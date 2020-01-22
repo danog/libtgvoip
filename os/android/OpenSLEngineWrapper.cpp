@@ -6,7 +6,7 @@
 
 #include <cstddef>
 #include "OpenSLEngineWrapper.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 
 #define CHECK_SL_ERROR(res, msg) if(res!=SL_RESULT_SUCCESS){ LOGE(msg); return NULL; }
 

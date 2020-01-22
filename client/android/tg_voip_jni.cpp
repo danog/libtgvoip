@@ -19,8 +19,8 @@
 #include "../../os/android/VideoRendererAndroid.h"
 #include "../../audio/Resampler.h"
 #include "../../os/android/JNIUtilities.h"
-#include "../../PrivateDefines.h"
-#include "../../logging.h"
+#include "../../controller/PrivateDefines.h"
+#include "../../tools/logging.h"
 
 #ifdef TGVOIP_HAS_CONFIG
 #include <tgvoip_config.h>

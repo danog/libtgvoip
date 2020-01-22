@@ -13,10 +13,10 @@
 #include <IPHlpApi.h>
 #endif
 #include <assert.h>
-#include "../../logging.h"
+#include "../../tools/logging.h"
 #include "../../VoIPController.h"
 #include "WindowsSpecific.h"
-#include "../../Buffers.h"
+#include "../../tools/Buffers.h"
 
 using namespace tgvoip;
 

@@ -3,7 +3,7 @@
 //
 
 #include "VideoFEC.h"
-#include "../logging.h"
+#include "../tools/logging.h"
 #include <stdlib.h>
 
 using namespace tgvoip;

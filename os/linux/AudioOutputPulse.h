@@ -8,7 +8,7 @@
 #define LIBTGVOIP_AUDIOOUTPUTPULSE_H
 
 #include "../../audio/AudioOutput.h"
-#include "../../threading.h"
+#include "../../tools/threading.h"
 #include <pulse/pulseaudio.h>
 
 namespace tgvoip{

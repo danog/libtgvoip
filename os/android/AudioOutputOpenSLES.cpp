@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include "AudioOutputOpenSLES.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 #include "../../VoIPController.h"
 #include "OpenSLEngineWrapper.h"
 #include "AudioInputAndroid.h"

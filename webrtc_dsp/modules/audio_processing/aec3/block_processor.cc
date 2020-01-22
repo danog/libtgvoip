@@ -20,7 +20,7 @@
 #include "rtc_base/atomicops.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/constructormagic.h"
-#include "rtc_base/logging.h"
+#include "rtc_base/tools/logging.h"
 
 namespace webrtc {
 namespace {

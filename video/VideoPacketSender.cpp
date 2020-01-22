@@ -3,10 +3,10 @@
 //
 
 #include <algorithm>
-#include "VideoPacketSender.h"
+#include "Videocontroller/PacketSender.h"
 #include "VideoFEC.h"
-#include "../logging.h"
-#include "../PrivateDefines.h"
+#include "../tools/logging.h"
+#include "../controller/PrivateDefines.h"
 
 using namespace tgvoip;
 using namespace tgvoip::video;

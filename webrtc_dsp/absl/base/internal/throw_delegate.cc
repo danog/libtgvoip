@@ -19,7 +19,7 @@
 #include <new>
 #include <stdexcept>
 #include "absl/base/config.h"
-#include "absl/base/internal/raw_logging.h"
+#include "absl/base/internal/raw_tools/logging.h"
 
 namespace absl {
 namespace base_internal {

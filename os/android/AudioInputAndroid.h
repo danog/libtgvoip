@@ -9,7 +9,7 @@
 
 #include <jni.h>
 #include "../../audio/AudioInput.h"
-#include "../../threading.h"
+#include "../../tools/threading.h"
 
 namespace tgvoip{ namespace audio{
 class AudioInputAndroid : public AudioInput{

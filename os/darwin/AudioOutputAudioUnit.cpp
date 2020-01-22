@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include "AudioOutputAudioUnit.h"
-#include "../../logging.h"
+#include "../../tools/logging.h"
 #include "AudioUnitIO.h"
 
 #define BUFFER_SIZE 960
