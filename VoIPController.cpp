@@ -1859,7 +1859,6 @@ void VoIPController::RunRecvThread()
 	}
 	while (runReceiver)
 	{
-
 		if (proxyProtocol == PROXY_SOCKS5 && needReInitUdpProxy)
 		{
 			InitUDPProxy();
