@@ -208,8 +208,7 @@ public:
 
         setNetworkType(initialNetworkType);
 
-        std::vector<uint8_t> encryptionKeyValue = encryptionKey.value;
-        controller_->SetEncryptionKey((char *)(encryptionKeyValue.data()), encryptionKey.isOutgoing);
+        controller_->SetEncryptionKey(encryptionKey.value, encryptionKey.isOutgoing);
         controller_->SetRemoteEndpoints(mappedEndpoints, config.enableP2P, config.maxApiLayer);
 
         controller_->Start();

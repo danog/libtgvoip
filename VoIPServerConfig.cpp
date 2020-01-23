@@ -53,6 +53,14 @@ int32_t ServerConfig::GetInt(std::string name, int32_t fallback)
 	return fallback;
 }
 
+uint32_t ServerConfig::GetUInt(std::string name, uint32_t fallback)
+{
+	MutexGuard sync(mutex);
+	if (ContainsKey(name) && config[name].is_number())
+		return static_cast<uint32_t>(config[name].int_value());
+	return fallback;
+}
+
 std::string ServerConfig::GetString(std::string name, std::string fallback)
 {
 	MutexGuard sync(mutex);

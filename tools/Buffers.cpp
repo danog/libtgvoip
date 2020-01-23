@@ -95,16 +95,16 @@ int16_t BufferInputStream::ReadInt16()
 	return res;
 }
 
-int32_t BufferInputStream::ReadTlLength()
+uint32_t BufferInputStream::ReadTlLength()
 {
 	unsigned char l = ReadByte();
 	if (l < 254)
 		return l;
 	assert(length - offset >= 3);
 	EnsureEnoughRemaining(3);
-	int32_t res = ((int32_t)buffer[offset] & 0xFF) |
-				  (((int32_t)buffer[offset + 1] & 0xFF) << 8) |
-				  (((int32_t)buffer[offset + 2] & 0xFF) << 16);
+	uint32_t res = ((uint32_t)buffer[offset] & 0xFF) |
+				  (((uint32_t)buffer[offset + 1] & 0xFF) << 8) |
+				  (((uint32_t)buffer[offset + 2] & 0xFF) << 16);
 	offset += 3;
 	return res;
 }

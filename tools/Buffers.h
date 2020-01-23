@@ -4,8 +4,7 @@
 // you should have received with this source code distribution.
 //
 
-#ifndef LIBTGVOIP_BUFFERINPUTSTREAM_H
-#define LIBTGVOIP_BUFFERINPUTSTREAM_H
+#pragma once
 
 #include <stdio.h>
 #include <stdint.h>
@@ -41,10 +40,23 @@ public:
 	int64_t ReadInt64();
 	int32_t ReadInt32();
 	int16_t ReadInt16();
-	int32_t ReadTlLength();
+	uint32_t ReadTlLength();
 	void ReadBytes(unsigned char *to, size_t count);
 	void ReadBytes(Buffer &to);
 	BufferInputStream GetPartBuffer(size_t length, bool advance);
+
+	inline uint64_t ReadUInt64()
+	{
+		return static_cast<uint64_t>(ReadInt64());
+	}
+	inline uint32_t ReadUInt32()
+	{
+		return static_cast<uint32_t>(ReadInt32());
+	}
+	inline uint16_t ReadUInt16()
+	{
+		return static_cast<uint16_t>(ReadInt16());
+	}
 
 private:
 	void EnsureEnoughRemaining(size_t need);
@@ -73,6 +85,20 @@ public:
 	size_t GetLength();
 	void Reset();
 	void Rewind(size_t numBytes);
+
+	
+	inline void WriteUInt64(uint64_t i)
+	{
+		WriteInt64(static_cast<int64_t>(i));
+	}
+	inline void WriteUInt32(uint32_t i)
+	{
+		WriteInt32(static_cast<int32_t>(i));
+	}
+	inline void WriteUInt16(uint16_t i)
+	{
+		WriteInt16(static_cast<int16_t>(i));
+	}
 
 	BufferOutputStream &operator=(BufferOutputStream &&other)
 	{
@@ -396,5 +422,3 @@ private:
 	Mutex mutex;
 };
 } // namespace tgvoip
-
-#endif //LIBTGVOIP_BUFFERINPUTSTREAM_H

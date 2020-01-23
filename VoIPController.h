@@ -236,7 +236,7 @@ public:
       * @param key
       * @param isOutgoing
       */
-    void SetEncryptionKey(char *key, bool isOutgoing);
+    void SetEncryptionKey(std::vector<uint8_t>, bool isOutgoing);
     /**
       *
       * @param cfg
@@ -333,7 +333,7 @@ public:
       * The peer must have the TGVOIP_PEER_CAP_GROUP_CALLS capability. After the peer acknowledges the key, Callbacks::groupCallKeySent will be called.
       * @param key newly-generated group call key, must be exactly 265 bytes long
       */
-    void SendGroupCallKey(unsigned char *key);
+    void SendGroupCallKey(uint8_t *key);
     /**
       * In an incoming call, request the peer to generate a new encryption key, send it to you and upgrade this call to a E2E group call.
       */
@@ -370,7 +370,7 @@ public:
         void (*connectionStateChanged)(VoIPController *, int);
         void (*signalBarCountChanged)(VoIPController *, int);
         void (*groupCallKeySent)(VoIPController *);
-        void (*groupCallKeyReceived)(VoIPController *, const unsigned char *);
+        void (*groupCallKeyReceived)(VoIPController *, const uint8_t *);
         void (*upgradeToGroupCallRequested)(VoIPController *);
     };
     void SetCallbacks(Callbacks callbacks);
@@ -390,7 +390,7 @@ public:
 
     struct PendingOutgoingPacket
     {
-        PendingOutgoingPacket(uint32_t seq, unsigned char type, size_t len, Buffer &&data, int64_t endpoint)
+        PendingOutgoingPacket(uint32_t seq, uint8_t type, size_t len, Buffer &&data, int64_t endpoint)
         {
             this->seq = seq;
             this->type = type;
@@ -420,7 +420,7 @@ public:
         }
         TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
         uint32_t seq;
-        unsigned char type;
+        uint8_t type;
         size_t len;
         Buffer data;
         int64_t endpoint;
@@ -429,7 +429,7 @@ public:
     struct Stream
     {
         int32_t userID;
-        unsigned char id;
+        uint8_t id;
         unsigned char type;
         uint32_t codec;
         bool enabled;
@@ -552,7 +552,11 @@ private:
     void SendPublicEndpointsRequest(const Endpoint &relay);
     Endpoint &GetEndpointByType(const Endpoint::Type type);
     void SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout);
-    uint32_t GenerateOutSeq();
+    inline uint32_t GenerateOutSeq()
+    {
+        return seq++;
+    }
+
     void ActuallySendPacket(NetworkPacket pkt, Endpoint &ep);
     void InitializeAudio();
     void StartAudio();
@@ -583,9 +587,9 @@ private:
     int64_t peerPreferredRelay = 0;
     std::atomic<bool> runReceiver;
     std::atomic<uint32_t> seq;
-    uint32_t lastRemoteSeq;	// Seqno of last received packet
+    uint32_t lastRemoteSeq;    // Seqno of last received packet
     uint32_t lastRemoteAckSeq; // Seqno of last sent packet acked by remote
-    uint32_t lastSentSeq;	  // Seqno of last sent packet
+    uint32_t lastSentSeq;      // Seqno of last sent packet
     std::vector<RecentOutgoingPacket> recentOutgoingPackets;
     std::array<uint32_t, MAX_RECENT_PACKETS> recentIncomingSeqs{};
     size_t recentIncomingSeqIdx = 0;

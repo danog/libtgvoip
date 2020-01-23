@@ -28,6 +28,8 @@ public:
 	bool GetBoolean(std::string name, bool fallback);
 	void Update(std::string jsonString);
 
+	uint32_t GetUInt(std::string name, uint32_t fallback);
+
 private:
 	static ServerConfig *sharedInstance;
 	bool ContainsKey(std::string key);
