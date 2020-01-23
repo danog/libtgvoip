@@ -813,16 +813,17 @@ am__libtgvoip_la_SOURCES_DIST = TgVoip.cpp VoIPController.cpp \
 	controller/audio/EchoCanceller.cpp \
 	controller/net/JitterBuffer.cpp tools/logging.cpp \
 	controller/MediaStreamItf.cpp tools/MessageThread.cpp \
-	controller/net/NetworkSocket.cpp \
+	controller/net/NetworkSocket.cpp controller/net/Endpoint.cpp \
 	controller/audio/OpusDecoder.cpp \
 	controller/audio/OpusEncoder.cpp \
 	controller/PacketReassembler.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
-	os/posix/NetworkSocketPosix.cpp video/VideoSource.cpp \
-	video/VideoRenderer.cpp video/VideoPacketSender.cpp \
-	video/VideoFEC.cpp video/ScreamCongestionController.cpp \
-	tools/json11.cpp os/darwin/AudioInputAudioUnit.cpp \
+	audio/AudioInputTester.cpp os/posix/NetworkSocketPosix.cpp \
+	video/VideoSource.cpp video/VideoRenderer.cpp \
+	video/VideoPacketSender.cpp video/VideoFEC.cpp \
+	video/ScreamCongestionController.cpp tools/json11.cpp \
+	os/darwin/AudioInputAudioUnit.cpp \
 	os/darwin/AudioOutputAudioUnit.cpp os/darwin/AudioUnitIO.cpp \
 	os/darwin/AudioInputAudioUnitOSX.cpp \
 	os/darwin/AudioOutputAudioUnitOSX.cpp \
@@ -1750,19 +1751,20 @@ am__objects_12 = TgVoip.lo VoIPController.lo tools/Buffers.lo \
 	controller/audio/EchoCanceller.lo \
 	controller/net/JitterBuffer.lo tools/logging.lo \
 	controller/MediaStreamItf.lo tools/MessageThread.lo \
-	controller/net/NetworkSocket.lo \
+	controller/net/NetworkSocket.lo controller/net/Endpoint.lo \
 	controller/audio/OpusDecoder.lo \
 	controller/audio/OpusEncoder.lo \
 	controller/PacketReassembler.lo VoIPGroupController.lo \
 	VoIPServerConfig.lo audio/AudioIO.lo audio/AudioInput.lo \
 	audio/AudioOutput.lo audio/Resampler.lo \
-	os/posix/NetworkSocketPosix.lo video/VideoSource.lo \
-	video/VideoRenderer.lo video/VideoPacketSender.lo \
-	video/VideoFEC.lo video/ScreamCongestionController.lo \
-	tools/json11.lo $(am__objects_1) $(am__objects_2) \
-	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
-	$(am__objects_6) $(am__objects_7) $(am__objects_8) \
-	$(am__objects_9) $(am__objects_10) $(am__objects_11)
+	audio/AudioInputTester.lo os/posix/NetworkSocketPosix.lo \
+	video/VideoSource.lo video/VideoRenderer.lo \
+	video/VideoPacketSender.lo video/VideoFEC.lo \
+	video/ScreamCongestionController.lo tools/json11.lo \
+	$(am__objects_1) $(am__objects_2) $(am__objects_3) \
+	$(am__objects_4) $(am__objects_5) $(am__objects_6) \
+	$(am__objects_7) $(am__objects_8) $(am__objects_9) \
+	$(am__objects_10) $(am__objects_11)
 am__objects_13 = $(am__objects_11) $(am__objects_11) $(am__objects_11) \
 	$(am__objects_11)
 am_libtgvoip_la_OBJECTS = $(am__objects_12) $(am__objects_13)
@@ -2055,14 +2057,16 @@ am__depfiles_remade = ./$(DEPDIR)/TgVoip.Plo \
 	./webrtc_dsp/third_party/rnnoise/src/$(DEPDIR)/rnn_vad_weights.Plo \
 	audio/$(DEPDIR)/AudioIO.Plo \
 	audio/$(DEPDIR)/AudioIOCallback.Plo \
-	audio/$(DEPDIR)/AudioInput.Plo audio/$(DEPDIR)/AudioOutput.Plo \
-	audio/$(DEPDIR)/Resampler.Plo \
+	audio/$(DEPDIR)/AudioInput.Plo \
+	audio/$(DEPDIR)/AudioInputTester.Plo \
+	audio/$(DEPDIR)/AudioOutput.Plo audio/$(DEPDIR)/Resampler.Plo \
 	controller/$(DEPDIR)/MediaStreamItf.Plo \
 	controller/$(DEPDIR)/PacketReassembler.Plo \
 	controller/audio/$(DEPDIR)/EchoCanceller.Plo \
 	controller/audio/$(DEPDIR)/OpusDecoder.Plo \
 	controller/audio/$(DEPDIR)/OpusEncoder.Plo \
 	controller/net/$(DEPDIR)/CongestionControl.Plo \
+	controller/net/$(DEPDIR)/Endpoint.Plo \
 	controller/net/$(DEPDIR)/JitterBuffer.Plo \
 	controller/net/$(DEPDIR)/NetworkSocket.Plo \
 	os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo \
@@ -2376,19 +2380,20 @@ SRC = TgVoip.cpp VoIPController.cpp tools/Buffers.cpp \
 	controller/audio/EchoCanceller.cpp \
 	controller/net/JitterBuffer.cpp tools/logging.cpp \
 	controller/MediaStreamItf.cpp tools/MessageThread.cpp \
-	controller/net/NetworkSocket.cpp \
+	controller/net/NetworkSocket.cpp controller/net/Endpoint.cpp \
 	controller/audio/OpusDecoder.cpp \
 	controller/audio/OpusEncoder.cpp \
 	controller/PacketReassembler.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
-	os/posix/NetworkSocketPosix.cpp video/VideoSource.cpp \
-	video/VideoRenderer.cpp video/VideoPacketSender.cpp \
-	video/VideoFEC.cpp video/ScreamCongestionController.cpp \
-	tools/json11.cpp $(am__append_1) $(am__append_4) \
-	$(am__append_6) $(am__append_10) $(am__append_12) \
-	$(am__append_14) $(am__append_16) $(am__append_18) \
-	$(am__append_21) $(am__append_22) $(am__append_23)
+	audio/AudioInputTester.cpp os/posix/NetworkSocketPosix.cpp \
+	video/VideoSource.cpp video/VideoRenderer.cpp \
+	video/VideoPacketSender.cpp video/VideoFEC.cpp \
+	video/ScreamCongestionController.cpp tools/json11.cpp \
+	$(am__append_1) $(am__append_4) $(am__append_6) \
+	$(am__append_10) $(am__append_12) $(am__append_14) \
+	$(am__append_16) $(am__append_18) $(am__append_21) \
+	$(am__append_22) $(am__append_23)
 TGVOIP_HDRS = TgVoip.h VoIPController.h tools/Buffers.h \
 	tools/BlockingQueue.h controller/PrivateDefines.h \
 	controller/net/CongestionControl.h \
@@ -2535,6 +2540,8 @@ tools/MessageThread.lo: tools/$(am__dirstamp) \
 	tools/$(DEPDIR)/$(am__dirstamp)
 controller/net/NetworkSocket.lo: controller/net/$(am__dirstamp) \
 	controller/net/$(DEPDIR)/$(am__dirstamp)
+controller/net/Endpoint.lo: controller/net/$(am__dirstamp) \
+	controller/net/$(DEPDIR)/$(am__dirstamp)
 controller/audio/OpusDecoder.lo: controller/audio/$(am__dirstamp) \
 	controller/audio/$(DEPDIR)/$(am__dirstamp)
 controller/audio/OpusEncoder.lo: controller/audio/$(am__dirstamp) \
@@ -2554,6 +2561,8 @@ audio/AudioInput.lo: audio/$(am__dirstamp) \
 audio/AudioOutput.lo: audio/$(am__dirstamp) \
 	audio/$(DEPDIR)/$(am__dirstamp)
 audio/Resampler.lo: audio/$(am__dirstamp) \
+	audio/$(DEPDIR)/$(am__dirstamp)
+audio/AudioInputTester.lo: audio/$(am__dirstamp) \
 	audio/$(DEPDIR)/$(am__dirstamp)
 os/posix/$(am__dirstamp):
 	@$(MKDIR_P) os/posix
@@ -3991,6 +4000,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@audio/$(DEPDIR)/AudioIO.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@audio/$(DEPDIR)/AudioIOCallback.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@audio/$(DEPDIR)/AudioInput.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@audio/$(DEPDIR)/AudioInputTester.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@audio/$(DEPDIR)/AudioOutput.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@audio/$(DEPDIR)/Resampler.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/$(DEPDIR)/MediaStreamItf.Plo@am__quote@ # am--include-marker
@@ -3999,6 +4009,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@controller/audio/$(DEPDIR)/OpusDecoder.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/audio/$(DEPDIR)/OpusEncoder.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/CongestionControl.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/Endpoint.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/JitterBuffer.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/NetworkSocket.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo@am__quote@ # am--include-marker
@@ -4874,6 +4885,7 @@ distclean: distclean-am
 	-rm -f audio/$(DEPDIR)/AudioIO.Plo
 	-rm -f audio/$(DEPDIR)/AudioIOCallback.Plo
 	-rm -f audio/$(DEPDIR)/AudioInput.Plo
+	-rm -f audio/$(DEPDIR)/AudioInputTester.Plo
 	-rm -f audio/$(DEPDIR)/AudioOutput.Plo
 	-rm -f audio/$(DEPDIR)/Resampler.Plo
 	-rm -f controller/$(DEPDIR)/MediaStreamItf.Plo
@@ -4882,6 +4894,7 @@ distclean: distclean-am
 	-rm -f controller/audio/$(DEPDIR)/OpusDecoder.Plo
 	-rm -f controller/audio/$(DEPDIR)/OpusEncoder.Plo
 	-rm -f controller/net/$(DEPDIR)/CongestionControl.Plo
+	-rm -f controller/net/$(DEPDIR)/Endpoint.Plo
 	-rm -f controller/net/$(DEPDIR)/JitterBuffer.Plo
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo
@@ -5240,6 +5253,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f audio/$(DEPDIR)/AudioIO.Plo
 	-rm -f audio/$(DEPDIR)/AudioIOCallback.Plo
 	-rm -f audio/$(DEPDIR)/AudioInput.Plo
+	-rm -f audio/$(DEPDIR)/AudioInputTester.Plo
 	-rm -f audio/$(DEPDIR)/AudioOutput.Plo
 	-rm -f audio/$(DEPDIR)/Resampler.Plo
 	-rm -f controller/$(DEPDIR)/MediaStreamItf.Plo
@@ -5248,6 +5262,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f controller/audio/$(DEPDIR)/OpusDecoder.Plo
 	-rm -f controller/audio/$(DEPDIR)/OpusEncoder.Plo
 	-rm -f controller/net/$(DEPDIR)/CongestionControl.Plo
+	-rm -f controller/net/$(DEPDIR)/Endpoint.Plo
 	-rm -f controller/net/$(DEPDIR)/JitterBuffer.Plo
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo

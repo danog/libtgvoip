@@ -4,7 +4,7 @@
 // you should have received with this source code distribution.
 //
 
-#include "VoIPController.h"
+#include "VoIPGroupController.h"
 #include "tools/logging.h"
 #include "VoIPServerConfig.h"
 #include "controller/PrivateDefines.h"

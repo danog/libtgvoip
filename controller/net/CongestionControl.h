@@ -16,6 +16,8 @@
 #define TGVOIP_CONCTL_ACT_DECREASE 2
 #define TGVOIP_CONCTL_ACT_NONE 0
 
+#define TGVOIP_CONCTL_LOST_AFTER 2
+
 namespace tgvoip
 {
 
@@ -49,16 +51,16 @@ public:
 private:
 	HistoricBuffer<double, 100> rttHistory;
 	HistoricBuffer<size_t, 30> inflightHistory;
-	tgvoip_congestionctl_packet_t inflightPackets[100];
-	uint32_t lossCount;
-	double tmpRtt;
-	double lastActionTime;
-	double lastActionRtt;
-	double stateTransitionTime;
-	int tmpRttCount;
-	uint32_t lastSentSeq;
-	uint32_t tickCount;
-	size_t inflightDataSize;
+	std::array<tgvoip_congestionctl_packet_t, 100> inflightPackets{};
+	uint32_t lossCount = 0;
+	double tmpRtt = 0.0;
+	double lastActionTime = 0;
+	double lastActionRtt = 0;
+	double stateTransitionTime = 0;
+	uint32_t tmpRttCount = 0;
+	uint32_t lastSentSeq = 0;
+	uint32_t tickCount = 0;
+	size_t inflightDataSize = 0;
 	size_t cwnd;
 };
 } // namespace tgvoip

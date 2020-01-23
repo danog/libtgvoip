@@ -16,6 +16,20 @@
 namespace tgvoip
 {
 
+
+// API compatibility
+struct IPv4Address
+{
+	IPv4Address(std::string addr) : addr(addr){};
+	std::string addr;
+};
+struct IPv6Address
+{
+	IPv6Address(std::string addr) : addr(addr){};
+	std::string addr;
+};
+
+
 enum class NetworkProtocol
 {
 	UDP = 0,

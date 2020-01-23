@@ -16,6 +16,7 @@
 #include <numeric>
 #include <array>
 #include <limits>
+#include <algorithm>
 #include <bitset>
 #include <stddef.h>
 #include "tools/threading.h"
@@ -256,7 +257,6 @@ class HistoricBuffer
 public:
 	HistoricBuffer()
 	{
-		std::fill(data.begin(), data.end(), static_cast<T>(0));
 	}
 
 	AVG_T Average() const
@@ -267,7 +267,7 @@ public:
 	AVG_T Average(size_t firstN) const
 	{
 		AVG_T avg = static_cast<AVG_T>(0);
-		for (size_t i = 0; i < firstN; i++)
+		for (size_t i = 0; i < firstN; i++) // Manual iteration required to wrap around array with specific offset
 		{
 			avg += (*this)[i];
 		}
@@ -299,24 +299,12 @@ public:
 
 	T Min() const
 	{
-		T min = std::numeric_limits<T>::max();
-		for (T i : data)
-		{
-			if (i < min)
-				min = i;
-		}
-		return min;
+		return *std::min_element(data.begin(), data.end());
 	}
 
 	T Max() const
 	{
-		T max = std::numeric_limits<T>::min();
-		for (T i : data)
-		{
-			if (i > max)
-				max = i;
-		}
-		return max;
+		return *std::max_element(data.begin(), data.end());
 	}
 
 	void Reset()
@@ -330,8 +318,8 @@ public:
 		assert(i < size);
 		// [0] should return the most recent entry, [1] the one before it, and so on
 		ptrdiff_t _i = offset - i - 1;
-		if (_i < 0)
-			_i = size + _i; // wtf
+		if (_i < 0) // Wrap around offset a-la posmod
+			_i = size + _i;
 		return data[_i];
 	}
 
@@ -340,8 +328,8 @@ public:
 		assert(i < size);
 		// [0] should return the most recent entry, [1] the one before it, and so on
 		ptrdiff_t _i = offset - i - 1;
-		if (_i < 0)
-			_i = size + _i; // wtf
+		if (_i < 0) // Wrap around offset a-la posmod
+			_i = size + _i;
 		return data[_i];
 	}
 
@@ -351,7 +339,7 @@ public:
 	}
 
 private:
-	std::array<T, size> data;
+	std::array<T, size> data{};
 	ptrdiff_t offset = 0;
 };
 

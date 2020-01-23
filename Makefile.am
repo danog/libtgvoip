@@ -14,6 +14,7 @@ tools/logging.cpp \
 controller/MediaStreamItf.cpp \
 tools/MessageThread.cpp \
 controller/net/NetworkSocket.cpp \
+controller/net/Endpoint.cpp \
 controller/audio/OpusDecoder.cpp \
 controller/audio/OpusEncoder.cpp \
 controller/PacketReassembler.cpp \
@@ -23,6 +24,7 @@ audio/AudioIO.cpp \
 audio/AudioInput.cpp \
 audio/AudioOutput.cpp \
 audio/Resampler.cpp \
+audio/AudioInputTester.cpp \
 os/posix/NetworkSocketPosix.cpp \
 video/VideoSource.cpp \
 video/VideoRenderer.cpp \

@@ -4,8 +4,7 @@
 // you should have received with this source code distribution.
 //
 
-#ifndef __VOIPCONTROLLER_H
-#define __VOIPCONTROLLER_H
+#pragma once
 
 #ifndef _WIN32
 #include <arpa/inet.h>
@@ -27,10 +26,12 @@
 #include <atomic>
 #include "video/ScreamCongestionController.h"
 #include "audio/AudioInput.h"
+#include "audio/Device.h"
 #include "tools/BlockingQueue.h"
 #include "audio/AudioOutput.h"
 #include "audio/AudioIO.h"
 #include "controller/net/JitterBuffer.h"
+#include "controller/net/Endpoint.h"
 #include "controller/audio/OpusDecoder.h"
 #include "controller/audio/OpusEncoder.h"
 #include "controller/audio/EchoCanceller.h"
@@ -122,95 +123,6 @@ struct CellularCarrierInfo
 	std::string mcc;
 	std::string mnc;
 	std::string countryCode;
-};
-
-// API compatibility
-struct IPv4Address
-{
-	IPv4Address(std::string addr) : addr(addr){};
-	std::string addr;
-};
-struct IPv6Address
-{
-	IPv6Address(std::string addr) : addr(addr){};
-	std::string addr;
-};
-
-class Endpoint
-{
-	friend class VoIPController;
-	friend class VoIPGroupController;
-
-public:
-	enum Type
-	{
-		UDP_P2P_INET = 1,
-		UDP_P2P_LAN,
-		UDP_RELAY,
-		TCP_RELAY
-	};
-
-	Endpoint(int64_t id, uint16_t port, const IPv4Address &address, const IPv6Address &v6address, Type type, unsigned char *peerTag);
-	Endpoint(int64_t id, uint16_t port, const NetworkAddress address, const NetworkAddress v6address, Type type, unsigned char *peerTag);
-	Endpoint();
-	~Endpoint();
-	const NetworkAddress &GetAddress() const;
-	NetworkAddress &GetAddress();
-	bool IsIPv6Only() const;
-	int64_t CleanID() const;
-	int64_t id;
-	uint16_t port;
-	NetworkAddress address;
-	NetworkAddress v6address;
-	Type type;
-	unsigned char peerTag[16];
-
-private:
-	double lastPingTime;
-	uint32_t lastPingSeq;
-	HistoricBuffer<double, 6> rtts;
-	HistoricBuffer<double, 4> selfRtts;
-	std::map<int64_t, double> udpPingTimes;
-	double averageRTT;
-	std::shared_ptr<NetworkSocket> socket;
-	int udpPongCount;
-	int totalUdpPings = 0;
-	int totalUdpPingReplies = 0;
-};
-
-class AudioDevice
-{
-public:
-	std::string id;
-	std::string displayName;
-};
-
-class AudioOutputDevice : public AudioDevice
-{
-};
-
-class AudioInputDevice : public AudioDevice
-{
-};
-
-class AudioInputTester
-{
-public:
-	AudioInputTester(const std::string deviceID);
-	~AudioInputTester();
-	TGVOIP_DISALLOW_COPY_AND_ASSIGN(AudioInputTester);
-	float GetAndResetLevel();
-	bool Failed()
-	{
-		return io && io->Failed();
-	}
-
-private:
-	void Update(int16_t *samples, size_t count);
-	audio::AudioIO *io = NULL;
-	audio::AudioInput *input = NULL;
-	int16_t maxSample = 0;
-	std::string deviceID;
 };
 
 class PacketSender;
@@ -638,7 +550,7 @@ private:
 	void KDF2(unsigned char *msgKey, size_t x, unsigned char *aesKey, unsigned char *aesIv);
 	void SendPublicEndpointsRequest();
 	void SendPublicEndpointsRequest(const Endpoint &relay);
-	Endpoint &GetEndpointByType(int type);
+	Endpoint &GetEndpointByType(const Endpoint::Type type);
 	void SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout);
 	uint32_t GenerateOutSeq();
 	void ActuallySendPacket(NetworkPacket pkt, Endpoint &ep);
@@ -862,72 +774,5 @@ public:
 #endif
 };
 
-class VoIPGroupController : public VoIPController
-{
-public:
-	VoIPGroupController(int32_t timeDifference);
-	virtual ~VoIPGroupController();
-	void SetGroupCallInfo(unsigned char *encryptionKey, unsigned char *reflectorGroupTag, unsigned char *reflectorSelfTag, unsigned char *reflectorSelfSecret, unsigned char *reflectorSelfTagHash, int32_t selfUserID, NetworkAddress reflectorAddress, NetworkAddress reflectorAddressV6, uint16_t reflectorPort);
-	void AddGroupCallParticipant(int32_t userID, unsigned char *memberTagHash, unsigned char *serializedStreams, size_t streamsLength);
-	void RemoveGroupCallParticipant(int32_t userID);
-	float GetParticipantAudioLevel(int32_t userID);
-	virtual void SetMicMute(bool mute);
-	void SetParticipantVolume(int32_t userID, float volume);
-	void SetParticipantStreams(int32_t userID, unsigned char *serializedStreams, size_t length);
-	static size_t GetInitialStreams(unsigned char *buf, size_t size);
-
-	struct Callbacks : public VoIPController::Callbacks
-	{
-		void (*updateStreams)(VoIPGroupController *, unsigned char *, size_t);
-		void (*participantAudioStateChanged)(VoIPGroupController *, int32_t, bool);
-	};
-	void SetCallbacks(Callbacks callbacks);
-	virtual std::string GetDebugString();
-	virtual void SetNetworkType(int type);
-
-protected:
-	virtual void ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcEndpoint);
-	virtual void SendInit();
-	virtual void SendUdpPing(Endpoint &endpoint);
-	virtual void SendRelayPings();
-	virtual void SendPacket(unsigned char *data, size_t len, Endpoint &ep, PendingOutgoingPacket &srcPacket);
-	virtual void WritePacketHeader(uint32_t seq, BufferOutputStream *s, unsigned char type, uint32_t length, PacketSender *sender = NULL);
-	virtual void OnAudioOutputReady();
-
-private:
-	int32_t GetCurrentUnixtime();
-	std::vector<std::shared_ptr<Stream>> DeserializeStreams(BufferInputStream &in);
-	void SendRecentPacketsRequest();
-	void SendSpecialReflectorRequest(unsigned char *data, size_t len);
-	void SerializeAndUpdateOutgoingStreams();
-	struct GroupCallParticipant
-	{
-		int32_t userID;
-		unsigned char memberTagHash[32];
-		std::vector<std::shared_ptr<Stream>> streams;
-		AudioLevelMeter *levelMeter;
-	};
-	std::vector<GroupCallParticipant> participants;
-	unsigned char reflectorSelfTag[16];
-	unsigned char reflectorSelfSecret[16];
-	unsigned char reflectorSelfTagHash[32];
-	int32_t userSelfID;
-	Endpoint groupReflector;
-	AudioMixer *audioMixer;
-	AudioLevelMeter selfLevelMeter;
-	Callbacks groupCallbacks;
-	struct PacketIdMapping
-	{
-		uint32_t seq;
-		uint16_t id;
-		double ackTime;
-	};
-	std::vector<PacketIdMapping> recentSentPackets;
-	Mutex sentPacketsMutex;
-	Mutex participantsMutex;
-	int32_t timeDifference;
-};
 
 }; // namespace tgvoip
-
-#endif

@@ -4,28 +4,18 @@
 // you should have received with this source code distribution.
 //
 
-#include "controller/net/CongestionControl.h"
+#include "CongestionControl.h"
 #include "VoIPController.h"
 #include "tools/logging.h"
 #include "VoIPServerConfig.h"
-#include "controller/PrivateDefines.h"
+#include "../PrivateDefines.h"
 #include <math.h>
 #include <assert.h>
 
 using namespace tgvoip;
 
-CongestionControl::CongestionControl()
+CongestionControl::CongestionControl() : cwnd(static_cast<size_t>(ServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024)))
 {
-	memset(inflightPackets, 0, sizeof(inflightPackets));
-	tmpRtt = 0;
-	tmpRttCount = 0;
-	lastSentSeq = 0;
-	lastActionTime = 0;
-	lastActionRtt = 0;
-	stateTransitionTime = 0;
-	inflightDataSize = 0;
-	lossCount = 0;
-	cwnd = (size_t)ServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024);
 }
 
 CongestionControl::~CongestionControl()
@@ -59,14 +49,14 @@ double CongestionControl::GetMinimumRTT()
 
 void CongestionControl::PacketAcknowledged(uint32_t seq)
 {
-	for (int i = 0; i < 100; i++)
+	for (auto &packet : inflightPackets)
 	{
-		if (inflightPackets[i].seq == seq && inflightPackets[i].sendTime > 0)
+		if (packet.seq == seq && packet.sendTime > 0)
 		{
-			tmpRtt += (VoIPController::GetCurrentTime() - inflightPackets[i].sendTime);
+			tmpRtt += (VoIPController::GetCurrentTime() - packet.sendTime);
 			tmpRttCount++;
-			inflightPackets[i].sendTime = 0;
-			inflightDataSize -= inflightPackets[i].size;
+			packet.sendTime = 0;
+			inflightDataSize -= packet.size;
 			break;
 		}
 	}
@@ -82,8 +72,7 @@ void CongestionControl::PacketSent(uint32_t seq, size_t size)
 	lastSentSeq = seq;
 	double smallestSendTime = INFINITY;
 	tgvoip_congestionctl_packet_t *slot = NULL;
-	int i;
-	for (i = 0; i < 100; i++)
+	for (size_t i = 0; i < inflightPackets.size(); i++)
 	{
 		if (inflightPackets[i].sendTime == 0)
 		{
@@ -111,12 +100,12 @@ void CongestionControl::PacketSent(uint32_t seq, size_t size)
 
 void CongestionControl::PacketLost(uint32_t seq)
 {
-	for (int i = 0; i < 100; i++)
+	for (auto &packet : inflightPackets)
 	{
-		if (inflightPackets[i].seq == seq && inflightPackets[i].sendTime > 0)
+		if (packet.seq == seq && packet.sendTime > 0)
 		{
-			inflightPackets[i].sendTime = 0;
-			inflightDataSize -= inflightPackets[i].size;
+			packet.sendTime = 0;
+			inflightDataSize -= packet.size;
 			lossCount++;
 			break;
 		}
@@ -132,15 +121,14 @@ void CongestionControl::Tick()
 		tmpRtt = 0;
 		tmpRttCount = 0;
 	}
-	int i;
-	for (i = 0; i < 100; i++)
+	for (auto &packet : inflightPackets)
 	{
-		if (inflightPackets[i].sendTime != 0 && VoIPController::GetCurrentTime() - inflightPackets[i].sendTime > 2)
+		if (packet.sendTime != 0 && VoIPController::GetCurrentTime() - packet.sendTime > TGVOIP_CONCTL_LOST_AFTER)
 		{
-			inflightPackets[i].sendTime = 0;
-			inflightDataSize -= inflightPackets[i].size;
+			packet.sendTime = 0;
+			inflightDataSize -= packet.size;
 			lossCount++;
-			LOGD("Packet with seq %u was not acknowledged", inflightPackets[i].seq);
+			LOGD("Packet with seq %u was not acknowledged", packet.seq);
 		}
 	}
 	inflightHistory.Add(inflightDataSize);
@@ -150,6 +138,7 @@ int CongestionControl::GetBandwidthControlAction()
 {
 	if (VoIPController::GetCurrentTime() - lastActionTime < 1)
 		return TGVOIP_CONCTL_ACT_NONE;
+
 	size_t inflightAvg = GetInflightDataSize();
 	size_t max = cwnd + cwnd / 10;
 	size_t min = cwnd - cwnd / 10;

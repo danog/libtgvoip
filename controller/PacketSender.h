@@ -43,7 +43,7 @@ protected:
 		return controller->connectionInitTime;
 	}
 
-	const HistoricBuffer<double, 32> &RTTHistory()
+	const HistoricBuffer<double, 32> &RTTHistory() const
 	{
 		return controller->rttHistory;
 	}
@@ -53,7 +53,7 @@ protected:
 		return controller->messageThread;
 	}
 
-	const VoIPController::ProtocolInfo &GetProtocolInfo()
+	const VoIPController::ProtocolInfo &GetProtocolInfo() const
 	{
 		return controller->protocolInfo;
 	}
@@ -63,7 +63,7 @@ protected:
 		controller->SendStreamFlags(stm);
 	}
 
-	const VoIPController::Config &GetConfig()
+	const VoIPController::Config &GetConfig() const
 	{
 		return controller->config;
 	}

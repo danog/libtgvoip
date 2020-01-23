@@ -676,6 +676,7 @@ bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vect
 	}
 	else if (anyFailed)
 	{
+		LOGE("Select failed, zeroing out");
 		FD_ZERO(&readSet);
 		FD_ZERO(&writeSet);
 	}

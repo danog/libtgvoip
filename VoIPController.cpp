@@ -19,6 +19,7 @@
 #include "controller/audio/OpusDecoder.h"
 #include "VoIPServerConfig.h"
 #include "controller/PrivateDefines.h"
+#include "controller/net/Endpoint.h"
 #include "tools/json11.hpp"
 #include "controller/PacketSender.h"
 #include "video/VideoPacketSender.h"
@@ -425,7 +426,7 @@ void VoIPController::SetNetworkType(int type)
 					if (_preferredRelay.type == Endpoint::Type::UDP_RELAY)
 						currentEndpoint = preferredRelay;
 					MutexGuard m(endpointsMutex);
-					constexpr int64_t lanID = (int64_t)(FOURCC('L', 'A', 'N', '4')) << 32;
+					constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
 					endpoints.erase(lanID);
 					for (pair<const int64_t, Endpoint> &e : endpoints)
 					{
@@ -2095,9 +2096,9 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
 	size_t len = packet.data.Length();
 	BufferInputStream in(packet.data);
 	bool hasPeerTag = false;
-	if (peerVersion < 9 || srcEndpoint.type == Endpoint::Type::UDP_RELAY || srcEndpoint.type == Endpoint::Type::TCP_RELAY)
+	if (peerVersion < 9 || srcEndpoint.IsReflector())
 	{
-		if (memcmp(buffer, srcEndpoint.type == Endpoint::Type::UDP_RELAY || srcEndpoint.type == Endpoint::Type::TCP_RELAY ? (void *)srcEndpoint.peerTag : (void *)callID, 16) != 0)
+		if (memcmp(buffer, srcEndpoint.IsReflector() ? (void *)srcEndpoint.peerTag : (void *)callID, 16) != 0)
 		{
 			LOGW("Received packet has wrong peerTag");
 			return;
@@ -2105,7 +2106,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
 		in.Seek(16);
 		hasPeerTag = true;
 	}
-	if (in.Remaining() >= 16 && (srcEndpoint.type == Endpoint::Type::UDP_RELAY || srcEndpoint.type == Endpoint::Type::TCP_RELAY) && *reinterpret_cast<uint64_t *>(buffer + 16) == 0xFFFFFFFFFFFFFFFFLL && *reinterpret_cast<uint32_t *>(buffer + 24) == 0xFFFFFFFF)
+	if (in.Remaining() >= 16 && srcEndpoint.IsReflector() && *reinterpret_cast<uint64_t *>(buffer + 16) == 0xFFFFFFFFFFFFFFFFLL && *reinterpret_cast<uint32_t *>(buffer + 24) == 0xFFFFFFFF)
 	{
 		// relay special request response
 		in.Seek(16 + 12);
@@ -2160,8 +2161,8 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
 				uint32_t peerAddr = (uint32_t)in.ReadInt32();
 				uint32_t peerPort = (uint32_t)in.ReadInt32();
 
-				constexpr int64_t p2pID = (int64_t)(FOURCC('P', '2', 'P', '4')) << 32;
-				constexpr int64_t lanID = (int64_t)(FOURCC('L', 'A', 'N', '4')) << 32;
+				constexpr int64_t p2pID = static_cast<int64_t>(FOURCC('P', '2', 'P', '4')) << 32;
+				constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
 
 				if (currentEndpoint == p2pID || currentEndpoint == lanID)
 					currentEndpoint = preferredRelay;
@@ -2583,7 +2584,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
 	}
 
 	Endpoint *_currentEndpoint = &endpoints.at(currentEndpoint);
-	if (srcEndpoint.id != currentEndpoint && (srcEndpoint.type == Endpoint::Type::UDP_RELAY || srcEndpoint.type == Endpoint::Type::TCP_RELAY) && ((_currentEndpoint->type != Endpoint::Type::UDP_RELAY && _currentEndpoint->type != Endpoint::Type::TCP_RELAY) || _currentEndpoint->averageRTT == 0))
+	if (srcEndpoint.id != currentEndpoint && srcEndpoint.IsReflector() && ((_currentEndpoint->type != Endpoint::Type::UDP_RELAY && _currentEndpoint->type != Endpoint::Type::TCP_RELAY) || _currentEndpoint->averageRTT == 0))
 	{
 		if (seqgt(lastSentSeq - 32, lastRemoteAckSeq))
 		{
@@ -3034,7 +3035,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
 		LOGV("received lan endpoint");
 		uint32_t peerAddr = (uint32_t)in.ReadInt32();
 		uint16_t peerPort = (uint16_t)in.ReadInt32();
-		constexpr int64_t lanID = (int64_t)(FOURCC('L', 'A', 'N', '4')) << 32;
+		constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
 		unsigned char peerTag[16];
 		Endpoint lan(lanID, peerPort, NetworkAddress::IPv4(peerAddr), NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_LAN, peerTag);
 
@@ -3209,7 +3210,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
 		LOGV("received lan endpoint (extra)");
 		uint32_t peerAddr = (uint32_t)in.ReadInt32();
 		uint16_t peerPort = (uint16_t)in.ReadInt32();
-		constexpr int64_t lanID = (int64_t)(FOURCC('L', 'A', 'N', '4')) << 32;
+		constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
 		if (currentEndpoint == lanID)
 			currentEndpoint = preferredRelay;
 
@@ -3268,7 +3269,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
 		peerIPv6Available = true;
 		LOGV("Received peer IPv6 endpoint [%s]:%u", addr.ToString().c_str(), port);
 
-		constexpr int64_t p2pID = (int64_t)(FOURCC('P', '2', 'P', '6')) << 32;
+		constexpr int64_t p2pID = static_cast<int64_t>(FOURCC('P', '2', 'P', '6')) << 32;
 
 		Endpoint ep;
 		ep.type = Endpoint::Type::UDP_P2P_INET;
@@ -3390,7 +3391,7 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, P
 	if (ep.type == Endpoint::Type::TCP_RELAY && !useTCP)
 		return;
 	BufferOutputStream out(len + 128);
-	if (ep.type == Endpoint::Type::UDP_RELAY || ep.type == Endpoint::Type::TCP_RELAY)
+	if (ep.IsReflector())
 		out.WriteBytes((unsigned char *)ep.peerTag, 16);
 	else if (peerVersion < 9)
 		out.WriteBytes(callID, 16);
@@ -3465,19 +3466,14 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, P
 	LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s", ep.GetAddress().ToString().c_str(), ep.port, srcPacket.seq, (unsigned int)out.GetLength(), GetPacketTypeString(srcPacket.type).c_str());
 #endif
 
-	/*ActuallySendPacket(NetworkPacket{
-			Buffer(std::move(out)),
-			ep.GetAddress(),
-			ep.port,
-			ep.type==Endpoint::Type::TCP_RELAY ? NetworkProtocol::TCP : NetworkProtocol::UDP
-		}, ep);*/
-	rawSendQueue.Put(RawPendingOutgoingPacket{
-		NetworkPacket{
-			Buffer(std::move(out)),
-			ep.GetAddress(),
-			ep.port,
-			ep.type == Endpoint::Type::TCP_RELAY ? NetworkProtocol::TCP : NetworkProtocol::UDP},
-		ep.type == Endpoint::Type::TCP_RELAY ? ep.socket : nullptr});
+	rawSendQueue.Put(
+		RawPendingOutgoingPacket{
+			NetworkPacket{
+				Buffer(std::move(out)),
+				ep.GetAddress(),
+				ep.port,
+				ep.type == Endpoint::Type::TCP_RELAY ? NetworkProtocol::TCP : NetworkProtocol::UDP},
+			ep.type == Endpoint::Type::TCP_RELAY ? ep.socket : nullptr});
 }
 
 void VoIPController::ActuallySendPacket(NetworkPacket pkt, Endpoint &ep)
@@ -3556,21 +3552,18 @@ std::string VoIPController::GetPacketTypeString(unsigned char type)
 	case PKT_STREAM_EC:
 		return "stream_ec";
 	}
-	char buf[255];
-	snprintf(buf, sizeof(buf), "unknown(%u)", type);
-	return string(buf);
+	return string("unknown(") + std::to_string(type) + ')';
 }
 
 void VoIPController::AddIPv6Relays()
 {
-
 	if (!myIPv6.IsEmpty() && !didAddIPv6Relays)
 	{
 		unordered_map<string, vector<Endpoint>> endpointsByAddress;
 		for (pair<const int64_t, Endpoint> &_e : endpoints)
 		{
 			Endpoint &e = _e.second;
-			if ((e.type == Endpoint::Type::UDP_RELAY || e.type == Endpoint::Type::TCP_RELAY) && !e.v6address.IsEmpty() && !e.address.IsEmpty())
+			if ((e.IsReflector()) && !e.v6address.IsEmpty() && !e.address.IsEmpty())
 			{
 				endpointsByAddress[e.v6address.ToString()].push_back(e);
 			}
@@ -3582,7 +3575,7 @@ void VoIPController::AddIPv6Relays()
 			{
 				didAddIPv6Relays = true;
 				e.address = NetworkAddress::Empty();
-				e.id = e.id ^ ((int64_t)(FOURCC('I', 'P', 'v', '6')) << 32);
+				e.id = e.id ^ (static_cast<int64_t>(FOURCC('I', 'P', 'v', '6')) << 32);
 				e.averageRTT = 0;
 				e.lastPingSeq = 0;
 				e.lastPingTime = 0;
@@ -3621,7 +3614,7 @@ void VoIPController::AddTCPRelays()
 			tcpRelay.lastPingTime = 0;
 			tcpRelay.rtts.Reset();
 			tcpRelay.udpPongCount = 0;
-			tcpRelay.id = tcpRelay.id ^ ((int64_t)(FOURCC('T', 'C', 'P', 0)) << 32);
+			tcpRelay.id = tcpRelay.id ^ (static_cast<int64_t>(FOURCC('T', 'C', 'P', 0)) << 32);
 			if (setCurrentEndpointToTCP && endpoints.at(currentEndpoint).type != Endpoint::Type::TCP_RELAY)
 			{
 				LOGV("Setting current endpoint to TCP");
@@ -3750,7 +3743,7 @@ void VoIPController::SendPublicEndpointsRequest(const Endpoint &relay)
 		NetworkProtocol::UDP});
 }
 
-Endpoint &VoIPController::GetEndpointByType(int type)
+Endpoint &VoIPController::GetEndpointByType(const Endpoint::Type type)
 {
 	if (type == Endpoint::Type::UDP_RELAY && preferredRelay)
 		return endpoints.at(preferredRelay);
@@ -4168,7 +4161,7 @@ void VoIPController::SendRelayPings()
 			preferredRelay = minPingRelay->id;
 			_preferredRelay = minPingRelay;
 			LOGV("set preferred relay to %s", _preferredRelay->address.ToString().c_str());
-			if (_currentEndpoint->type == Endpoint::Type::UDP_RELAY || _currentEndpoint->type == Endpoint::Type::TCP_RELAY)
+			if (_currentEndpoint->IsReflector())
 			{
 				currentEndpoint = preferredRelay;
 				_currentEndpoint = _preferredRelay;
@@ -4176,8 +4169,8 @@ void VoIPController::SendRelayPings()
 		}
 		if (_currentEndpoint->type == Endpoint::Type::UDP_RELAY && useUDP)
 		{
-			constexpr int64_t p2pID = (int64_t)(FOURCC('P', '2', 'P', '4')) << 32;
-			constexpr int64_t lanID = (int64_t)(FOURCC('L', 'A', 'N', '4')) << 32;
+			constexpr int64_t p2pID = static_cast<int64_t>(FOURCC('P', '2', 'P', '4')) << 32;
+			constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
 
 			if (endpoints.find(p2pID) != endpoints.end())
 			{
@@ -4359,7 +4352,7 @@ void VoIPController::UpdateAudioBitrate()
 					for (pair<const int64_t, Endpoint> &_e : endpoints)
 					{
 						Endpoint &e = _e.second;
-						if (e.type == Endpoint::Type::UDP_P2P_INET || e.type == Endpoint::Type::UDP_P2P_LAN)
+						if (e.IsP2P())
 						{
 							e.averageRTT = 0;
 							e.rtts.Reset();
@@ -4511,14 +4504,15 @@ void VoIPController::SendPublicEndpointsRequest()
 	publicEndpointsReqCount++;
 	if (publicEndpointsReqCount < 10)
 	{
-		messageThread.Post([this] {
-			if (waitingForRelayPeerInfo)
-			{
-				LOGW("Resending peer relay info request");
-				SendPublicEndpointsRequest();
-			}
-		},
-						   5.0);
+		messageThread.Post(
+			[this] {
+				if (waitingForRelayPeerInfo)
+				{
+					LOGW("Resending peer relay info request");
+					SendPublicEndpointsRequest();
+				}
+			},
+			5.0);
 	}
 	else
 	{
@@ -4564,126 +4558,4 @@ void VoIPController::TickJitterBufferAndCongestionControl()
 			}
 		}
 	}
-}
-
-#pragma mark - Endpoint
-
-Endpoint::Endpoint(int64_t id, uint16_t port, const IPv4Address &_address, const IPv6Address &_v6address, Type type, unsigned char peerTag[16]) : address(NetworkAddress::IPv4(_address.addr)), v6address(NetworkAddress::IPv6(_v6address.addr))
-{
-	this->id = id;
-	this->port = port;
-	this->type = type;
-	memcpy(this->peerTag, peerTag, 16);
-	if (type == Type::UDP_RELAY && ServerConfig::GetSharedInstance()->GetBoolean("force_tcp", false))
-		this->type = Type::TCP_RELAY;
-
-	lastPingSeq = 0;
-	lastPingTime = 0;
-	averageRTT = 0;
-	socket = NULL;
-	udpPongCount = 0;
-}
-
-Endpoint::Endpoint(int64_t id, uint16_t port, const NetworkAddress _address, const NetworkAddress _v6address, Type type, unsigned char peerTag[16]) : address(_address), v6address(_v6address)
-{
-	this->id = id;
-	this->port = port;
-	this->type = type;
-	memcpy(this->peerTag, peerTag, 16);
-	if (type == Type::UDP_RELAY && ServerConfig::GetSharedInstance()->GetBoolean("force_tcp", false))
-		this->type = Type::TCP_RELAY;
-
-	lastPingSeq = 0;
-	lastPingTime = 0;
-	averageRTT = 0;
-	socket = NULL;
-	udpPongCount = 0;
-}
-
-Endpoint::Endpoint() : address(NetworkAddress::Empty()), v6address(NetworkAddress::Empty())
-{
-	lastPingSeq = 0;
-	lastPingTime = 0;
-	averageRTT = 0;
-	socket = NULL;
-	udpPongCount = 0;
-}
-
-const NetworkAddress &Endpoint::GetAddress() const
-{
-	return IsIPv6Only() ? (NetworkAddress &)v6address : (NetworkAddress &)address;
-}
-
-NetworkAddress &Endpoint::GetAddress()
-{
-	return IsIPv6Only() ? (NetworkAddress &)v6address : (NetworkAddress &)address;
-}
-
-bool Endpoint::IsIPv6Only() const
-{
-	return address.IsEmpty() && !v6address.IsEmpty();
-}
-
-int64_t Endpoint::CleanID() const
-{
-	int64_t _id = id;
-	if (type == Type::TCP_RELAY)
-	{
-		_id = _id ^ ((int64_t)FOURCC('T', 'C', 'P', ' ') << 32);
-	}
-	if (IsIPv6Only())
-	{
-		_id = _id ^ ((int64_t)FOURCC('I', 'P', 'v', '6') << 32);
-	}
-	return _id;
-}
-
-Endpoint::~Endpoint()
-{
-	if (socket)
-	{
-		socket->Close();
-	}
-}
-
-#pragma mark - AudioInputTester
-
-AudioInputTester::AudioInputTester(std::string deviceID) : deviceID(std::move(deviceID))
-{
-	io = audio::AudioIO::Create(deviceID, "default");
-	if (io->Failed())
-	{
-		LOGE("Audio IO failed");
-		return;
-	}
-	input = io->GetInput();
-	input->SetCallback([](unsigned char *data, size_t size, void *ctx) -> size_t {
-		reinterpret_cast<AudioInputTester *>(ctx)->Update(reinterpret_cast<int16_t *>(data), size / 2);
-		return 0;
-	},
-					   this);
-	input->Start();
-}
-
-AudioInputTester::~AudioInputTester()
-{
-	input->Stop();
-	delete io;
-}
-
-void AudioInputTester::Update(int16_t *samples, size_t count)
-{
-	for (size_t i = 0; i < count; i++)
-	{
-		int16_t s = abs(samples[i]);
-		if (s > maxSample)
-			maxSample = s;
-	}
-}
-
-float AudioInputTester::GetAndResetLevel()
-{
-	float s = maxSample;
-	maxSample = 0;
-	return s / (float)INT16_MAX;
 }
