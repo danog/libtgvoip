@@ -32,11 +32,6 @@
 #include <sstream>
 #include <inttypes.h>
 #include <float.h>
-#ifdef HAVE_CONFIG_H
-#include <opus/opus.h>
-#else
-#include <opus/opus.h>
-#endif
 
 inline int pad4(int x)
 {
@@ -79,84 +74,12 @@ extern FILE *tgvoipLogFile;
 
 #pragma mark - Public API
 
-VoIPController::VoIPController() : activeNetItfName(""),
-                                   currentAudioInput("default"),
-                                   currentAudioOutput("default"),
-                                   proxyAddress(""),
-                                   proxyUsername(""),
-                                   proxyPassword(""),
-                                   ecAudioPackets(4),
+VoIPController::VoIPController() : ecAudioPackets(4),
                                    rawSendQueue(64)
 {
-    seq = 1;
-    lastRemoteSeq = 0;
-    state = STATE_WAIT_INIT;
-    audioInput = nullptr;
-    audioOutput = nullptr;
-    encoder = nullptr;
-    audioOutStarted = false;
-    audioTimestampIn = 0;
-    audioTimestampOut = 0;
-    stopping = false;
-    memset(&stats, 0, sizeof(TrafficStats));
-    lastRemoteAckSeq = 0;
-    lastSentSeq = 0;
-    recvLossCount = 0;
-    packetsReceived = 0;
-    waitingForAcks = false;
-    networkType = NET_TYPE_UNKNOWN;
-    echoCanceller = nullptr;
-    dontSendPackets = 0;
-    micMuted = false;
-    waitingForRelayPeerInfo = false;
-    allowP2p = true;
-    dataSavingMode = false;
-    publicEndpointsReqTime = 0;
-    connectionInitTime = 0;
-    lastRecvPacketTime = 0;
-    dataSavingRequestedByPeer = false;
-    peerVersion = 0;
-    conctl = new CongestionControl();
-    prevSendLossCount = 0;
-    receivedInit = false;
-    receivedInitAck = false;
-    statsDump = nullptr;
-    useTCP = false;
-    useUDP = true;
-    didAddTcpRelays = false;
-    udpPingCount = 0;
-    lastUdpPingTime = 0;
-
-    proxyProtocol = PROXY_NONE;
-    proxyPort = 0;
-
     selectCanceller = SocketSelectCanceller::Create();
     udpSocket = NetworkSocket::Create(NetworkProtocol::UDP);
     realUdpSocket = udpSocket;
-    udpConnectivityState = UDP_UNKNOWN;
-    echoCancellationStrength = 1;
-
-    peerCapabilities = 0;
-    callbacks = {0};
-    didReceiveGroupCallKey = false;
-    didReceiveGroupCallKeyAck = false;
-    didSendGroupCallKey = false;
-    didSendUpgradeRequest = false;
-    didInvokeUpgradeCallback = false;
-
-    connectionMaxLayer = 0;
-    useMTProto2 = false;
-    setCurrentEndpointToTCP = false;
-    useIPv6 = false;
-    peerIPv6Available = false;
-    shittyInternetMode = false;
-    didAddIPv6Relays = false;
-    didSendIPv6Endpoint = false;
-    unsentStreamPackets.store(0);
-    runReceiver = false;
-
-    sendThread = nullptr;
-    recvThread = nullptr;
 
     maxAudioBitrate = ServerConfig::GetSharedInstance()->GetUInt("audio_max_bitrate", 20000);
     maxAudioBitrateGPRS = ServerConfig::GetSharedInstance()->GetUInt("audio_max_bitrate_gprs", 8000);
@@ -180,10 +103,6 @@ VoIPController::VoIPController() : activeNetItfName(""),
     maxUnsentStreamPackets = ServerConfig::GetSharedInstance()->GetUInt("max_unsent_stream_packets", 2);
     unackNopThreshold = ServerConfig::GetSharedInstance()->GetUInt("unack_nop_threshold", 10);
 
-#ifdef __APPLE__
-    machTimestart = 0;
-#endif
-
     shared_ptr<Stream> stm = make_shared<Stream>();
     stm->id = 1;
     stm->type = STREAM_TYPE_AUDIO;
@@ -201,18 +120,7 @@ VoIPController::~VoIPController()
         LOGE("!!!!!!!!!!!!!!!!!!!! CALL controller->Stop() BEFORE DELETING THE CONTROLLER OBJECT !!!!!!!!!!!!!!!!!!!!!!!1");
         abort();
     }
-    LOGD("before close socket");
-    if (udpSocket)
-        delete udpSocket;
-    if (udpSocket != realUdpSocket)
-        delete realUdpSocket;
-    LOGD("before delete audioIO");
-    if (audioIO)
-    {
-        delete audioIO;
-        audioInput = nullptr;
-        audioOutput = nullptr;
-    }
+
     for (auto _stm = incomingStreams.begin(); _stm != incomingStreams.end(); ++_stm)
     {
         shared_ptr<Stream> stm = *_stm;
@@ -222,22 +130,11 @@ VoIPController::~VoIPController()
             stm->decoder->Stop();
         }
     }
-    LOGD("before delete encoder");
-    if (encoder)
-    {
-        encoder->Stop();
-        delete encoder;
-    }
     LOGD("before delete echo canceller");
     if (echoCanceller)
     {
         echoCanceller->Stop();
-        delete echoCanceller;
     }
-    delete conctl;
-    if (statsDump)
-        fclose(statsDump);
-    delete selectCanceller;
     LOGD("Left VoIPController::~VoIPController");
     if (tgvoipLogFile)
     {
@@ -245,13 +142,6 @@ VoIPController::~VoIPController()
         tgvoipLogFile = nullptr;
         fclose(log);
     }
-#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
-    if (preprocDecoder)
-    {
-        opus_decoder_destroy(preprocDecoder);
-        preprocDecoder = nullptr;
-    }
-#endif
 }
 
 void VoIPController::Stop()
@@ -273,13 +163,11 @@ void VoIPController::Stop()
     if (sendThread)
     {
         sendThread->Join();
-        delete sendThread;
     }
     LOGD("before join recvThread");
     if (recvThread)
     {
         recvThread->Join();
-        delete recvThread;
     }
     LOGD("before stop messageThread");
     messageThread.Stop();
@@ -296,12 +184,6 @@ void VoIPController::Stop()
             audioOutput->Stop();
             audioOutput->SetCallback(NULL, NULL);
         }
-    }
-    if (videoPacketSender)
-    {
-        LOGD("before delete video packet sender");
-        delete videoPacketSender;
-        videoPacketSender = nullptr;
     }
     LOGD("Left VoIPController::Stop [need rate = %d]", (int)needRate);
 }
@@ -356,7 +238,7 @@ void VoIPController::Start()
     }
 
     runReceiver = true;
-    recvThread = new Thread(bind(&VoIPController::RunRecvThread, this));
+    recvThread.reset(new Thread(bind(&VoIPController::RunRecvThread, this)));
     recvThread->SetName("VoipRecv");
     recvThread->Start();
 
@@ -375,7 +257,7 @@ void VoIPController::Connect()
 
     //InitializeTimers();
     //SendInit();
-    sendThread = new Thread(bind(&VoIPController::RunSendThread, this));
+    sendThread.reset(new Thread(bind(&VoIPController::RunSendThread, this)));
     sendThread->SetName("VoipSend");
     sendThread->Start();
 }
@@ -611,8 +493,8 @@ string VoIPController::GetDebugString()
              "Bytes sent/recvd: %llu/%llu",
              jitterBuffer ? jitterBuffer->GetMinPacketCount() : 0, jitterBuffer ? jitterBuffer->GetAverageDelay() : 0, avgLate[0], avgLate[1], avgLate[2],
              // (int)(GetAverageRTT()*1000), 0,
-             (int)(conctl->GetAverageRTT() * 1000), (int)(conctl->GetMinimumRTT() * 1000),
-             int(conctl->GetInflightDataSize()), int(conctl->GetCongestionWindow()),
+             (int)(conctl.GetAverageRTT() * 1000), (int)(conctl.GetMinimumRTT() * 1000),
+             int(conctl.GetInflightDataSize()), int(conctl.GetCongestionWindow()),
              keyFingerprint[0], keyFingerprint[1], keyFingerprint[2], keyFingerprint[3], keyFingerprint[4], keyFingerprint[5], keyFingerprint[6], keyFingerprint[7],
              useMTProto2 ? " (MTProto2.0)" : "",
              lastSentSeq, lastRemoteAckSeq, lastRemoteSeq,
@@ -717,7 +599,7 @@ string VoIPController::GetDebugLog()
             {"network", network},
             {"protocol_version", std::min(peerVersion, PROTOCOL_VERSION)},
             {"total_losses", json11::Json::object{
-                    {"s", (int32_t)conctl->GetSendLossCount()},
+                    {"s", (int32_t)conctl.GetSendLossCount()},
                     {"r", (int32_t)recvLossCount}
             }},
             {"call_duration", GetCurrentTime()-connectionInitTime},
@@ -798,7 +680,7 @@ string VoIPController::GetDebugLog()
                             {"packet_stats", json11::Json::object{
                                                  {"out", (int)seq},
                                                  {"in", (int)packetsReceived},
-                                                 {"lost_out", (int)conctl->GetSendLossCount()},
+                                                 {"lost_out", (int)conctl.GetSendLossCount()},
                                                  {"lost_in", (int)recvLossCount}}},
                             {"endpoints", _endpoints},
                             {"problems", problems}})
@@ -937,7 +819,6 @@ void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t *, size_t)
     audioInputDataCallback = input;
     audioOutputDataCallback = output;
     audioPreprocDataCallback = preproc;
-    preprocDecoder = preprocDecoder ? preprocDecoder : opus_decoder_create(48000, 1, NULL);
 }
 #endif
 
@@ -970,29 +851,15 @@ void VoIPController::SetConfig(const Config &cfg)
     {
         tgvoipLogFile = nullptr;
     }
-    if (statsDump)
-    {
-        fclose(statsDump);
-        statsDump = nullptr;
-    }
     if (!config.statsDumpFilePath.empty())
     {
-#ifndef _WIN32
-        statsDump = fopen(config.statsDumpFilePath.c_str(), "w");
-#else
-        if (_wfopen_s(&statsDump, config.statsDumpFilePath.c_str(), L"w") != 0)
-        {
-            statsDump = nullptr;
-        }
-#endif
+        statsDump.open(config.statsDumpFilePath);
         if (statsDump)
-            fprintf(statsDump, "Time\tRTT\tLRSeq\tLSSeq\tLASeq\tLostR\tLostS\tCWnd\tBitrate\tLoss%%\tJitter\tJDelay\tAJDelay\n");
-        //else
-        //	LOGW("Failed to open stats dump file %s for writing", config.statsDumpFilePath.c_str());
+            statsDump << "Time\tRTT\tLRSeq\tLSSeq\tLASeq\tLostR\tLostS\tCWnd\tBitrate\tLoss%%\tJitter\tJDelay\tAJDelay\n";
     }
     else
     {
-        statsDump = nullptr;
+        statsDump.close();
     }
     UpdateDataSavingState();
     UpdateAudioBitrateLimit();
@@ -1045,19 +912,19 @@ vector<uint8_t> VoIPController::GetPersistentState()
 
 void VoIPController::SetOutputVolume(float level)
 {
-    outputVolume.SetLevel(level);
+    outputVolume->SetLevel(level);
 }
 
 void VoIPController::SetInputVolume(float level)
 {
-    inputVolume.SetLevel(level);
+    inputVolume->SetLevel(level);
 }
 
 #if defined(__APPLE__) && TARGET_OS_OSX
 void VoIPController::SetAudioOutputDuckingEnabled(bool enabled)
 {
     macAudioDuckingEnabled = enabled;
-    audio::AudioUnitIO *osxAudio = dynamic_cast<audio::AudioUnitIO *>(audioIO);
+    audio::AudioUnitIO *osxAudio = dynamic_cast<audio::AudioUnitIO *>(audioIO.get());
     if (osxAudio)
     {
         osxAudio->SetDuckingEnabled(enabled);
@@ -1084,21 +951,20 @@ void VoIPController::InitializeTimers()
                 if (statsDump && incomingStreams.size() == 1)
                 {
                     shared_ptr<JitterBuffer> &jitterBuffer = incomingStreams[0]->jitterBuffer;
-                    //fprintf(statsDump, "Time\tRTT\tLISeq\tLASeq\tCWnd\tBitrate\tJitter\tJDelay\tAJDelay\n");
-                    fprintf(statsDump, "%.3f\t%.3f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.3f\t%.3f\t%.3f\n",
-                            GetCurrentTime() - connectionInitTime,
-                            endpoints.at(currentEndpoint).rtts[0],
-                            lastRemoteSeq,
-                            (uint32_t)seq,
-                            lastRemoteAckSeq,
-                            recvLossCount,
-                            conctl ? conctl->GetSendLossCount() : 0,
-                            conctl ? (int)conctl->GetInflightDataSize() : 0,
-                            encoder ? encoder->GetBitrate() : 0,
-                            encoder ? encoder->GetPacketLoss() : 0,
-                            jitterBuffer ? jitterBuffer->GetLastMeasuredJitter() : 0,
-                            jitterBuffer ? jitterBuffer->GetLastMeasuredDelay() * 0.06 : 0,
-                            jitterBuffer ? jitterBuffer->GetAverageDelay() * 0.06 : 0);
+                    statsDump << std::setprecision(3)
+                              << GetCurrentTime() - connectionInitTime
+                              << endpoints.at(currentEndpoint).rtts[0]
+                              << lastRemoteSeq
+                              << (uint32_t)seq
+                              << lastRemoteAckSeq
+                              << recvLossCount
+                              << conctl.GetSendLossCount()
+                              << (int)conctl.GetInflightDataSize()
+                              << (encoder ? encoder->GetBitrate() : 0)
+                              << (encoder ? encoder->GetPacketLoss() : 0)
+                              << (jitterBuffer ? jitterBuffer->GetLastMeasuredJitter() : 0)
+                              << (jitterBuffer ? jitterBuffer->GetLastMeasuredDelay() * 0.06 : 0)
+                              << (jitterBuffer ? jitterBuffer->GetAverageDelay() * 0.06 : 0);
                 }
             },
             0.1, 0.1);
@@ -1317,7 +1183,7 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
             /*.endpoint=*/0,
         };
 
-        conctl->PacketSent(p.seq, p.len);
+        conctl.PacketSent(p.seq, p.len);
 
         SendOrEnqueuePacket(move(p));
         if (peerVersion < 7 && secondaryLen && shittyInternetMode)
@@ -1353,9 +1219,9 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
     });
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
-    if (audioPreprocDataCallback && preprocDecoder)
+    if (audioPreprocDataCallback)
     {
-        int size = opus_decode(preprocDecoder, data, len, preprocBuffer, 4096, 0);
+        int size = opus_decode(preprocDecoder.get(), data, len, preprocBuffer, 4096, 0);
         audioPreprocDataCallback(preprocBuffer, size);
     }
 #endif
@@ -1370,7 +1236,7 @@ void VoIPController::InitializeAudio()
     audioInput = audioIO->GetInput();
     audioOutput = audioIO->GetOutput();
 #ifdef __ANDROID__
-    audio::AudioInputAndroid *androidInput = dynamic_cast<audio::AudioInputAndroid *>(audioInput);
+    audio::AudioInputAndroid *androidInput = dynamic_cast<audio::AudioInputAndroid *>(audioInput.get());
     if (androidInput)
     {
         unsigned int effects = androidInput->GetEnabledEffects();
@@ -1389,20 +1255,20 @@ void VoIPController::InitializeAudio()
     SetAudioOutputDuckingEnabled(macAudioDuckingEnabled);
 #endif
     LOGI("AEC: %d NS: %d AGC: %d", config.enableAEC, config.enableNS, config.enableAGC);
-    echoCanceller = new EchoCanceller(config.enableAEC, config.enableNS, config.enableAGC);
-    encoder = new OpusEncoder(audioInput, true);
+    echoCanceller.reset(new EchoCanceller(config.enableAEC, config.enableNS, config.enableAGC));
+    encoder.reset(new OpusEncoder(audioInput, true));
     encoder->SetCallback(bind(&VoIPController::HandleAudioInput, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
     encoder->SetOutputFrameDuration(outgoingAudioStream->frameDuration);
     encoder->SetEchoCanceller(echoCanceller);
     encoder->SetSecondaryEncoderEnabled(false);
     if (config.enableVolumeControl)
     {
-        encoder->AddAudioEffect(&inputVolume);
+        encoder->AddAudioEffect(inputVolume);
     }
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
-    dynamic_cast<audio::AudioInputCallback *>(audioInput)->SetDataCallback(audioInputDataCallback);
-    dynamic_cast<audio::AudioOutputCallback *>(audioOutput)->SetDataCallback(audioOutputDataCallback);
+    dynamic_cast<audio::AudioInputCallback *>(audioInput.get())->SetDataCallback(audioInputDataCallback);
+    dynamic_cast<audio::AudioOutputCallback *>(audioOutput.get())->SetDataCallback(audioOutputDataCallback);
 #endif
 
     if (!audioOutput->IsInitialized())
@@ -1444,7 +1310,7 @@ void VoIPController::OnAudioOutputReady()
     stm->decoder->SetEchoCanceller(echoCanceller);
     if (config.enableVolumeControl)
     {
-        stm->decoder->AddAudioEffect(&outputVolume);
+        stm->decoder->AddAudioEffect(outputVolume);
     }
     stm->decoder->SetJitterBuffer(stm->jitterBuffer);
     stm->decoder->SetFrameDuration(stm->frameDuration);
@@ -1774,7 +1640,6 @@ void VoIPController::InitUDPProxy()
     if (realUdpSocket != udpSocket)
     {
         udpSocket->Close();
-        delete udpSocket;
         udpSocket = realUdpSocket;
     }
     char sbuf[128];
@@ -1787,12 +1652,12 @@ void VoIPController::InitUDPProxy()
         return;
     }
 
-    NetworkSocket *tcp = NetworkSocket::Create(NetworkProtocol::TCP);
+    std::shared_ptr<NetworkSocket> tcp = NetworkSocket::Create(NetworkProtocol::TCP);
     tcp->Connect(resolvedProxyAddress, proxyPort);
 
-    vector<NetworkSocket *> writeSockets;
-    vector<NetworkSocket *> readSockets;
-    vector<NetworkSocket *> errorSockets;
+    vector<std::shared_ptr<NetworkSocket>> writeSockets;
+    vector<std::shared_ptr<NetworkSocket>> readSockets;
+    vector<std::shared_ptr<NetworkSocket>> errorSockets;
 
     while (!tcp->IsFailed() && !tcp->IsReadyToSend())
     {
@@ -1800,12 +1665,12 @@ void VoIPController::InitUDPProxy()
         if (!NetworkSocket::Select(readSockets, writeSockets, errorSockets, selectCanceller))
         {
             LOGW("Select canceled while waiting for proxy control socket to connect");
-            delete tcp;
+            tcp.reset();
             return;
         }
     }
     LOGV("UDP proxy control socket ready to send");
-    NetworkSocketSOCKS5Proxy *udpProxy = new NetworkSocketSOCKS5Proxy(tcp, realUdpSocket, proxyUsername, proxyPassword);
+    std::shared_ptr<NetworkSocketSOCKS5Proxy> udpProxy = std::make_shared<NetworkSocketSOCKS5Proxy>(tcp, realUdpSocket, proxyUsername, proxyPassword);
     udpProxy->OnReadyToSend();
     writeSockets.clear();
     while (!udpProxy->IsFailed() && !tcp->IsFailed() && !udpProxy->IsReadyToSend())
@@ -1817,7 +1682,7 @@ void VoIPController::InitUDPProxy()
         if (!NetworkSocket::Select(readSockets, writeSockets, errorSockets, selectCanceller))
         {
             LOGW("Select canceled while waiting for UDP proxy to initialize");
-            delete udpProxy;
+            udpProxy.reset();
             return;
         }
         if (!readSockets.empty())
@@ -1828,7 +1693,7 @@ void VoIPController::InitUDPProxy()
     if (udpProxy->IsFailed())
     {
         udpProxy->Close();
-        delete udpProxy;
+        udpProxy.reset();
         proxySupportsUDP = false;
     }
     else
@@ -1864,9 +1729,9 @@ void VoIPController::RunRecvThread()
             needReInitUdpProxy = false;
         }
 
-        vector<NetworkSocket *> readSockets;
-        vector<NetworkSocket *> errorSockets;
-        vector<NetworkSocket *> writeSockets;
+        vector<std::shared_ptr<NetworkSocket>> readSockets;
+        vector<std::shared_ptr<NetworkSocket>> errorSockets;
+        vector<std::shared_ptr<NetworkSocket>> writeSockets;
         readSockets.push_back(udpSocket);
         errorSockets.push_back(realUdpSocket);
         if (!realUdpSocket->IsReadyToSend())
@@ -1881,13 +1746,13 @@ void VoIPController::RunRecvThread()
                 {
                     if (e.socket)
                     {
-                        readSockets.push_back(&*e.socket);
-                        errorSockets.push_back(&*e.socket);
+                        readSockets.push_back(e.socket);
+                        errorSockets.push_back(e.socket);
                         if (!e.socket->IsReadyToSend())
                         {
                             NetworkSocketSOCKS5Proxy *proxy = dynamic_cast<NetworkSocketSOCKS5Proxy *>(&*e.socket);
                             if (!proxy || proxy->NeedSelectForSending())
-                                writeSockets.push_back(&*e.socket);
+                                writeSockets.push_back(e.socket);
                         }
                     }
                 }
@@ -1914,12 +1779,12 @@ void VoIPController::RunRecvThread()
                 return;
             }
             MutexGuard m(endpointsMutex);
-            for (NetworkSocket *&socket : errorSockets)
+            for (std::shared_ptr<NetworkSocket> &socket : errorSockets)
             {
                 for (pair<const int64_t, Endpoint> &_e : endpoints)
                 {
                     Endpoint &e = _e.second;
-                    if (e.socket && &*e.socket == socket)
+                    if (e.socket == socket)
                     {
                         e.socket->Close();
                         e.socket.reset();
@@ -1930,7 +1795,7 @@ void VoIPController::RunRecvThread()
             continue;
         }
 
-        for (NetworkSocket *&socket : readSockets)
+        for (std::shared_ptr<NetworkSocket> &socket : readSockets)
         {
             //while(packet.length){
             NetworkPacket packet = socket->Receive();
@@ -2493,7 +2358,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             LOGI("resuming sending");
         }
         lastRemoteAckSeq = ackId;
-        conctl->PacketAcknowledged(ackId);
+        conctl.PacketAcknowledged(ackId);
 
         // Status list of acked seqnos, starting from the seq explicitly present in the packet + up to 32 seqs ago
         std::array<uint32_t, 33> peerAcks{0};
@@ -2524,7 +2389,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                 }
 
                 // TODO move this to a PacketSender
-                conctl->PacketAcknowledged(opkt.seq);
+                conctl.PacketAcknowledged(opkt.seq);
             }
         }
 
@@ -2569,7 +2434,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         {
             for (auto x = currentExtras.begin(); x != currentExtras.end();)
             {
-                if (x->firstContainingSeq != 0 && (lastRemoteAckSeq == x->firstContainingSeq || seqgt(lastRemoteAckSeq, x->firstContainingSeq)))
+                if (x->firstContainingSeq != 0 && seqgte(lastRemoteAckSeq, x->firstContainingSeq))
                 {
                     LOGV("Peer acknowledged extra type %u length %u", x->type, (unsigned int)x->data.Length());
                     ProcessAcknowledgedOutgoingExtra(*x);
@@ -2582,7 +2447,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
     }
 
     Endpoint *_currentEndpoint = &endpoints.at(currentEndpoint);
-    if (srcEndpoint.id != currentEndpoint && srcEndpoint.IsReflector() && ((_currentEndpoint->type != Endpoint::Type::UDP_RELAY && _currentEndpoint->type != Endpoint::Type::TCP_RELAY) || _currentEndpoint->averageRTT == 0))
+    if (srcEndpoint.id != currentEndpoint && srcEndpoint.IsReflector() && (_currentEndpoint->IsP2P() || _currentEndpoint->averageRTT == 0))
     {
         if (seqgt(lastSentSeq - 32, lastRemoteAckSeq))
         {
@@ -3348,7 +3213,7 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
             }
             else if (proxyProtocol == PROXY_SOCKS5)
             {
-                NetworkSocket *tcp = NetworkSocket::Create(NetworkProtocol::TCP);
+                std::shared_ptr<NetworkSocket> tcp = NetworkSocket::Create(NetworkProtocol::TCP);
                 tcp->Connect(resolvedProxyAddress, proxyPort);
                 shared_ptr<NetworkSocketSOCKS5Proxy> proxy = make_shared<NetworkSocketSOCKS5Proxy>(tcp, nullptr, proxyUsername, proxyPassword);
                 endpoint->socket = proxy;
@@ -3875,7 +3740,7 @@ void VoIPController::SetVideoSource(video::VideoSource *source)
         }
 
         if (!videoPacketSender)
-            videoPacketSender = new video::VideoPacketSender(this, source, stm);
+            videoPacketSender.reset(new video::VideoPacketSender(this, source, stm));
         else
             videoPacketSender->SetSource(source);
     }
@@ -4067,11 +3932,11 @@ void VoIPController::EvaluateUdpPingResults()
     if (avgPongs == 0.0 && proxyProtocol == PROXY_SOCKS5 && udpSocket != realUdpSocket)
     {
         LOGI("Proxy does not let UDP through, closing proxy connection and using UDP directly");
-        NetworkSocket *proxySocket = udpSocket;
+        std::shared_ptr<NetworkSocket> proxySocket = udpSocket;
         proxySocket->Close();
         udpSocket = realUdpSocket;
         selectCanceller->CancelSelect();
-        delete proxySocket;
+        proxySocket.reset();
         proxySupportsUDP = false;
         ResetUdpAvailability();
         return;
@@ -4225,9 +4090,9 @@ void VoIPController::UpdateRTT()
 
 void VoIPController::UpdateCongestion()
 {
-    if (conctl && encoder)
+    if (encoder)
     {
-        uint32_t sendLossCount = conctl->GetSendLossCount();
+        uint32_t sendLossCount = conctl.GetSendLossCount();
         sendLossCountHistory.Add(sendLossCount - prevSendLossCount);
         prevSendLossCount = sendLossCount;
         double packetsPerSec = 1000 / (double)outgoingStreams[0]->frameDuration;
@@ -4301,7 +4166,7 @@ void VoIPController::UpdateCongestion()
 
 void VoIPController::UpdateAudioBitrate()
 {
-    if (encoder && conctl)
+    if (encoder)
     {
         double time = GetCurrentTime();
         if ((audioInput && !audioInput->IsInitialized()) || (audioOutput && !audioOutput->IsInitialized()))
@@ -4311,7 +4176,7 @@ void VoIPController::UpdateAudioBitrate()
             SetState(STATE_FAILED);
         }
 
-        int act = conctl->GetBandwidthControlAction();
+        int act = conctl.GetBandwidthControlAction();
         if (shittyInternetMode)
         {
             encoder->SetBitrate(8000);
@@ -4528,10 +4393,7 @@ void VoIPController::TickJitterBufferAndCongestionControl()
             stm->jitterBuffer->Tick();
         }
     }
-    if (conctl)
-    {
-        conctl->Tick();
-    }
+    conctl.Tick();
 
     //MutexGuard m(queuedPacketsMutex);
     double currentTime = GetCurrentTime();
@@ -4552,7 +4414,7 @@ void VoIPController::TickJitterBufferAndCongestionControl()
             }
             else if (pkt.type == PKT_STREAM_DATA)
             {
-                conctl->PacketLost(pkt.seq);
+                conctl.PacketLost(pkt.seq);
             }
         }
     }

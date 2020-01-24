@@ -605,7 +605,7 @@ void NetworkSocketPosix::SetTimeouts(int sendTimeout, int recvTimeout)
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 }
 
-bool NetworkSocketPosix::Select(std::vector<NetworkSocket *> &readFds, std::vector<NetworkSocket *> &writeFds, std::vector<NetworkSocket *> &errorFds, SocketSelectCanceller *_canceller)
+bool NetworkSocketPosix::Select(std::vector<std::shared_ptr<NetworkSocket>> &readFds, std::vector<std::shared_ptr<NetworkSocket>> &writeFds, std::vector<std::shared_ptr<NetworkSocket>> &errorFds, const std::unique_ptr<SocketSelectCanceller> &canceller)
 {
 	fd_set readSet;
 	fd_set writeSet;
@@ -768,4 +768,9 @@ int NetworkSocketPosix::GetDescriptorFromSocket(NetworkSocket *socket)
 	if (sw)
 		return GetDescriptorFromSocket(sw->GetWrapped());
 	return 0;
+}
+
+inline int NetworkSocketPosix::GetDescriptorFromSocket(const std::shared_ptr<NetworkSocket> &socket)
+{
+	return GetDescriptorFromSocket(socket.get());
 }

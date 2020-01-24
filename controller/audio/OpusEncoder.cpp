@@ -17,7 +17,7 @@
 
 namespace
 {
-int serverConfigValueToBandwidth(int config)
+inline int serverConfigValueToBandwidth(int config)
 {
 	switch (config)
 	{
@@ -36,7 +36,7 @@ int serverConfigValueToBandwidth(int config)
 }
 } // namespace
 
-tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source, bool needSecondary) : queue(10)
+tgvoip::OpusEncoder::OpusEncoder(const std::shared_ptr<MediaStreamItf> &source, bool needSecondary) : queue(10)
 {
 	this->source = source;
 	source->SetCallback(tgvoip::OpusEncoder::Callback, this);
@@ -74,6 +74,7 @@ tgvoip::OpusEncoder::OpusEncoder(MediaStreamItf *source, bool needSecondary) : q
 
 tgvoip::OpusEncoder::~OpusEncoder()
 {
+	Stop();
 	opus_encoder_destroy(enc);
 	if (secondaryEncoder)
 		opus_encoder_destroy(secondaryEncoder);
@@ -172,7 +173,7 @@ uint32_t tgvoip::OpusEncoder::GetBitrate()
 	return requestedBitrate;
 }
 
-void tgvoip::OpusEncoder::SetEchoCanceller(EchoCanceller *aec)
+void tgvoip::OpusEncoder::SetEchoCanceller(const std::shared_ptr<EchoCanceller> &aec)
 {
 	echoCanceller = aec;
 }
@@ -200,7 +201,7 @@ void tgvoip::OpusEncoder::RunThread()
 				echoCanceller->ProcessInput(packet, 960, hasVoice);
 			if (!postProcEffects.empty())
 			{
-				for (effects::AudioEffect *effect : postProcEffects)
+				for (auto &effect : postProcEffects)
 				{
 					effect->Process(packet, 960);
 				}
@@ -282,7 +283,7 @@ void tgvoip::OpusEncoder::SetDTX(bool enable)
 	opus_encoder_ctl(enc, OPUS_SET_DTX(enable ? 1 : 0));
 }
 
-void tgvoip::OpusEncoder::SetLevelMeter(tgvoip::AudioLevelMeter *levelMeter)
+void tgvoip::OpusEncoder::SetLevelMeter(const std::shared_ptr<tgvoip::AudioLevelMeter> &levelMeter)
 {
 	this->levelMeter = levelMeter;
 }
@@ -306,14 +307,14 @@ void tgvoip::OpusEncoder::SetVadMode(bool vad)
 {
 	vadMode = vad;
 }
-void tgvoip::OpusEncoder::AddAudioEffect(effects::AudioEffect *effect)
+void tgvoip::OpusEncoder::AddAudioEffect(const std::shared_ptr<effects::AudioEffect> &effect)
 {
 	postProcEffects.push_back(effect);
 }
 
-void tgvoip::OpusEncoder::RemoveAudioEffect(effects::AudioEffect *effect)
+void tgvoip::OpusEncoder::RemoveAudioEffect(const std::shared_ptr<effects::AudioEffect> &effect)
 {
-	std::vector<effects::AudioEffect *>::iterator i = std::find(postProcEffects.begin(), postProcEffects.end(), effect);
+	auto i = std::find(postProcEffects.begin(), postProcEffects.end(), effect);
 	if (i != postProcEffects.end())
 		postProcEffects.erase(i);
 }

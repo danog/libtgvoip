@@ -94,7 +94,7 @@ class SocketSelectCanceller
 public:
 	virtual ~SocketSelectCanceller();
 	virtual void CancelSelect() = 0;
-	static SocketSelectCanceller *Create();
+	static std::unique_ptr<SocketSelectCanceller> Create();
 };
 
 class NetworkSocket
@@ -135,9 +135,9 @@ public:
 		this->timeout = timeout;
 	};
 
-	static NetworkSocket *Create(NetworkProtocol protocol);
+	static std::shared_ptr<NetworkSocket> Create(NetworkProtocol protocol);
 	static NetworkAddress ResolveDomainName(std::string name);
-	static bool Select(std::vector<NetworkSocket *> &readFds, std::vector<NetworkSocket *> &writeFds, std::vector<NetworkSocket *> &errorFds, SocketSelectCanceller *canceller);
+	static bool Select(std::vector<std::shared_ptr<NetworkSocket>> &readFds, std::vector<std::shared_ptr<NetworkSocket>> &writeFds, std::vector<std::shared_ptr<NetworkSocket>> &errorFds, const std::unique_ptr<SocketSelectCanceller> &canceller);
 
 protected:
 	virtual uint16_t GenerateLocalPort();
@@ -159,7 +159,7 @@ class NetworkSocketWrapper : public NetworkSocket
 public:
 	NetworkSocketWrapper(NetworkProtocol protocol) : NetworkSocket(protocol){};
 	virtual ~NetworkSocketWrapper(){};
-	virtual NetworkSocket *GetWrapped() = 0;
+	virtual std::shared_ptr<NetworkSocket> GetWrapped() = 0;
 	virtual void InitConnection() = 0;
 	virtual void SetNonBlocking(bool){};
 };
@@ -167,9 +167,9 @@ public:
 class NetworkSocketTCPObfuscated : public NetworkSocketWrapper
 {
 public:
-	NetworkSocketTCPObfuscated(NetworkSocket *wrapped);
+	NetworkSocketTCPObfuscated(const std::shared_ptr<NetworkSocket> &wrapped);
 	virtual ~NetworkSocketTCPObfuscated();
-	virtual NetworkSocket *GetWrapped();
+	virtual std::shared_ptr<NetworkSocket> GetWrapped();
 	virtual void InitConnection();
 	virtual void Send(NetworkPacket packet) override;
 	virtual NetworkPacket Receive(size_t maxLen) override;
@@ -185,7 +185,7 @@ public:
 	};
 
 private:
-	NetworkSocket *wrapped;
+	std::shared_ptr<NetworkSocket> wrapped;
 	TCPO2State recvState;
 	TCPO2State sendState;
 	bool initialized = false;
@@ -194,14 +194,14 @@ private:
 class NetworkSocketSOCKS5Proxy : public NetworkSocketWrapper
 {
 public:
-	NetworkSocketSOCKS5Proxy(NetworkSocket *tcp, NetworkSocket *udp, std::string username, std::string password);
+	NetworkSocketSOCKS5Proxy(const std::shared_ptr<NetworkSocket> &tcp, const std::shared_ptr<NetworkSocket> &udp, std::string username, std::string password);
 	virtual ~NetworkSocketSOCKS5Proxy();
 	virtual void Send(NetworkPacket packet) override;
 	virtual NetworkPacket Receive(size_t maxLen) override;
 	virtual void Open() override;
 	virtual void Close();
 	virtual void Connect(const NetworkAddress address, uint16_t port);
-	virtual NetworkSocket *GetWrapped();
+	virtual std::shared_ptr<NetworkSocket> GetWrapped();
 	virtual void InitConnection();
 	virtual bool IsFailed();
 	virtual NetworkAddress GetConnectedAddress();
@@ -221,8 +221,8 @@ private:
 		WaitingForCommandResult,
 		Connected
 	};
-	NetworkSocket *tcp;
-	NetworkSocket *udp;
+	std::shared_ptr<NetworkSocket> tcp;
+	std::shared_ptr<NetworkSocket> udp;
 	std::string username;
 	std::string password;
 	NetworkAddress connectedAddress = NetworkAddress::Empty();

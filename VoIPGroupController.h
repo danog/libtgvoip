@@ -49,7 +49,7 @@ private:
         int32_t userID;
         unsigned char memberTagHash[32];
         std::vector<std::shared_ptr<Stream>> streams;
-        AudioLevelMeter *levelMeter;
+        std::shared_ptr<AudioLevelMeter> levelMeter = std::make_shared<AudioLevelMeter>();
     };
     std::vector<GroupCallParticipant> participants;
     unsigned char reflectorSelfTag[16];
@@ -57,9 +57,9 @@ private:
     unsigned char reflectorSelfTagHash[32];
     int32_t userSelfID;
     Endpoint groupReflector;
-    AudioMixer *audioMixer;
-    AudioLevelMeter selfLevelMeter;
-    Callbacks groupCallbacks;
+    AudioMixer audioMixer;
+    std::shared_ptr<AudioLevelMeter> selfLevelMeter = std::make_shared<AudioLevelMeter>();
+    Callbacks groupCallbacks {};
     struct PacketIdMapping
     {
         uint32_t seq;

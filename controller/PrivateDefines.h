@@ -123,6 +123,11 @@ inline bool seqgt(uint32_t s1, uint32_t s2)
 	return ((s1 > s2) && (s1 - s2 <= SEQ_MAX / 2)) || ((s1 < s2) && (s2 - s1 > SEQ_MAX / 2));
 }
 
+inline bool seqgte(uint32_t s1, uint32_t s2)
+{
+	return s1 == s2 || seqgt(s1, s2);
+}
+
 #define NEED_RATE_FLAG_SHITTY_INTERNET_MODE 1
 #define NEED_RATE_FLAG_UDP_NA 2
 #define NEED_RATE_FLAG_UDP_BAD 4

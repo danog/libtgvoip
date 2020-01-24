@@ -23,9 +23,9 @@ public:
 	AudioIO(){};
 	virtual ~AudioIO(){};
 	TGVOIP_DISALLOW_COPY_AND_ASSIGN(AudioIO);
-	static AudioIO *Create(std::string inputDevice, std::string outputDevice);
-	virtual AudioInput *GetInput() = 0;
-	virtual AudioOutput *GetOutput() = 0;
+	static std::unique_ptr<AudioIO> Create(std::string inputDevice, std::string outputDevice);
+	virtual std::shared_ptr<AudioInput> GetInput() = 0;
+	virtual std::shared_ptr<AudioOutput> GetOutput() = 0;
 	bool Failed();
 	std::string GetErrorDescription();
 
@@ -40,35 +40,29 @@ class ContextlessAudioIO : public AudioIO
 public:
 	ContextlessAudioIO()
 	{
-		input = new I();
-		output = new O();
+		input = std::make_shared<I>();
+		output = std::make_shared<O>();
 	}
 
 	ContextlessAudioIO(std::string inputDeviceID, std::string outputDeviceID)
 	{
-		input = new I(inputDeviceID);
-		output = new O(outputDeviceID);
+		input = std::make_shared<I>(inputDeviceID);
+		output = std::make_shared<O>(outputDeviceID);
 	}
 
-	virtual ~ContextlessAudioIO()
-	{
-		delete input;
-		delete output;
-	}
-
-	virtual AudioInput *GetInput()
+	virtual std::shared_ptr<AudioInput> GetInput()
 	{
 		return input;
 	}
 
-	virtual AudioOutput *GetOutput()
+	virtual std::shared_ptr<AudioOutput> *GetOutput()
 	{
 		return output;
 	}
 
 private:
-	I *input;
-	O *output;
+	std::shared_ptr<I> input;
+	std::shared_ptr<O> output;
 };
 } // namespace audio
 } // namespace tgvoip

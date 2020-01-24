@@ -17,23 +17,23 @@ JitterBuffer::JitterBuffer(uint32_t _step) : step(_step),
 {
 	if (step < 30)
 	{
-		minMinDelay = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_20", 6);
-		maxMinDelay = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_20", 25);
-		maxUsedSlots = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_20", 50);
+		minMinDelay = ServerConfig::GetSharedInstance()->GetUInt("jitter_min_delay_20", 6);
+		maxMinDelay = ServerConfig::GetSharedInstance()->GetUInt("jitter_max_delay_20", 25);
+		maxUsedSlots = ServerConfig::GetSharedInstance()->GetUInt("jitter_max_slots_20", 50);
 	}
 	else if (step < 50)
 	{
-		minMinDelay = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_40", 4);
-		maxMinDelay = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_40", 15);
-		maxUsedSlots = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_40", 30);
+		minMinDelay = ServerConfig::GetSharedInstance()->GetUInt("jitter_min_delay_40", 4);
+		maxMinDelay = ServerConfig::GetSharedInstance()->GetUInt("jitter_max_delay_40", 15);
+		maxUsedSlots = ServerConfig::GetSharedInstance()->GetUInt("jitter_max_slots_40", 30);
 	}
 	else
 	{
-		minMinDelay = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_min_delay_60", 2);
-		maxMinDelay = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_max_delay_60", 10);
-		maxUsedSlots = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_max_slots_60", 20);
+		minMinDelay = ServerConfig::GetSharedInstance()->GetUInt("jitter_min_delay_60", 2);
+		maxMinDelay = ServerConfig::GetSharedInstance()->GetUInt("jitter_max_delay_60", 10);
+		maxUsedSlots = ServerConfig::GetSharedInstance()->GetUInt("jitter_max_slots_60", 20);
 	}
-	lossesToReset = (uint32_t)ServerConfig::GetSharedInstance()->GetInt("jitter_losses_to_reset", 20);
+	lossesToReset = ServerConfig::GetSharedInstance()->GetUInt("jitter_losses_to_reset", 20);
 	resyncThreshold = ServerConfig::GetSharedInstance()->GetDouble("jitter_resync_threshold", 1.0);
 #ifdef TGVOIP_DUMP_JITTER_STATS
 #ifdef TGVOIP_JITTER_DUMP_FILE

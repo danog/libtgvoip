@@ -19,6 +19,7 @@
 #include <memory>
 #include <atomic>
 
+
 struct OpusDecoder;
 
 namespace tgvoip
@@ -33,16 +34,15 @@ public:
 
 	OpusDecoder(const std::shared_ptr<MediaStreamItf> &dst, bool isAsync, bool needEC);
 	OpusDecoder(const std::unique_ptr<MediaStreamItf> &dst, bool isAsync, bool needEC);
-	OpusDecoder(MediaStreamItf *dst, bool isAsync, bool needEC);
 	virtual ~OpusDecoder();
 	size_t HandleCallback(unsigned char *data, size_t len);
-	void SetEchoCanceller(EchoCanceller *canceller);
+	void SetEchoCanceller(const std::shared_ptr<EchoCanceller> &canceller);
 	void SetFrameDuration(uint32_t duration);
-	void SetJitterBuffer(std::shared_ptr<JitterBuffer> jitterBuffer);
+	void SetJitterBuffer(const std::shared_ptr<JitterBuffer> &jitterBuffer);
 	void SetDTX(bool enable);
-	void SetLevelMeter(AudioLevelMeter *levelMeter);
-	void AddAudioEffect(effects::AudioEffect *effect);
-	void RemoveAudioEffect(effects::AudioEffect *effect);
+	void SetLevelMeter(const std::shared_ptr<AudioLevelMeter> &levelMeter);
+	void AddAudioEffect(const std::shared_ptr<effects::AudioEffect> &effect);
+	void RemoveAudioEffect(const std::shared_ptr<effects::AudioEffect> &effect);
 
 private:
 	void Initialize(bool isAsync, bool needEC);
@@ -61,13 +61,13 @@ private:
 	Thread *thread;
 	Semaphore *semaphore;
 	uint32_t frameDuration;
-	EchoCanceller *echoCanceller;
+	std::shared_ptr<EchoCanceller> echoCanceller;
 	std::shared_ptr<JitterBuffer> jitterBuffer;
-	AudioLevelMeter *levelMeter;
+	std::shared_ptr<AudioLevelMeter> levelMeter;
 	int consecutiveLostPackets;
 	bool enableDTX;
 	size_t silentPacketCount;
-	std::vector<effects::AudioEffect *> postProcEffects;
+	std::vector<std::shared_ptr<effects::AudioEffect>> postProcEffects;
 	bool async;
 	unsigned char nextBuffer[8192];
 	unsigned char decodeBuffer[8192];

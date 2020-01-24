@@ -55,12 +55,12 @@ bool NetworkSocket::IsFailed()
 	return failed;
 }
 
-NetworkSocket *NetworkSocket::Create(NetworkProtocol protocol)
+std::shared_ptr<NetworkSocket> NetworkSocket::Create(NetworkProtocol protocol)
 {
 #ifndef _WIN32
-	return new NetworkSocketPosix(protocol);
+	return std::make_shared<NetworkSocketPosix>(protocol);
 #else
-	return new NetworkSocketWinsock(protocol);
+	return std::make_shared<NetworkSocketWinsock>(protocol);
 #endif
 }
 
@@ -225,7 +225,7 @@ NetworkAddress NetworkAddress::IPv6(const uint8_t addr[16])
 	return a;
 }
 
-bool NetworkSocket::Select(std::vector<NetworkSocket *> &readFds, std::vector<NetworkSocket *> &writeFds, std::vector<NetworkSocket *> &errorFds, SocketSelectCanceller *canceller)
+bool NetworkSocket::Select(std::vector<std::shared_ptr<NetworkSocket>> &readFds, std::vector<std::shared_ptr<NetworkSocket>> &writeFds, std::vector<std::shared_ptr<NetworkSocket>> &errorFds, const std::unique_ptr<SocketSelectCanceller> &canceller)
 {
 #ifndef _WIN32
 	return NetworkSocketPosix::Select(readFds, writeFds, errorFds, canceller);
@@ -238,27 +238,25 @@ SocketSelectCanceller::~SocketSelectCanceller()
 {
 }
 
-SocketSelectCanceller *SocketSelectCanceller::Create()
+std::unique_ptr<SocketSelectCanceller> SocketSelectCanceller::Create()
 {
 #ifndef _WIN32
-	return new SocketSelectCancellerPosix();
+	return std::move(std::unique_ptr<SocketSelectCanceller>{new SocketSelectCancellerPosix()});
 #else
-	return new SocketSelectCancellerWin32();
+	return std::move(std::unique_ptr<SocketSelectCanceller>{new SocketSelectCancellerWin32()});
 #endif
 }
 
-NetworkSocketTCPObfuscated::NetworkSocketTCPObfuscated(NetworkSocket *wrapped) : NetworkSocketWrapper(NetworkProtocol::TCP)
+NetworkSocketTCPObfuscated::NetworkSocketTCPObfuscated(const std::shared_ptr<NetworkSocket> &wrapped) : NetworkSocketWrapper(NetworkProtocol::TCP)
 {
 	this->wrapped = wrapped;
 }
 
 NetworkSocketTCPObfuscated::~NetworkSocketTCPObfuscated()
 {
-	if (wrapped)
-		delete wrapped;
 }
 
-NetworkSocket *NetworkSocketTCPObfuscated::GetWrapped()
+std::shared_ptr<NetworkSocket> NetworkSocketTCPObfuscated::GetWrapped()
 {
 	return wrapped;
 }
@@ -385,7 +383,7 @@ bool NetworkSocketTCPObfuscated::IsFailed()
 	return wrapped->IsFailed();
 }
 
-NetworkSocketSOCKS5Proxy::NetworkSocketSOCKS5Proxy(NetworkSocket *tcp, NetworkSocket *udp, std::string username, std::string password) : NetworkSocketWrapper(udp ? NetworkProtocol::UDP : NetworkProtocol::TCP)
+NetworkSocketSOCKS5Proxy::NetworkSocketSOCKS5Proxy(const std::shared_ptr<NetworkSocket> &tcp, const std::shared_ptr<NetworkSocket> &udp, std::string username, std::string password) : NetworkSocketWrapper(udp ? NetworkProtocol::UDP : NetworkProtocol::TCP)
 {
 	this->tcp = tcp;
 	this->udp = udp;
@@ -395,7 +393,6 @@ NetworkSocketSOCKS5Proxy::NetworkSocketSOCKS5Proxy(NetworkSocket *tcp, NetworkSo
 
 NetworkSocketSOCKS5Proxy::~NetworkSocketSOCKS5Proxy()
 {
-	delete tcp;
 }
 
 void NetworkSocketSOCKS5Proxy::Send(NetworkPacket packet)
@@ -450,7 +447,7 @@ NetworkPacket NetworkSocketSOCKS5Proxy::Receive(size_t maxLen)
 			NetworkAddress address = NetworkAddress::Empty();
 			if (atyp == 1)
 			{ // IPv4
-				address = NetworkAddress::IPv4((uint32_t)in.ReadInt32());
+				address = NetworkAddress::IPv4(in.ReadUInt32());
 			}
 			else if (atyp == 4)
 			{ // IPv6
@@ -483,7 +480,7 @@ void NetworkSocketSOCKS5Proxy::Connect(const NetworkAddress address, uint16_t po
 	connectedPort = port;
 }
 
-NetworkSocket *NetworkSocketSOCKS5Proxy::GetWrapped()
+std::shared_ptr<NetworkSocket> NetworkSocketSOCKS5Proxy::GetWrapped()
 {
 	return protocol == NetworkProtocol::TCP ? tcp : udp;
 }
@@ -642,7 +639,7 @@ bool NetworkSocketSOCKS5Proxy::OnReadyToReceive()
 			}
 			LOGV("socks5: connect succeeded");
 			state = ConnectionState::Connected;
-			tcp = new NetworkSocketTCPObfuscated(tcp);
+			tcp = std::make_shared<NetworkSocketTCPObfuscated>(tcp);
 			readyToSend = true;
 			return tcp->OnReadyToSend();
 		}
@@ -675,7 +672,7 @@ bool NetworkSocketSOCKS5Proxy::OnReadyToReceive()
 				unsigned char atyp = in.ReadByte();
 				if (atyp == 1)
 				{
-					uint32_t addr = (uint32_t)in.ReadInt32();
+					uint32_t addr = in.ReadUInt32();
 					connectedAddress = NetworkAddress::IPv4(addr);
 				}
 				else if (atyp == 3)

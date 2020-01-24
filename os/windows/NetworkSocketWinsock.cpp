@@ -693,7 +693,7 @@ void NetworkSocketWinsock::SetTimeouts(int sendTimeout, int recvTimeout)
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 }
 
-bool NetworkSocketWinsock::Select(std::vector<NetworkSocket *> &readFds, std::vector<NetworkSocket *> &writeFds, std::vector<NetworkSocket *> &errorFds, SocketSelectCanceller *_canceller)
+bool NetworkSocketWinsock::Select(std::vector<std::shared_ptr<NetworkSocket>> &readFds, std::vector<std::shared_ptr<NetworkSocket>> &writeFds, std::vector<std::shared_ptr<NetworkSocket>> &errorFds, const std::unique_ptr<SocketSelectCanceller> &canceller)
 {
 	fd_set readSet;
 	fd_set errorSet;
@@ -842,4 +842,9 @@ int NetworkSocketWinsock::GetDescriptorFromSocket(NetworkSocket *socket)
 	if (sw)
 		return GetDescriptorFromSocket(sw->GetWrapped());
 	return 0;
+}
+
+inline int NetworkSocketWinsock::GetDescriptorFromSocket(const std::unique_ptr<NetworkSocket> &socket)
+{
+	return GetDescriptorFromSocket(socket.get());
 }

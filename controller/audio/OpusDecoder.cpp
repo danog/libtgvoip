@@ -10,11 +10,6 @@
 #include <assert.h>
 #include <math.h>
 #include <algorithm>
-#if defined HAVE_CONFIG_H || defined TGVOIP_USE_INSTALLED_OPUS
-#include <opus/opus.h>
-#else
-#include <opus/opus.h>
-#endif
 
 #include "VoIPController.h"
 
@@ -29,12 +24,6 @@ tgvoip::OpusDecoder::OpusDecoder(const std::shared_ptr<MediaStreamItf> &dst, boo
 }
 
 tgvoip::OpusDecoder::OpusDecoder(const std::unique_ptr<MediaStreamItf> &dst, bool isAsync, bool needEC)
-{
-	dst->SetCallback(OpusDecoder::Callback, this);
-	Initialize(isAsync, needEC);
-}
-
-tgvoip::OpusDecoder::OpusDecoder(MediaStreamItf *dst, bool isAsync, bool needEC)
 {
 	dst->SetCallback(OpusDecoder::Callback, this);
 	Initialize(isAsync, needEC);
@@ -87,7 +76,7 @@ tgvoip::OpusDecoder::~OpusDecoder()
 		delete semaphore;
 }
 
-void tgvoip::OpusDecoder::SetEchoCanceller(EchoCanceller *canceller)
+void tgvoip::OpusDecoder::SetEchoCanceller(const std::shared_ptr<EchoCanceller> &canceller)
 {
 	echoCanceller = canceller;
 }
@@ -212,7 +201,7 @@ void tgvoip::OpusDecoder::RunThread()
 				Buffer buf = bufferPool.Get();
 				if (remainingDataLen > 0)
 				{
-					for (effects::AudioEffect *&effect : postProcEffects)
+					for (auto &effect : postProcEffects)
 					{
 						effect->Process(reinterpret_cast<int16_t *>(processedBuffer + (PACKET_SIZE * i)), 960);
 					}
@@ -312,7 +301,7 @@ void tgvoip::OpusDecoder::SetFrameDuration(uint32_t duration)
 	packetsPerFrame = frameDuration / 20;
 }
 
-void tgvoip::OpusDecoder::SetJitterBuffer(std::shared_ptr<JitterBuffer> jitterBuffer)
+void tgvoip::OpusDecoder::SetJitterBuffer(const std::shared_ptr<JitterBuffer> &jitterBuffer)
 {
 	this->jitterBuffer = jitterBuffer;
 }
@@ -322,19 +311,19 @@ void tgvoip::OpusDecoder::SetDTX(bool enable)
 	enableDTX = enable;
 }
 
-void tgvoip::OpusDecoder::SetLevelMeter(AudioLevelMeter *levelMeter)
+void tgvoip::OpusDecoder::SetLevelMeter(const std::shared_ptr<AudioLevelMeter> &levelMeter)
 {
 	this->levelMeter = levelMeter;
 }
 
-void tgvoip::OpusDecoder::AddAudioEffect(effects::AudioEffect *effect)
+void tgvoip::OpusDecoder::AddAudioEffect(const std::shared_ptr<effects::AudioEffect> &effect)
 {
 	postProcEffects.push_back(effect);
 }
 
-void tgvoip::OpusDecoder::RemoveAudioEffect(effects::AudioEffect *effect)
+void tgvoip::OpusDecoder::RemoveAudioEffect(const std::shared_ptr<effects::AudioEffect> &effect)
 {
-	std::vector<effects::AudioEffect *>::iterator i = std::find(postProcEffects.begin(), postProcEffects.end(), effect);
+	auto i = std::find(postProcEffects.begin(), postProcEffects.end(), effect);
 	if (i != postProcEffects.end())
 		postProcEffects.erase(i);
 }

@@ -17,8 +17,6 @@ using namespace std;
 
 VoIPGroupController::VoIPGroupController(int32_t timeDifference)
 {
-	audioMixer = new AudioMixer();
-	memset(&callbacks, 0, sizeof(callbacks));
 	userSelfID = 0;
 	this->timeDifference = timeDifference;
 	LOGV("Created VoIPGroupController; timeDifference=%d", timeDifference);
@@ -31,14 +29,7 @@ VoIPGroupController::~VoIPGroupController()
 		audioOutput->Stop();
 	}
 	LOGD("before stop audio mixer");
-	audioMixer->Stop();
-	delete audioMixer;
-
-	for (vector<GroupCallParticipant>::iterator p = participants.begin(); p != participants.end(); p++)
-	{
-		if (p->levelMeter)
-			delete p->levelMeter;
-	}
+	audioMixer.Stop();
 }
 
 void VoIPGroupController::SetGroupCallInfo(unsigned char *encryptionKey, unsigned char *reflectorGroupTag, unsigned char *reflectorSelfTag, unsigned char *reflectorSelfSecret, unsigned char *reflectorSelfTagHash, int32_t selfUserID, NetworkAddress reflectorAddress, NetworkAddress reflectorAddressV6, uint16_t reflectorPort)
@@ -93,7 +84,6 @@ void VoIPGroupController::AddGroupCallParticipant(int32_t userID, unsigned char 
 	GroupCallParticipant p;
 	p.userID = userID;
 	memcpy(p.memberTagHash, memberTagHash, sizeof(p.memberTagHash));
-	p.levelMeter = new AudioLevelMeter();
 
 	BufferInputStream ss(serializedStreams, streamsLength);
 	vector<shared_ptr<Stream>> streams = DeserializeStreams(ss);
@@ -120,7 +110,7 @@ void VoIPGroupController::AddGroupCallParticipant(int32_t userID, unsigned char 
 			s->decoder->SetFrameDuration(s->frameDuration);
 			s->decoder->SetDTX(true);
 			s->decoder->SetLevelMeter(p.levelMeter);
-			audioMixer->AddInput(s->callbackWrapper);
+			audioMixer.AddInput(s->callbackWrapper);
 		}
 		incomingStreams.push_back(s);
 	}
@@ -144,11 +134,8 @@ void VoIPGroupController::RemoveGroupCallParticipant(int32_t userID)
 		if ((*stm)->userID == userID)
 		{
 			LOGI("Removed stream %d belonging to user %d", (*stm)->id, userID);
-			audioMixer->RemoveInput((*stm)->callbackWrapper);
+			audioMixer.RemoveInput((*stm)->callbackWrapper);
 			(*stm)->decoder->Stop();
-			//delete (*stm)->decoder;
-			//delete (*stm)->jitterBuffer;
-			//delete (*stm)->callbackWrapper;
 			stm = incomingStreams.erase(stm);
 			continue;
 		}
@@ -158,8 +145,6 @@ void VoIPGroupController::RemoveGroupCallParticipant(int32_t userID)
 	{
 		if (p->userID == userID)
 		{
-			if (p->levelMeter)
-				delete p->levelMeter;
 			participants.erase(p);
 			LOGI("Removed group call participant %d", userID);
 			break;
@@ -309,7 +294,7 @@ void VoIPGroupController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint 
 							if(pkt->id==id){
 								if(!pkt->ackTime){
 									pkt->ackTime=GetCurrentTime();
-									conctl->PacketAcknowledged(pkt->seq);
+									conctl.PacketAcknowledged(pkt->seq);
 									//LOGV("relay acknowledged packet %u", pkt->seq);
 									if(seqgt(pkt->seq, lastRemoteAckSeq))
 										lastRemoteAckSeq=pkt->seq;
@@ -583,12 +568,12 @@ void VoIPGroupController::SendRelayPings()
 void VoIPGroupController::OnAudioOutputReady()
 {
 	encoder->SetDTX(true);
-	audioMixer->SetOutput(audioOutput);
-	audioMixer->SetEchoCanceller(echoCanceller);
-	audioMixer->Start();
+	audioMixer.SetOutput(audioOutput.get());
+	audioMixer.SetEchoCanceller(echoCanceller.get());
+	audioMixer.Start();
 	audioOutput->Start();
 	audioOutStarted = true;
-	encoder->SetLevelMeter(&selfLevelMeter);
+	encoder->SetLevelMeter(selfLevelMeter);
 }
 
 void VoIPGroupController::WritePacketHeader(uint32_t seq, BufferOutputStream *s, unsigned char type, uint32_t length, PacketSender *source)
@@ -609,7 +594,7 @@ void VoIPGroupController::WritePacketHeader(uint32_t seq, BufferOutputStream *s,
 
 	if (type == PKT_STREAM_DATA || type == PKT_STREAM_DATA_X2 || type == PKT_STREAM_DATA_X3)
 	{
-		conctl->PacketSent(seq, length);
+		conctl.PacketSent(seq, length);
 	}
 
 	/*if(pflags & PFLAG_HAS_CALL_ID){
@@ -722,7 +707,7 @@ int32_t VoIPGroupController::GetCurrentUnixtime()
 float VoIPGroupController::GetParticipantAudioLevel(int32_t userID)
 {
 	if (userID == userSelfID)
-		return selfLevelMeter.GetLevel();
+		return selfLevelMeter->GetLevel();
 	MutexGuard m(participantsMutex);
 	for (vector<GroupCallParticipant>::iterator p = participants.begin(); p != participants.end(); ++p)
 	{
@@ -777,7 +762,7 @@ void VoIPGroupController::SetParticipantVolume(int32_t userID, float volume)
 						else
 							db = 0.0f;
 						//LOGV("Setting user %u audio volume to %.2f dB", userID, db);
-						audioMixer->SetInputVolume((*s)->callbackWrapper, db);
+						audioMixer.SetInputVolume((*s)->callbackWrapper, db);
 					}
 					break;
 				}
@@ -850,11 +835,11 @@ std::string VoIPGroupController::GetDebugString()
 			 "Send/recv losses: %u/%u (%d%%)\n"
 			 "Audio bitrate: %d kbit\n"
 			 "Bytes sent/recvd: %llu/%llu\n\n",
-			 (int)(conctl->GetAverageRTT() * 1000), (int)(conctl->GetMinimumRTT() * 1000),
-			 int(conctl->GetInflightDataSize()), int(conctl->GetCongestionWindow()),
+			 (int)(conctl.GetAverageRTT() * 1000), (int)(conctl.GetMinimumRTT() * 1000),
+			 int(conctl.GetInflightDataSize()), int(conctl.GetCongestionWindow()),
 			 keyFingerprint[0], keyFingerprint[1], keyFingerprint[2], keyFingerprint[3], keyFingerprint[4], keyFingerprint[5], keyFingerprint[6], keyFingerprint[7],
 			 lastSentSeq, lastRemoteAckSeq,
-			 conctl->GetSendLossCount(), recvLossCount, encoder ? encoder->GetPacketLoss() : 0,
+			 conctl.GetSendLossCount(), recvLossCount, encoder ? encoder->GetPacketLoss() : 0,
 			 encoder ? (encoder->GetBitrate() / 1000) : 0,
 			 (long long unsigned int)(stats.bytesSentMobile + stats.bytesSentWifi),
 			 (long long unsigned int)(stats.bytesRecvdMobile + stats.bytesRecvdWifi));

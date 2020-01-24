@@ -65,6 +65,7 @@ public:
 
 	virtual ~Thread()
 	{
+		Join();
 	}
 
 	void Start()
@@ -271,6 +272,7 @@ public:
 
 	~Thread()
 	{
+		Join();
 	}
 
 	void Start()

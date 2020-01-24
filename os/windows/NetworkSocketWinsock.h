@@ -11,20 +11,25 @@
 #include <stdint.h>
 #include <vector>
 
-namespace tgvoip {
+namespace tgvoip
+{
 class Buffer;
 
-class SocketSelectCancellerWin32 : public SocketSelectCanceller{
-friend class NetworkSocketWinsock;
+class SocketSelectCancellerWin32 : public SocketSelectCanceller
+{
+	friend class NetworkSocketWinsock;
+
 public:
 	SocketSelectCancellerWin32();
 	virtual ~SocketSelectCancellerWin32();
 	virtual void CancelSelect();
+
 private:
 	bool canceled;
 };
 
-class NetworkSocketWinsock : public NetworkSocket{
+class NetworkSocketWinsock : public NetworkSocket
+{
 public:
 	NetworkSocketWinsock(NetworkProtocol protocol);
 	virtual ~NetworkSocketWinsock();
@@ -32,7 +37,7 @@ public:
 	virtual NetworkPacket Receive(size_t maxLen) override;
 	virtual void Open() override;
 	virtual void Close() override;
-	virtual std::string GetLocalInterfaceInfo(NetworkAddress* v4addr, NetworkAddress* v6addr) override;
+	virtual std::string GetLocalInterfaceInfo(NetworkAddress *v4addr, NetworkAddress *v6addr) override;
 	virtual void OnActiveInterfaceChanged() override;
 	virtual uint16_t GetLocalPort() override;
 	virtual void Connect(const NetworkAddress address, uint16_t port) override;
@@ -40,9 +45,9 @@ public:
 	static std::string V4AddressToString(uint32_t address);
 	static std::string V6AddressToString(const unsigned char address[16]);
 	static uint32_t StringToV4Address(std::string address);
-	static void StringToV6Address(std::string address, unsigned char* out);
+	static void StringToV6Address(std::string address, unsigned char *out);
 	static NetworkAddress ResolveDomainName(std::string name);
-	static bool Select(std::vector<NetworkSocket*>& readFds, std::vector<NetworkSocket*>& writeFds, std::vector<NetworkSocket*>& errorFds, SocketSelectCanceller* canceller);
+	static bool Select(std::vector<std::shared_ptr<NetworkSocket>> &readFds, std::vector<std::shared_ptr<NetworkSocket>> &writeFds, std::vector<std::shared_ptr<NetworkSocket>> &errorFds, const std::unique_ptr<SocketSelectCanceller> &canceller);
 	virtual NetworkAddress GetConnectedAddress() override;
 	virtual uint16_t GetConnectedPort() override;
 	virtual void SetTimeouts(int sendTimeout, int recvTimeout) override;
@@ -52,7 +57,8 @@ protected:
 	virtual void SetMaxPriority();
 
 private:
-	static int GetDescriptorFromSocket(NetworkSocket* socket);
+	static int GetDescriptorFromSocket(NetworkSocket *socket);
+	static int GetDescriptorFromSocket(const std::unique_ptr<NetworkSocket> &socket)
 	uintptr_t fd;
 	bool needUpdateNat64Prefix;
 	bool nat64Present;
@@ -60,12 +66,12 @@ private:
 	bool isV4Available;
 	bool isAtLeastVista;
 	bool closing;
-	NetworkAddress tcpConnectedAddress=NetworkAddress::Empty();
+	NetworkAddress tcpConnectedAddress = NetworkAddress::Empty();
 	uint16_t tcpConnectedPort;
-	NetworkPacket pendingOutgoingPacket=NetworkPacket::Empty();
-	Buffer recvBuf=Buffer(2048);
+	NetworkPacket pendingOutgoingPacket = NetworkPacket::Empty();
+	Buffer recvBuf = Buffer(2048);
 };
 
-}
+} // namespace tgvoip
 
 #endif //LIBTGVOIP_NETWORKSOCKETWINSOCK_H

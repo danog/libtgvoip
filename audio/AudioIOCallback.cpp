@@ -15,22 +15,20 @@ using namespace tgvoip::audio;
 
 AudioIOCallback::AudioIOCallback()
 {
-	input = new AudioInputCallback();
-	output = new AudioOutputCallback();
+	input = std::make_shared<AudioInputCallback>();
+	output = std::make_shared<AudioOutputCallback>();
 }
 
 AudioIOCallback::~AudioIOCallback()
 {
-	delete input;
-	delete output;
 }
 
-AudioInput *AudioIOCallback::GetInput()
+std::shared_ptr<AudioInput> AudioIOCallback::GetInput()
 {
 	return input;
 }
 
-AudioOutput *AudioIOCallback::GetOutput()
+std::shared_ptr<AudioInput> AudioIOCallback::GetOutput()
 {
 	return output;
 }

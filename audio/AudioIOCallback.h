@@ -7,9 +7,10 @@
 #ifndef LIBTGVOIP_AUDIO_IO_CALLBACK
 #define LIBTGVOIP_AUDIO_IO_CALLBACK
 
-#include "AudioIO.h"
 #include <functional>
+#include <memory>
 
+#include "AudioIO.h"
 #include "../tools/threading.h"
 
 namespace tgvoip
@@ -56,12 +57,12 @@ class AudioIOCallback : public AudioIO
 public:
 	AudioIOCallback();
 	virtual ~AudioIOCallback();
-	virtual AudioInput *GetInput() override;
-	virtual AudioOutput *GetOutput() override;
+	virtual std::shared_ptr<AudioInput> GetInput() override;
+	virtual std::shared_ptr<AudioOutput> GetOutput() override;
 
 private:
-	AudioInputCallback *input;
-	AudioOutputCallback *output;
+	std::shared_ptr<AudioInputCallback> input;
+	std::shared_ptr<AudioOutputCallback> output;
 };
 } // namespace audio
 } // namespace tgvoip
