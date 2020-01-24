@@ -1665,7 +1665,6 @@ void VoIPController::InitUDPProxy()
         if (!NetworkSocket::Select(readSockets, writeSockets, errorSockets, selectCanceller))
         {
             LOGW("Select canceled while waiting for proxy control socket to connect");
-            tcp.reset();
             return;
         }
     }
@@ -1682,7 +1681,6 @@ void VoIPController::InitUDPProxy()
         if (!NetworkSocket::Select(readSockets, writeSockets, errorSockets, selectCanceller))
         {
             LOGW("Select canceled while waiting for UDP proxy to initialize");
-            udpProxy.reset();
             return;
         }
         if (!readSockets.empty())
@@ -1693,7 +1691,6 @@ void VoIPController::InitUDPProxy()
     if (udpProxy->IsFailed())
     {
         udpProxy->Close();
-        udpProxy.reset();
         proxySupportsUDP = false;
     }
     else
@@ -3936,7 +3933,6 @@ void VoIPController::EvaluateUdpPingResults()
         proxySocket->Close();
         udpSocket = realUdpSocket;
         selectCanceller->CancelSelect();
-        proxySocket.reset();
         proxySupportsUDP = false;
         ResetUdpAvailability();
         return;

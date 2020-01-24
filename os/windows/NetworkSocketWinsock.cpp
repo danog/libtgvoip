@@ -709,7 +709,7 @@ bool NetworkSocketWinsock::Select(std::vector<std::shared_ptr<NetworkSocket>> &r
 		FD_ZERO(&writeSet);
 		FD_ZERO(&errorSet);
 
-		for (std::vector<NetworkSocket *>::iterator itr = readFds.begin(); itr != readFds.end(); ++itr)
+		for (auto itr = readFds.begin(); itr != readFds.end(); ++itr)
 		{
 			int sfd = GetDescriptorFromSocket(*itr);
 			if (sfd == 0)
@@ -720,7 +720,7 @@ bool NetworkSocketWinsock::Select(std::vector<std::shared_ptr<NetworkSocket>> &r
 			FD_SET(sfd, &readSet);
 		}
 
-		for (NetworkSocket *&s : writeFds)
+		for (const auto &s : writeFds)
 		{
 			int sfd = GetDescriptorFromSocket(s);
 			if (sfd == 0)
@@ -731,7 +731,7 @@ bool NetworkSocketWinsock::Select(std::vector<std::shared_ptr<NetworkSocket>> &r
 			FD_SET(sfd, &writeSet);
 		}
 
-		for (std::vector<NetworkSocket *>::iterator itr = errorFds.begin(); itr != errorFds.end(); ++itr)
+		for (auto itr = errorFds.begin(); itr != errorFds.end(); ++itr)
 		{
 			int sfd = GetDescriptorFromSocket(*itr);
 			if (sfd == 0)
@@ -766,7 +766,7 @@ bool NetworkSocketWinsock::Select(std::vector<std::shared_ptr<NetworkSocket>> &r
 		FD_ZERO(&errorSet);
 	}
 
-	std::vector<NetworkSocket *>::iterator itr = readFds.begin();
+	auto itr = readFds.begin();
 	while (itr != readFds.end())
 	{
 		int sfd = GetDescriptorFromSocket(*itr);

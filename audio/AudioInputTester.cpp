@@ -23,7 +23,6 @@ AudioInputTester::AudioInputTester(std::string deviceID) : deviceID(std::move(de
 AudioInputTester::~AudioInputTester()
 {
 	input->Stop();
-	delete io;
 }
 
 void AudioInputTester::Update(int16_t *samples, size_t count)

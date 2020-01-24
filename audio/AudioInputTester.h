@@ -21,8 +21,8 @@ public:
 
 private:
     void Update(int16_t *samples, size_t count);
-    audio::AudioIO *io = NULL;
-    audio::AudioInput *input = NULL;
+    std::shared_ptr<audio::AudioIO> io;
+    std::shared_ptr<audio::AudioInput> input;
     int16_t maxSample = 0;
     std::string deviceID;
 };

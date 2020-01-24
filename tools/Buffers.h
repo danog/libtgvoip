@@ -86,7 +86,6 @@ public:
 	void Reset();
 	void Rewind(size_t numBytes);
 
-	
 	inline void WriteUInt64(uint64_t i)
 	{
 		WriteInt64(static_cast<int64_t>(i));

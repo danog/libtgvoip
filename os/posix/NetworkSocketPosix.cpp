@@ -605,7 +605,7 @@ void NetworkSocketPosix::SetTimeouts(int sendTimeout, int recvTimeout)
 	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 }
 
-bool NetworkSocketPosix::Select(std::vector<std::shared_ptr<NetworkSocket>> &readFds, std::vector<std::shared_ptr<NetworkSocket>> &writeFds, std::vector<std::shared_ptr<NetworkSocket>> &errorFds, const std::unique_ptr<SocketSelectCanceller> &canceller)
+bool NetworkSocketPosix::Select(std::vector<std::shared_ptr<NetworkSocket>> &readFds, std::vector<std::shared_ptr<NetworkSocket>> &writeFds, std::vector<std::shared_ptr<NetworkSocket>> &errorFds, const std::unique_ptr<SocketSelectCanceller> &_canceller)
 {
 	fd_set readSet;
 	fd_set writeSet;
@@ -613,13 +613,13 @@ bool NetworkSocketPosix::Select(std::vector<std::shared_ptr<NetworkSocket>> &rea
 	FD_ZERO(&readSet);
 	FD_ZERO(&writeSet);
 	FD_ZERO(&errorSet);
-	SocketSelectCancellerPosix *canceller = dynamic_cast<SocketSelectCancellerPosix *>(_canceller);
+	SocketSelectCancellerPosix *canceller = dynamic_cast<SocketSelectCancellerPosix *>(_canceller.get());
 	if (canceller)
 		FD_SET(canceller->pipeRead, &readSet);
 
 	int maxfd = canceller ? canceller->pipeRead : 0;
 
-	for (NetworkSocket *&s : readFds)
+	for (const auto &s : readFds)
 	{
 		int sfd = GetDescriptorFromSocket(s);
 		if (sfd <= 0)
@@ -632,7 +632,7 @@ bool NetworkSocketPosix::Select(std::vector<std::shared_ptr<NetworkSocket>> &rea
 			maxfd = sfd;
 	}
 
-	for (NetworkSocket *&s : writeFds)
+	for (const auto &s : writeFds)
 	{
 		int sfd = GetDescriptorFromSocket(s);
 		if (sfd <= 0)
@@ -647,7 +647,7 @@ bool NetworkSocketPosix::Select(std::vector<std::shared_ptr<NetworkSocket>> &rea
 
 	bool anyFailed = false;
 
-	for (NetworkSocket *&s : errorFds)
+	for (const auto &s : errorFds)
 	{
 		int sfd = GetDescriptorFromSocket(s);
 		if (sfd <= 0)
@@ -681,7 +681,7 @@ bool NetworkSocketPosix::Select(std::vector<std::shared_ptr<NetworkSocket>> &rea
 		FD_ZERO(&writeSet);
 	}
 
-	std::vector<NetworkSocket *>::iterator itr = readFds.begin();
+	auto itr = readFds.begin();
 	while (itr != readFds.end())
 	{
 		int sfd = GetDescriptorFromSocket(*itr);

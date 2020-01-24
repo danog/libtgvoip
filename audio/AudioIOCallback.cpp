@@ -28,7 +28,7 @@ std::shared_ptr<AudioInput> AudioIOCallback::GetInput()
 	return input;
 }
 
-std::shared_ptr<AudioInput> AudioIOCallback::GetOutput()
+std::shared_ptr<AudioOutput> AudioIOCallback::GetOutput()
 {
 	return output;
 }

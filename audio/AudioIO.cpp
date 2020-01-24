@@ -49,37 +49,36 @@ using namespace std;
 std::unique_ptr<AudioIO> AudioIO::Create(std::string inputDevice, std::string outputDevice)
 {
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
-	return new AudioIOCallback();
+	return std::unique_ptr<AudioIO>{new AudioIOCallback()};
 #elif defined(__ANDROID__)
-	return new ContextlessAudioIO<AudioInputAndroid, AudioOutputAndroid>();
+	return std::unique_ptr<AudioIO>{new ContextlessAudioIO<AudioInputAndroid, AudioOutputAndroid>()};
 #elif defined(__APPLE__)
 #if TARGET_OS_OSX
 	if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber10_7)
-		return new ContextlessAudioIO<AudioInputAudioUnitLegacy, AudioOutputAudioUnitLegacy>(inputDevice, outputDevice);
+		return std::unique_ptr<AudioIO>{new ContextlessAudioIO<AudioInputAudioUnitLegacy, AudioOutputAudioUnitLegacy>(inputDevice, outputDevice)};
 
 #endif
-	return new AudioUnitIO(inputDevice, outputDevice);
+	return std::unique_ptr<AudioIO>{new AudioUnitIO(inputDevice, outputDevice)};
 #elif defined(_WIN32)
 #ifdef TGVOIP_WINXP_COMPAT
 	if (LOBYTE(LOWORD(GetVersion())) < 6)
-		return new ContextlessAudioIO<AudioInputWave, AudioOutputWave>(inputDevice, outputDevice);
+		return std::unique_ptr<AudioIO>{new ContextlessAudioIO<AudioInputWave, AudioOutputWave>(inputDevice, outputDevice)};
 #endif
-	return new ContextlessAudioIO<AudioInputWASAPI, AudioOutputWASAPI>(inputDevice, outputDevice);
+	return std::unique_ptr<AudioIO>{new ContextlessAudioIO<AudioInputWASAPI, AudioOutputWASAPI>(inputDevice, outputDevice)};
 #elif defined(__linux__)
 #ifndef WITHOUT_ALSA
 #ifndef WITHOUT_PULSE
 	if (AudioPulse::Load())
 	{
-		AudioIO *io = new AudioPulse(inputDevice, outputDevice);
+		auto io = std::unique_ptr<AudioIO>{new AudioPulse(inputDevice, outputDevice);
 		if (!io->Failed() && io->GetInput()->IsInitialized() && io->GetOutput()->IsInitialized())
 			return io;
 		LOGW("PulseAudio available but not working; trying ALSA");
-		delete io;
 	}
 #endif
-	return new ContextlessAudioIO<AudioInputALSA, AudioOutputALSA>(inputDevice, outputDevice);
+	return std::unique_ptr<AudioIO>{new ContextlessAudioIO<AudioInputALSA, AudioOutputALSA>(inputDevice, outputDevice)};
 #else
-	return new AudioPulse(inputDevice, outputDevice);
+	return std::unique_ptr<AudioIO>{new AudioPulse(inputDevice, outputDevice)};
 #endif
 #endif
 }
