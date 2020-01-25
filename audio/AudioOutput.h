@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "../controller/MediaStreamItf.h"
+#include "../controller/media/MediaStreamItf.h"
 
 namespace tgvoip
 {

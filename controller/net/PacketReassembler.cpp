@@ -2,7 +2,7 @@
 // Created by Grishka on 19.03.2018.
 //
 
-#include "controller/PacketReassembler.h"
+#include "PacketReassembler.h"
 #include "tools/logging.h"
 #include "controller/PrivateDefines.h"
 #include "video/VideoFEC.h"

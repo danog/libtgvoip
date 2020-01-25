@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <stdio.h>
-#include "controller/MediaStreamItf.h"
+#include "controller/media/MediaStreamItf.h"
 #include "tools/BlockingQueue.h"
 #include "tools/Buffers.h"
 #include "tools/threading.h"

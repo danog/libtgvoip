@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
-#include "../controller/MediaStreamItf.h"
+#include "../controller/media/MediaStreamItf.h"
 
 namespace tgvoip
 {

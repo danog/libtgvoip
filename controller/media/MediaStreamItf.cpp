@@ -5,7 +5,7 @@
 //
 
 #include "tools/logging.h"
-#include "controller/MediaStreamItf.h"
+#include "controller/media/MediaStreamItf.h"
 #include "controller/audio/EchoCanceller.h"
 #include <stdint.h>
 #include <algorithm>

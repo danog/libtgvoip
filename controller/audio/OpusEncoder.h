@@ -7,7 +7,7 @@
 #ifndef LIBTGVOIP_OPUSENCODER_H
 #define LIBTGVOIP_OPUSENCODER_H
 
-#include "controller/MediaStreamItf.h"
+#include "controller/media/MediaStreamItf.h"
 #include "tools/threading.h"
 #include "tools/BlockingQueue.h"
 #include "tools/Buffers.h"

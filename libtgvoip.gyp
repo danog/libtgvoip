@@ -40,7 +40,7 @@
           '<(tgvoip_src_loc)/tools/logging.cpp',
           '<(tgvoip_src_loc)/tools/logging.h',
           '<(tgvoip_src_loc)/controller/MediaStreamItf.cpp',
-          '<(tgvoip_src_loc)/controller/MediaStreamItf.h',
+          '<(tgvoip_src_loc)/controller/media/MediaStreamItf.h',
           '<(tgvoip_src_loc)/controller/audio/OpusDecoder.cpp',
           '<(tgvoip_src_loc)/controller/audio/OpusDecoder.h',
           '<(tgvoip_src_loc)/controller/audio/OpusEncoder.cpp',

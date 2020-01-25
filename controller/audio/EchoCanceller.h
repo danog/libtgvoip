@@ -10,7 +10,7 @@
 #include "tools/threading.h"
 #include "tools/Buffers.h"
 #include "tools/BlockingQueue.h"
-#include "controller/MediaStreamItf.h"
+#include "controller/media/MediaStreamItf.h"
 #include "tools/utils.h"
 
 namespace webrtc

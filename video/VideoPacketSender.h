@@ -5,7 +5,7 @@
 #ifndef LIBTGVOIP_VIDEOPACKETSENDER_H
 #define LIBTGVOIP_VIDEOPACKETSENDER_H
 
-#include "../controller/PacketSender.h"
+#include "../controller/net/PacketSender.h"
 #include "../tools/Buffers.h"
 #include "../tools/threading.h"
 #include <memory>

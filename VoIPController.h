@@ -40,7 +40,7 @@
 #include "controller/net/CongestionControl.h"
 #include "controller/net/NetworkSocket.h"
 #include "tools/Buffers.h"
-#include "controller/PacketReassembler.h"
+#include "controller/net/PacketReassembler.h"
 #include "tools/MessageThread.h"
 #include "tools/utils.h"
 #include "controller/PrivateDefines.h"
@@ -581,7 +581,7 @@ private:
     void SendNopPacket();
     void TickJitterBufferAndCongestionControl();
     void ResetUdpAvailability();
-    static std::string VoIPController::NetworkTypeToString(int type)
+    static std::string NetworkTypeToString(int type)
     {
         switch (type)
         {
@@ -612,7 +612,7 @@ private:
         }
     }
 
-    static std::string VoIPController::GetPacketTypeString(unsigned char type)
+    static std::string GetPacketTypeString(unsigned char type)
     {
         switch (type)
         {

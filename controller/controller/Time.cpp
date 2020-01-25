@@ -1,4 +1,4 @@
-#include "../../VoIPController.h"
+#include "../PrivateDefines.cpp"
 
 using namespace tgvoip;
 using namespace std;
