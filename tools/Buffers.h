@@ -13,7 +13,10 @@
 #include <stdexcept>
 #include <array>
 #include <limits>
+#include <algorithm>
+#include <numeric>
 #include <bitset>
+#include <memory>
 #include <stddef.h>
 #include "threading.h"
 #include "utils.h"
@@ -30,23 +33,36 @@ public:
 	BufferInputStream(const Buffer &buffer);
 	~BufferInputStream();
 	void Seek(size_t offset);
-	size_t GetLength();
-	size_t GetOffset();
-	size_t Remaining();
+	size_t GetLength() const;
+	size_t GetOffset() const;
+	size_t Remaining() const;
 	unsigned char ReadByte();
 	int64_t ReadInt64();
 	int32_t ReadInt32();
 	int16_t ReadInt16();
-	int32_t ReadTlLength();
+	uint32_t ReadTlLength();
 	void ReadBytes(unsigned char *to, size_t count);
 	void ReadBytes(Buffer &to);
 	BufferInputStream GetPartBuffer(size_t length, bool advance);
+
+	inline uint64_t ReadUInt64()
+	{
+		return static_cast<uint64_t>(ReadInt64());
+	}
+	inline uint32_t ReadUInt32()
+	{
+		return static_cast<uint32_t>(ReadInt32());
+	}
+	inline uint16_t ReadUInt16()
+	{
+		return static_cast<uint16_t>(ReadInt16());
+	}
 
 private:
 	void EnsureEnoughRemaining(size_t need);
 	const unsigned char *buffer;
 	size_t length;
-	size_t offset;
+	size_t offset = 0;
 };
 
 class BufferOutputStream
@@ -70,6 +86,19 @@ public:
 	void Reset();
 	void Rewind(size_t numBytes);
 
+	inline void WriteUInt64(uint64_t i)
+	{
+		WriteInt64(static_cast<int64_t>(i));
+	}
+	inline void WriteUInt32(uint32_t i)
+	{
+		WriteInt32(static_cast<int32_t>(i));
+	}
+	inline void WriteUInt16(uint16_t i)
+	{
+		WriteInt16(static_cast<int16_t>(i));
+	}
+
 	BufferOutputStream &operator=(BufferOutputStream &&other)
 	{
 		if (this != &other)
@@ -89,7 +118,7 @@ private:
 	void ExpandBufferIfNeeded(size_t need);
 	unsigned char *buffer = NULL;
 	size_t size;
-	size_t offset;
+	size_t offset = 0;
 	bool bufferProvided;
 };
 
@@ -253,32 +282,26 @@ class HistoricBuffer
 public:
 	HistoricBuffer()
 	{
-		std::fill(data.begin(), data.end(), (T)0);
 	}
 
 	AVG_T Average() const
 	{
-		AVG_T avg = (AVG_T)0;
-		for (T i : data)
-		{
-			avg += i;
-		}
-		return avg / (AVG_T)size;
+		return std::accumulate(data.begin(), data.end(), static_cast<AVG_T>(0)) / static_cast<AVG_T>(size);
 	}
 
 	AVG_T Average(size_t firstN) const
 	{
-		AVG_T avg = (AVG_T)0;
-		for (size_t i = 0; i < firstN; i++)
+		AVG_T avg = static_cast<AVG_T>(0);
+		for (size_t i = 0; i < firstN; i++) // Manual iteration required to wrap around array with specific offset
 		{
 			avg += (*this)[i];
 		}
-		return avg / (AVG_T)firstN;
+		return avg / static_cast<AVG_T>(firstN);
 	}
 
 	AVG_T NonZeroAverage() const
 	{
-		AVG_T avg = (AVG_T)0;
+		AVG_T avg = static_cast<AVG_T>(0);
 		int nonZeroCount = 0;
 		for (T i : data)
 		{
@@ -289,8 +312,8 @@ public:
 			}
 		}
 		if (nonZeroCount == 0)
-			return (AVG_T)0;
-		return avg / (AVG_T)nonZeroCount;
+			return static_cast<AVG_T>(0);
+		return avg / static_cast<AVG_T>(nonZeroCount);
 	}
 
 	void Add(T el)
@@ -301,29 +324,17 @@ public:
 
 	T Min() const
 	{
-		T min = std::numeric_limits<T>::max();
-		for (T i : data)
-		{
-			if (i < min)
-				min = i;
-		}
-		return min;
+		return *std::min_element(data.begin(), data.end());
 	}
 
 	T Max() const
 	{
-		T max = std::numeric_limits<T>::min();
-		for (T i : data)
-		{
-			if (i > max)
-				max = i;
-		}
-		return max;
+		return *std::max_element(data.begin(), data.end());
 	}
 
 	void Reset()
 	{
-		std::fill(data.begin(), data.end(), (T)0);
+		std::fill(data.begin(), data.end(), static_cast<T>(0));
 		offset = 0;
 	}
 
@@ -332,7 +343,7 @@ public:
 		assert(i < size);
 		// [0] should return the most recent entry, [1] the one before it, and so on
 		ptrdiff_t _i = offset - i - 1;
-		if (_i < 0)
+		if (_i < 0) // Wrap around offset a-la posmod
 			_i = size + _i;
 		return data[_i];
 	}
@@ -342,7 +353,7 @@ public:
 		assert(i < size);
 		// [0] should return the most recent entry, [1] the one before it, and so on
 		ptrdiff_t _i = offset - i - 1;
-		if (_i < 0)
+		if (_i < 0) // Wrap around offset a-la posmod
 			_i = size + _i;
 		return data[_i];
 	}
@@ -353,7 +364,7 @@ public:
 	}
 
 private:
-	std::array<T, size> data;
+	std::array<T, size> data{};
 	ptrdiff_t offset = 0;
 };
 

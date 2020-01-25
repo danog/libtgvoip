@@ -140,24 +140,28 @@ void BufferInputStream::EnsureEnoughRemaining(size_t need)
 
 #pragma mark - BufferOutputStream
 
-BufferOutputStream::BufferOutputStream(size_t size_) : size(size_),
-													   data(static_cast<unsigned char *>(size_), &free),
-													   bufferProvided(false)
+BufferOutputStream::BufferOutputStream(size_t size_)
+	: size(size_),
+	  bufferProvided(false)
+
 {
+	buffer = (unsigned char *)malloc(size_);
+	if (!buffer)
+		throw std::bad_alloc();
+	bufferProvided = false;
 }
 
-/*
-BufferOutputStream::BufferOutputStream(unsigned char *buffer, size_t size)
+BufferOutputStream::BufferOutputStream(unsigned char *buffer_, size_t size_)
+	: buffer(buffer_),
+	  size(size_),
+	  bufferProvided(true)
 {
-	this->buffer = buffer;
-	this->size = size;
-	offset = 0;
-	bufferProvided = true;
 }
-*/
 
 BufferOutputStream::~BufferOutputStream()
 {
+	if (!bufferProvided && buffer)
+		free(buffer);
 }
 
 void BufferOutputStream::WriteByte(unsigned char byte)
