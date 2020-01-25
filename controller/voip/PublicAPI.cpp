@@ -1,6 +1,8 @@
-#include "../VoIPController.h"
+#include "../../VoIPController.h"
 
-#define ENFORCE_MSG_THREAD assert(messageThread.IsCurrent())
+
+using namespace tgvoip;
+using namespace std;
 
 extern FILE *tgvoipLogFile;
 

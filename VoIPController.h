@@ -58,6 +58,8 @@
 #undef ERROR_TIMEOUT
 #endif
 
+#define ENFORCE_MSG_THREAD assert(messageThread.IsCurrent())
+
 #define TGVOIP_PEER_CAP_GROUP_CALLS 1
 #define TGVOIP_PEER_CAP_VIDEO_CAPTURE 2
 #define TGVOIP_PEER_CAP_VIDEO_DISPLAY 4
@@ -250,7 +252,6 @@ public:
       * @param cfg
       */
     void SetConfig(const Config &cfg);
-    void DebugCtl(int request, int param);
     /**
       *
       * @param stats
@@ -509,7 +510,6 @@ protected:
     std::shared_ptr<Stream> GetStreamByID(unsigned char id, bool outgoing);
     Endpoint *GetEndpointForPacket(const PendingOutgoingPacket &pkt);
     bool SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue = true, PacketSender *source = NULL);
-    static std::string NetworkTypeToString(int type);
     CellularCarrierInfo GetCarrierInfo();
 
 private:
@@ -581,7 +581,65 @@ private:
     void SendNopPacket();
     void TickJitterBufferAndCongestionControl();
     void ResetUdpAvailability();
-    std::string GetPacketTypeString(unsigned char type);
+    static std::string VoIPController::NetworkTypeToString(int type)
+    {
+        switch (type)
+        {
+        case NET_TYPE_WIFI:
+            return "wifi";
+        case NET_TYPE_GPRS:
+            return "gprs";
+        case NET_TYPE_EDGE:
+            return "edge";
+        case NET_TYPE_3G:
+            return "3g";
+        case NET_TYPE_HSPA:
+            return "hspa";
+        case NET_TYPE_LTE:
+            return "lte";
+        case NET_TYPE_ETHERNET:
+            return "ethernet";
+        case NET_TYPE_OTHER_HIGH_SPEED:
+            return "other_high_speed";
+        case NET_TYPE_OTHER_LOW_SPEED:
+            return "other_low_speed";
+        case NET_TYPE_DIALUP:
+            return "dialup";
+        case NET_TYPE_OTHER_MOBILE:
+            return "other_mobile";
+        default:
+            return "unknown";
+        }
+    }
+
+    static std::string VoIPController::GetPacketTypeString(unsigned char type)
+    {
+        switch (type)
+        {
+        case PKT_INIT:
+            return "init";
+        case PKT_INIT_ACK:
+            return "init_ack";
+        case PKT_STREAM_STATE:
+            return "stream_state";
+        case PKT_STREAM_DATA:
+            return "stream_data";
+        case PKT_PING:
+            return "ping";
+        case PKT_PONG:
+            return "pong";
+        case PKT_LAN_ENDPOINT:
+            return "lan_endpoint";
+        case PKT_NETWORK_CHANGED:
+            return "network_changed";
+        case PKT_NOP:
+            return "nop";
+        case PKT_STREAM_EC:
+            return "stream_ec";
+        }
+        return string("unknown(") + std::to_string(type) + ')';
+    }
+
     void SetupOutgoingVideoStream();
     bool WasOutgoingPacketAcknowledged(uint32_t seq);
     RecentOutgoingPacket *GetRecentOutgoingPacket(uint32_t seq);

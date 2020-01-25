@@ -1,3 +1,7 @@
+#include "../../VoIPController.h"
+
+using namespace tgvoip;
+using namespace std;
 
 #pragma mark - Internal intialization
 
