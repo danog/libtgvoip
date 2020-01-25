@@ -5,21 +5,18 @@
 //
 
 #pragma once
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <stdexcept>
-#include <numeric>
 #include <array>
 #include <limits>
-#include <algorithm>
 #include <bitset>
 #include <stddef.h>
-#include "tools/threading.h"
-#include "tools/utils.h"
+#include "threading.h"
+#include "utils.h"
 
 namespace tgvoip
 {
@@ -33,36 +30,23 @@ public:
 	BufferInputStream(const Buffer &buffer);
 	~BufferInputStream();
 	void Seek(size_t offset);
-	size_t GetLength() const;
-	size_t GetOffset() const;
-	size_t Remaining() const;
+	size_t GetLength();
+	size_t GetOffset();
+	size_t Remaining();
 	unsigned char ReadByte();
 	int64_t ReadInt64();
 	int32_t ReadInt32();
 	int16_t ReadInt16();
-	uint32_t ReadTlLength();
+	int32_t ReadTlLength();
 	void ReadBytes(unsigned char *to, size_t count);
 	void ReadBytes(Buffer &to);
 	BufferInputStream GetPartBuffer(size_t length, bool advance);
-
-	inline uint64_t ReadUInt64()
-	{
-		return static_cast<uint64_t>(ReadInt64());
-	}
-	inline uint32_t ReadUInt32()
-	{
-		return static_cast<uint32_t>(ReadInt32());
-	}
-	inline uint16_t ReadUInt16()
-	{
-		return static_cast<uint16_t>(ReadInt16());
-	}
 
 private:
 	void EnsureEnoughRemaining(size_t need);
 	const unsigned char *buffer;
 	size_t length;
-	size_t offset = 0;
+	size_t offset;
 };
 
 class BufferOutputStream
@@ -85,19 +69,6 @@ public:
 	size_t GetLength();
 	void Reset();
 	void Rewind(size_t numBytes);
-
-	inline void WriteUInt64(uint64_t i)
-	{
-		WriteInt64(static_cast<int64_t>(i));
-	}
-	inline void WriteUInt32(uint32_t i)
-	{
-		WriteInt32(static_cast<int32_t>(i));
-	}
-	inline void WriteUInt16(uint16_t i)
-	{
-		WriteInt16(static_cast<int16_t>(i));
-	}
 
 	BufferOutputStream &operator=(BufferOutputStream &&other)
 	{
@@ -282,26 +253,32 @@ class HistoricBuffer
 public:
 	HistoricBuffer()
 	{
+		std::fill(data.begin(), data.end(), (T)0);
 	}
 
 	AVG_T Average() const
 	{
-		return std::accumulate(data.begin(), data.end(), static_cast<AVG_T>(0)) / static_cast<AVG_T>(size);
+		AVG_T avg = (AVG_T)0;
+		for (T i : data)
+		{
+			avg += i;
+		}
+		return avg / (AVG_T)size;
 	}
 
 	AVG_T Average(size_t firstN) const
 	{
-		AVG_T avg = static_cast<AVG_T>(0);
-		for (size_t i = 0; i < firstN; i++) // Manual iteration required to wrap around array with specific offset
+		AVG_T avg = (AVG_T)0;
+		for (size_t i = 0; i < firstN; i++)
 		{
 			avg += (*this)[i];
 		}
-		return avg / static_cast<AVG_T>(firstN);
+		return avg / (AVG_T)firstN;
 	}
 
 	AVG_T NonZeroAverage() const
 	{
-		AVG_T avg = static_cast<AVG_T>(0);
+		AVG_T avg = (AVG_T)0;
 		int nonZeroCount = 0;
 		for (T i : data)
 		{
@@ -312,8 +289,8 @@ public:
 			}
 		}
 		if (nonZeroCount == 0)
-			return static_cast<AVG_T>(0);
-		return avg / static_cast<AVG_T>(nonZeroCount);
+			return (AVG_T)0;
+		return avg / (AVG_T)nonZeroCount;
 	}
 
 	void Add(T el)
@@ -324,17 +301,29 @@ public:
 
 	T Min() const
 	{
-		return *std::min_element(data.begin(), data.end());
+		T min = std::numeric_limits<T>::max();
+		for (T i : data)
+		{
+			if (i < min)
+				min = i;
+		}
+		return min;
 	}
 
 	T Max() const
 	{
-		return *std::max_element(data.begin(), data.end());
+		T max = std::numeric_limits<T>::min();
+		for (T i : data)
+		{
+			if (i > max)
+				max = i;
+		}
+		return max;
 	}
 
 	void Reset()
 	{
-		std::fill(data.begin(), data.end(), static_cast<T>(0));
+		std::fill(data.begin(), data.end(), (T)0);
 		offset = 0;
 	}
 
@@ -343,7 +332,7 @@ public:
 		assert(i < size);
 		// [0] should return the most recent entry, [1] the one before it, and so on
 		ptrdiff_t _i = offset - i - 1;
-		if (_i < 0) // Wrap around offset a-la posmod
+		if (_i < 0)
 			_i = size + _i;
 		return data[_i];
 	}
@@ -353,7 +342,7 @@ public:
 		assert(i < size);
 		// [0] should return the most recent entry, [1] the one before it, and so on
 		ptrdiff_t _i = offset - i - 1;
-		if (_i < 0) // Wrap around offset a-la posmod
+		if (_i < 0)
 			_i = size + _i;
 		return data[_i];
 	}
@@ -364,7 +353,7 @@ public:
 	}
 
 private:
-	std::array<T, size> data{};
+	std::array<T, size> data;
 	ptrdiff_t offset = 0;
 };
 
@@ -373,31 +362,12 @@ class BufferPool
 {
 public:
 	TGVOIP_DISALLOW_COPY_AND_ASSIGN(BufferPool);
-	BufferPool()
-	{
-		bufferStart = (unsigned char *)malloc(bufSize * bufCount);
-		if (!bufferStart)
-			throw std::bad_alloc();
-	};
-	~BufferPool()
-	{
-		assert(usedBuffers.none());
-		free(bufferStart);
-	};
+	BufferPool() : bufferStart(new unsigned char[bufSize * bufCount], std::default_delete<unsigned char[]>()) {}
+	~BufferPool(){};
 	Buffer Get()
 	{
-		auto freeFn = [this](void *_buf) {
-			assert(_buf != NULL);
-			unsigned char *buf = (unsigned char *)_buf;
-			size_t offset = buf - bufferStart;
-			assert(offset % bufSize == 0);
-			size_t index = offset / bufSize;
-			assert(index < bufCount);
+		std::shared_ptr<unsigned char> lock = bufferStart;
 
-			MutexGuard m(mutex);
-			assert(usedBuffers.test(index));
-			usedBuffers[index] = 0;
-		};
 		auto resizeFn = [](void *buf, size_t newSize) -> void * {
 			if (newSize > bufSize)
 				throw std::invalid_argument("newSize>bufferSize");
@@ -406,10 +376,17 @@ public:
 		MutexGuard m(mutex);
 		for (size_t i = 0; i < bufCount; i++)
 		{
-			if (!usedBuffers[i])
+			if (!usedBuffers[offset])
 			{
-				usedBuffers[i] = 1;
-				return Buffer::Wrap(bufferStart + (bufSize * i), bufSize, freeFn, resizeFn);
+				usedBuffers[offset] = 1;
+				size_t offsetCopy = offset;
+				offset = (offset + 1) % bufCount;
+				auto freeFn = [this, offsetCopy, &lock](void *_buf) {
+					MutexGuard m(mutex);
+					usedBuffers[offsetCopy] = 0;
+					lock.reset();
+				};
+				return Buffer::Wrap(bufferStart.get() + (bufSize * offsetCopy), bufSize, freeFn, resizeFn);
 			}
 		}
 		throw std::bad_alloc();
@@ -417,7 +394,8 @@ public:
 
 private:
 	std::bitset<bufCount> usedBuffers;
-	unsigned char *bufferStart;
+	size_t offset = 0;
+	std::shared_ptr<unsigned char> bufferStart;
 	Mutex mutex;
 };
 } // namespace tgvoip

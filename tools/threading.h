@@ -65,7 +65,6 @@ public:
 
 	virtual ~Thread()
 	{
-		Join();
 	}
 
 	void Start()
@@ -78,8 +77,10 @@ public:
 
 	void Join()
 	{
-		if (valid)
+		if (valid) {
 			pthread_join(thread, NULL);
+			valid = false;
+		}
 	}
 
 	void SetName(const char *name)
@@ -272,7 +273,6 @@ public:
 
 	~Thread()
 	{
-		Join();
 	}
 
 	void Start()
@@ -290,6 +290,7 @@ public:
 		WaitForSingleObjectEx(thread, INFINITE, false);
 #endif
 		CloseHandle(thread);
+		thread = nullptr;
 	}
 
 	void SetName(const char *name)

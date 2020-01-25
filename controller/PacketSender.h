@@ -5,7 +5,7 @@
 #ifndef LIBTGVOIP_PACKETSENDER_H
 #define LIBTGVOIP_PACKETSENDER_H
 
-#include "VoIPController.h"
+#include "../VoIPController.h"
 #include <functional>
 #include <stdint.h>
 

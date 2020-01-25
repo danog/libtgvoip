@@ -103,8 +103,8 @@ uint32_t BufferInputStream::ReadTlLength()
 	assert(length - offset >= 3);
 	EnsureEnoughRemaining(3);
 	uint32_t res = ((uint32_t)buffer[offset] & 0xFF) |
-				  (((uint32_t)buffer[offset + 1] & 0xFF) << 8) |
-				  (((uint32_t)buffer[offset + 2] & 0xFF) << 16);
+				   (((uint32_t)buffer[offset + 1] & 0xFF) << 8) |
+				   (((uint32_t)buffer[offset + 2] & 0xFF) << 16);
 	offset += 3;
 	return res;
 }
@@ -140,16 +140,13 @@ void BufferInputStream::EnsureEnoughRemaining(size_t need)
 
 #pragma mark - BufferOutputStream
 
-BufferOutputStream::BufferOutputStream(size_t size)
+BufferOutputStream::BufferOutputStream(size_t size_) : size(size_),
+													   data(static_cast<unsigned char *>(size_), &free),
+													   bufferProvided(false)
 {
-	buffer = (unsigned char *)malloc(size);
-	if (!buffer)
-		throw std::bad_alloc();
-	offset = 0;
-	this->size = size;
-	bufferProvided = false;
 }
 
+/*
 BufferOutputStream::BufferOutputStream(unsigned char *buffer, size_t size)
 {
 	this->buffer = buffer;
@@ -157,11 +154,10 @@ BufferOutputStream::BufferOutputStream(unsigned char *buffer, size_t size)
 	offset = 0;
 	bufferProvided = true;
 }
+*/
 
 BufferOutputStream::~BufferOutputStream()
 {
-	if (!bufferProvided && buffer)
-		free(buffer);
 }
 
 void BufferOutputStream::WriteByte(unsigned char byte)

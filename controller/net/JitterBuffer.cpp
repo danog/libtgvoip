@@ -72,7 +72,7 @@ void JitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timesta
 	MutexGuard m(mutex);
 	jitter_packet_t pkt;
 	pkt.size = len;
-	pkt.buffer = Buffer::Wrap(data, len, [](void *) {}, [](void *a, size_t) -> void * { return a; });
+	pkt.buffer = Buffer::Wrap(data, len, [](void *) {});
 	pkt.timestamp = timestamp;
 	pkt.isEC = isEC;
 	PutInternal(&pkt, !isEC);
