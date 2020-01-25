@@ -265,7 +265,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             if (find(peerAcks.begin(), peerAcks.end(), opkt.seq) != peerAcks.end())
             {
                 opkt.ackTime = GetCurrentTime();
-                opkt.rttTime = opkt.sendTime - opkt.ackTime;
+                opkt.rttTime = opkt.ackTime - opkt.sendTime;
                 if (opkt.lost)
                 {
                     LOGW("acknowledged lost packet %u", opkt.seq);
