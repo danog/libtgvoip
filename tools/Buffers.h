@@ -259,7 +259,7 @@ public:
 		buf.CopyFrom(other, length, offset);
 		return buf;
 	}
-	static Buffer Wrap(unsigned char *data, size_t size, std::function<void(void *)> freeFn, std::function<void *(void *, size_t)> reallocFn)
+	static Buffer Wrap(unsigned char *data, size_t size, const std::function<void(void *)> &freeFn, const std::function<void *(void *, size_t)> &reallocFn)
 	{
 		Buffer b = Buffer();
 		b.data = data;
@@ -377,9 +377,7 @@ public:
 	~BufferPool(){};
 	Buffer Get()
 	{
-		std::shared_ptr<unsigned char> lock = bufferStart;
-
-		auto resizeFn = [](void *buf, size_t newSize) -> void * {
+		static auto resizeFn = [](void *buf, size_t newSize) -> void * {
 			if (newSize > bufSize)
 				throw std::invalid_argument("newSize>bufferSize");
 			return buf;
@@ -389,10 +387,11 @@ public:
 		{
 			if (!usedBuffers[offset])
 			{
-				usedBuffers[offset] = 1;
 				size_t offsetCopy = offset;
 				offset = (offset + 1) % bufCount;
-				auto freeFn = [this, offsetCopy, &lock](void *_buf) {
+
+				usedBuffers[offsetCopy] = 1;
+				auto freeFn = [this, offsetCopy, lock = bufferStart](void *_buf) mutable {
 					MutexGuard m(mutex);
 					usedBuffers[offsetCopy] = 0;
 					lock.reset();

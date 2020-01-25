@@ -2520,7 +2520,7 @@ void VoIPController::AddIPv6Relays()
         for (pair<const int64_t, Endpoint> &_e : endpoints)
         {
             Endpoint &e = _e.second;
-            if ((e.IsReflector()) && !e.v6address.IsEmpty() && !e.address.IsEmpty())
+            if (e.IsReflector() && !e.v6address.IsEmpty() && !e.address.IsEmpty())
             {
                 endpointsByAddress[e.v6address.ToString()].push_back(e);
             }

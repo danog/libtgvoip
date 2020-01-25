@@ -762,7 +762,7 @@ host_triplet = @host@
 @ENABLE_DSP_TRUE@webrtc_dsp/common_audio/vad/vad_filterbank.h
 
 @ENABLE_DSP_FALSE@am__append_24 = -DTGVOIP_NO_DSP
-@TARGET_OS_OSX_TRUE@am__append_25 = -std=gnu++0x $(CFLAGS)
+@TARGET_OS_OSX_TRUE@am__append_25 = -std=gnu++17 $(CFLAGS)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -2265,7 +2265,7 @@ CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
-CXXFLAGS = @CXXFLAGS@ -std=gnu++0x $(CFLAGS)
+CXXFLAGS = @CXXFLAGS@ -std=gnu++17 $(CFLAGS)
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
