@@ -25,32 +25,50 @@ shared_ptr<VoIPController::Stream> VoIPController::GetStreamByID(unsigned char i
     return s;
 }
 
-CellularCarrierInfo VoIPController::GetCarrierInfo()
+
+int64_t VoIPController::GetPreferredRelayID()
 {
-#if defined(__APPLE__) && TARGET_OS_IOS
-    return DarwinSpecific::GetCarrierInfo();
-#elif defined(__ANDROID__)
-    CellularCarrierInfo carrier;
-    jni::DoWithJNI([&carrier](JNIEnv *env) {
-        jmethodID getCarrierInfoMethod = env->GetStaticMethodID(jniUtilitiesClass, "getCarrierInfo", "()[Ljava/lang/String;");
-        jobjectArray jinfo = (jobjectArray)env->CallStaticObjectMethod(jniUtilitiesClass, getCarrierInfoMethod);
-        if (jinfo && env->GetArrayLength(jinfo) == 4)
-        {
-            carrier.name = jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 0));
-            carrier.countryCode = jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 1));
-            carrier.mcc = jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 2));
-            carrier.mnc = jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 3));
-        }
-        else
-        {
-            LOGW("Failed to get carrier info");
-        }
-    });
-    return carrier;
-#else
-    return CellularCarrierInfo();
-#endif
+    return preferredRelay;
 }
+
+
+void VoIPController::SetRemoteEndpoints(vector<Endpoint> endpoints, bool allowP2p, int32_t connectionMaxLayer)
+{
+    LOGW("Set remote endpoints, allowP2P=%d, connectionMaxLayer=%u", allowP2p ? 1 : 0, connectionMaxLayer);
+    assert(!runReceiver);
+    preferredRelay = 0;
+
+    this->endpoints.clear();
+    didAddTcpRelays = false;
+    useTCP = true;
+    for (auto it = endpoints.begin(); it != endpoints.end(); ++it)
+    {
+        if (this->endpoints.find(it->id) != this->endpoints.end())
+            LOGE("Endpoint IDs are not unique!");
+        this->endpoints[it->id] = *it;
+        if (currentEndpoint == 0)
+            currentEndpoint = it->id;
+
+        if (it->type == Endpoint::Type::UDP_RELAY)
+            useTCP = false;
+        else if (it->type == Endpoint::Type::TCP_RELAY)
+            didAddTcpRelays = true;
+
+        LOGV("Adding endpoint: %s:%d, %s", it->address.ToString().c_str(), it->port, it->type == Endpoint::Type::UDP_RELAY ? "UDP" : "TCP");
+    }
+    preferredRelay = currentEndpoint;
+    this->allowP2p = allowP2p;
+    this->connectionMaxLayer = connectionMaxLayer;
+    if (connectionMaxLayer >= 74)
+    {
+        useMTProto2 = true;
+    }
+    AddIPv6Relays();
+}
+
+
+
+
 
 void VoIPController::AddIPv6Relays()
 {

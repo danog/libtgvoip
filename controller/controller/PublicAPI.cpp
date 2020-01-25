@@ -167,142 +167,6 @@ bool VoIPController::NeedRate()
     return needRate && ServerConfig::GetSharedInstance()->GetBoolean("bad_call_rating", false);
 }
 
-void VoIPController::SetRemoteEndpoints(vector<Endpoint> endpoints, bool allowP2p, int32_t connectionMaxLayer)
-{
-    LOGW("Set remote endpoints, allowP2P=%d, connectionMaxLayer=%u", allowP2p ? 1 : 0, connectionMaxLayer);
-    assert(!runReceiver);
-    preferredRelay = 0;
-
-    this->endpoints.clear();
-    didAddTcpRelays = false;
-    useTCP = true;
-    for (auto it = endpoints.begin(); it != endpoints.end(); ++it)
-    {
-        if (this->endpoints.find(it->id) != this->endpoints.end())
-            LOGE("Endpoint IDs are not unique!");
-        this->endpoints[it->id] = *it;
-        if (currentEndpoint == 0)
-            currentEndpoint = it->id;
-
-        if (it->type == Endpoint::Type::UDP_RELAY)
-            useTCP = false;
-        else if (it->type == Endpoint::Type::TCP_RELAY)
-            didAddTcpRelays = true;
-
-        LOGV("Adding endpoint: %s:%d, %s", it->address.ToString().c_str(), it->port, it->type == Endpoint::Type::UDP_RELAY ? "UDP" : "TCP");
-    }
-    preferredRelay = currentEndpoint;
-    this->allowP2p = allowP2p;
-    this->connectionMaxLayer = connectionMaxLayer;
-    if (connectionMaxLayer >= 74)
-    {
-        useMTProto2 = true;
-    }
-    AddIPv6Relays();
-}
-
-
-
-void VoIPController::SetEncryptionKey(std::vector<uint8_t> key, bool isOutgoing)
-{
-    memcpy(encryptionKey, key.data(), 256);
-    uint8_t sha1[SHA1_LENGTH];
-    crypto.sha1((uint8_t *)encryptionKey, 256, sha1);
-    memcpy(keyFingerprint, sha1 + (SHA1_LENGTH - 8), 8);
-    uint8_t sha256[SHA256_LENGTH];
-    crypto.sha256((uint8_t *)encryptionKey, 256, sha256);
-    memcpy(callID, sha256 + (SHA256_LENGTH - 16), 16);
-    this->isOutgoing = isOutgoing;
-}
-
-void VoIPController::SetNetworkType(int type)
-{
-    networkType = type;
-    UpdateDataSavingState();
-    UpdateAudioBitrateLimit();
-    myIPv6 = NetworkAddress::Empty();
-    string itfName = udpSocket->GetLocalInterfaceInfo(NULL, &myIPv6);
-    LOGI("set network type: %s, active interface %s", NetworkTypeToString(type).c_str(), itfName.c_str());
-    LOGI("Local IPv6 address: %s", myIPv6.ToString().c_str());
-    if (IS_MOBILE_NETWORK(networkType))
-    {
-        CellularCarrierInfo carrier = GetCarrierInfo();
-        if (!carrier.name.empty())
-        {
-            LOGI("Carrier: %s [%s; mcc=%s, mnc=%s]", carrier.name.c_str(), carrier.countryCode.c_str(), carrier.mcc.c_str(), carrier.mnc.c_str());
-        }
-    }
-    if (itfName != activeNetItfName)
-    {
-        udpSocket->OnActiveInterfaceChanged();
-        LOGI("Active network interface changed: %s -> %s", activeNetItfName.c_str(), itfName.c_str());
-        bool isFirstChange = activeNetItfName.length() == 0 && state != STATE_ESTABLISHED && state != STATE_RECONNECTING;
-        activeNetItfName = itfName;
-        if (isFirstChange)
-            return;
-        messageThread.Post([this] {
-            wasNetworkHandover = true;
-            if (currentEndpoint)
-            {
-                const Endpoint &_currentEndpoint = endpoints.at(currentEndpoint);
-                const Endpoint &_preferredRelay = endpoints.at(preferredRelay);
-                if (_currentEndpoint.type != Endpoint::Type::UDP_RELAY)
-                {
-                    if (_preferredRelay.type == Endpoint::Type::UDP_RELAY)
-                        currentEndpoint = preferredRelay;
-                    MutexGuard m(endpointsMutex);
-                    constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
-                    endpoints.erase(lanID);
-                    for (pair<const int64_t, Endpoint> &e : endpoints)
-                    {
-                        Endpoint &endpoint = e.second;
-                        if (endpoint.type == Endpoint::Type::UDP_RELAY && useTCP)
-                        {
-                            useTCP = false;
-                            if (_preferredRelay.type == Endpoint::Type::TCP_RELAY)
-                            {
-                                preferredRelay = currentEndpoint = endpoint.id;
-                            }
-                        }
-                        else if (endpoint.type == Endpoint::Type::TCP_RELAY && endpoint.socket)
-                        {
-                            endpoint.socket->Close();
-                        }
-                        endpoint.averageRTT = 0;
-                        endpoint.rtts.Reset();
-                    }
-                }
-            }
-            lastUdpPingTime = 0;
-            if (proxyProtocol == PROXY_SOCKS5)
-                InitUDPProxy();
-            if (allowP2p && currentEndpoint)
-            {
-                SendPublicEndpointsRequest();
-            }
-            BufferOutputStream s(4);
-            s.WriteInt32(dataSavingMode ? INIT_FLAG_DATA_SAVING_ENABLED : 0);
-            if (peerVersion < 6)
-            {
-                SendPacketReliably(PKT_NETWORK_CHANGED, s.GetBuffer(), s.GetLength(), 1, 20);
-            }
-            else
-            {
-                Buffer buf(move(s));
-                SendExtra(buf, EXTRA_TYPE_NETWORK_CHANGED);
-            }
-            needReInitUdpProxy = true;
-            selectCanceller->CancelSelect();
-            didSendIPv6Endpoint = false;
-
-            AddIPv6Relays();
-            ResetUdpAvailability();
-            ResetEndpointPingStats();
-        });
-    }
-}
-
-
 void VoIPController::SetMicMute(bool mute)
 {
     if (micMuted == mute)
@@ -456,11 +320,6 @@ string VoIPController::GetDebugString()
 const char *VoIPController::GetVersion()
 {
     return LIBTGVOIP_VERSION;
-}
-
-int64_t VoIPController::GetPreferredRelayID()
-{
-    return preferredRelay;
 }
 
 int VoIPController::GetLastError()
@@ -728,15 +587,6 @@ void VoIPController::SetEchoCancellationStrength(int strength)
         echoCanceller->SetAECStrength(strength);
 }
 
-#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
-void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t *, size_t)> input, std::function<void(int16_t *, size_t)> output, std::function<void(int16_t *, size_t)> preproc = nullptr)
-{
-    audioInputDataCallback = input;
-    audioOutputDataCallback = output;
-    audioPreprocDataCallback = preproc;
-}
-#endif
-
 int VoIPController::GetConnectionState()
 {
     return state;
@@ -825,6 +675,7 @@ vector<uint8_t> VoIPController::GetPersistentState()
     return vector<uint8_t>(jstr, jstr + strlen(jstr));
 }
 
+
 void VoIPController::SetOutputVolume(float level)
 {
     outputVolume->SetLevel(level);
@@ -846,3 +697,41 @@ void VoIPController::SetAudioOutputDuckingEnabled(bool enabled)
     }
 }
 #endif
+
+
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t *, size_t)> input, std::function<void(int16_t *, size_t)> output, std::function<void(int16_t *, size_t)> preproc = nullptr)
+{
+    audioInputDataCallback = input;
+    audioOutputDataCallback = output;
+    audioPreprocDataCallback = preproc;
+}
+#endif
+
+
+CellularCarrierInfo VoIPController::GetCarrierInfo()
+{
+#if defined(__APPLE__) && TARGET_OS_IOS
+    return DarwinSpecific::GetCarrierInfo();
+#elif defined(__ANDROID__)
+    CellularCarrierInfo carrier;
+    jni::DoWithJNI([&carrier](JNIEnv *env) {
+        jmethodID getCarrierInfoMethod = env->GetStaticMethodID(jniUtilitiesClass, "getCarrierInfo", "()[Ljava/lang/String;");
+        jobjectArray jinfo = (jobjectArray)env->CallStaticObjectMethod(jniUtilitiesClass, getCarrierInfoMethod);
+        if (jinfo && env->GetArrayLength(jinfo) == 4)
+        {
+            carrier.name = jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 0));
+            carrier.countryCode = jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 1));
+            carrier.mcc = jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 2));
+            carrier.mnc = jni::JavaStringToStdString(env, (jstring)env->GetObjectArrayElement(jinfo, 3));
+        }
+        else
+        {
+            LOGW("Failed to get carrier info");
+        }
+    });
+    return carrier;
+#else
+    return CellularCarrierInfo();
+#endif
+}

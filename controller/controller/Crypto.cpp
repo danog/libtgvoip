@@ -3,6 +3,18 @@
 using namespace tgvoip;
 using namespace std;
 
+void VoIPController::SetEncryptionKey(std::vector<uint8_t> key, bool isOutgoing)
+{
+    memcpy(encryptionKey, key.data(), 256);
+    uint8_t sha1[SHA1_LENGTH];
+    crypto.sha1((uint8_t *)encryptionKey, 256, sha1);
+    memcpy(keyFingerprint, sha1 + (SHA1_LENGTH - 8), 8);
+    uint8_t sha256[SHA256_LENGTH];
+    crypto.sha256((uint8_t *)encryptionKey, 256, sha256);
+    memcpy(callID, sha256 + (SHA256_LENGTH - 16), 16);
+    this->isOutgoing = isOutgoing;
+}
+
 void VoIPController::KDF(unsigned char *msgKey, size_t x, unsigned char *aesKey, unsigned char *aesIv)
 {
     uint8_t sA[SHA1_LENGTH], sB[SHA1_LENGTH], sC[SHA1_LENGTH], sD[SHA1_LENGTH];

@@ -241,4 +241,3 @@ void VoIPController::UpdateAudioOutputState()
         }
     }
 }
-
