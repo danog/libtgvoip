@@ -3,57 +3,7 @@
 using namespace tgvoip;
 using namespace std;
 
-
-
 #pragma mark - Bandwidth management
-
-void VoIPController::UpdateAudioBitrateLimit()
-{
-    if (encoder)
-    {
-        if (dataSavingMode || dataSavingRequestedByPeer)
-        {
-            maxBitrate = maxAudioBitrateSaving;
-            encoder->SetBitrate(initAudioBitrateSaving);
-        }
-        else if (networkType == NET_TYPE_GPRS)
-        {
-            maxBitrate = maxAudioBitrateGPRS;
-            encoder->SetBitrate(initAudioBitrateGPRS);
-        }
-        else if (networkType == NET_TYPE_EDGE)
-        {
-            maxBitrate = maxAudioBitrateEDGE;
-            encoder->SetBitrate(initAudioBitrateEDGE);
-        }
-        else
-        {
-            maxBitrate = maxAudioBitrate;
-            encoder->SetBitrate(initAudioBitrate);
-        }
-        encoder->SetVadMode(dataSavingMode || dataSavingRequestedByPeer);
-        if (echoCanceller)
-            echoCanceller->SetVoiceDetectionEnabled(dataSavingMode || dataSavingRequestedByPeer);
-    }
-}
-
-void VoIPController::UpdateDataSavingState()
-{
-    if (config.dataSaving == DATA_SAVING_ALWAYS)
-    {
-        dataSavingMode = true;
-    }
-    else if (config.dataSaving == DATA_SAVING_MOBILE)
-    {
-        dataSavingMode = networkType == NET_TYPE_GPRS || networkType == NET_TYPE_EDGE ||
-                         networkType == NET_TYPE_3G || networkType == NET_TYPE_HSPA || networkType == NET_TYPE_LTE || networkType == NET_TYPE_OTHER_MOBILE;
-    }
-    else
-    {
-        dataSavingMode = false;
-    }
-    LOGI("update data saving mode, config %d, enabled %d, reqd by peer %d", config.dataSaving, dataSavingMode, dataSavingRequestedByPeer);
-}
 
 
 double VoIPController::GetAverageRTT()
@@ -70,9 +20,9 @@ double VoIPController::GetAverageRTT()
             int count = 0;
             for (const auto &packet : recentOutgoingPackets)
             {
-                if (packet.ackTime > 0)
+                if (packet.rttTime)
                 {
-                    res += (packet.ackTime - packet.sendTime);
+                    res += packet.rttTime;
                     count++;
                 }
             }
@@ -172,3 +122,50 @@ void VoIPController::SetNetworkType(int type)
     }
 }
 
+
+void VoIPController::UpdateAudioBitrateLimit()
+{
+    if (encoder)
+    {
+        if (dataSavingMode || dataSavingRequestedByPeer)
+        {
+            maxBitrate = maxAudioBitrateSaving;
+            encoder->SetBitrate(initAudioBitrateSaving);
+        }
+        else if (networkType == NET_TYPE_GPRS)
+        {
+            maxBitrate = maxAudioBitrateGPRS;
+            encoder->SetBitrate(initAudioBitrateGPRS);
+        }
+        else if (networkType == NET_TYPE_EDGE)
+        {
+            maxBitrate = maxAudioBitrateEDGE;
+            encoder->SetBitrate(initAudioBitrateEDGE);
+        }
+        else
+        {
+            maxBitrate = maxAudioBitrate;
+            encoder->SetBitrate(initAudioBitrate);
+        }
+        encoder->SetVadMode(dataSavingMode || dataSavingRequestedByPeer);
+        if (echoCanceller)
+            echoCanceller->SetVoiceDetectionEnabled(dataSavingMode || dataSavingRequestedByPeer);
+    }
+}
+
+void VoIPController::UpdateDataSavingState()
+{
+    if (config.dataSaving == DATA_SAVING_ALWAYS)
+    {
+        dataSavingMode = true;
+    }
+    else if (config.dataSaving == DATA_SAVING_MOBILE)
+    {
+        dataSavingMode = IS_MOBILE_NETWORK(networkType);
+    }
+    else
+    {
+        dataSavingMode = false;
+    }
+    LOGI("update data saving mode, config %d, enabled %d, reqd by peer %d", config.dataSaving, dataSavingMode, dataSavingRequestedByPeer);
+}

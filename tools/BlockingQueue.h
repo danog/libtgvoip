@@ -40,25 +40,6 @@ public:
 		if (queue.size() > capacity) {
 			abort(); // I still don't like this
 		}
-		/*
-		bool didOverflow = false;
-		while (queue.size() > capacity)
-		{
-			didOverflow = true;
-			
-			if (overflowCallback)
-			{
-				// Potential for deadlock, but since I don't see this used anywhere, I'll just comment out all references to overflow callbacks
-				overflowCallback(std::move(queue.front()));
-				queue.pop_front();
-			}
-			else
-			{
-			abort(); // I don't like this one bit
-			}
-		}
-		if (!didOverflow)
-		*/
 		semaphore.Release();
 	}
 
@@ -85,13 +66,6 @@ public:
 	void PrepareDealloc()
 	{
 	}
-
-/*
-	void SetOverflowCallback(void (*overflowCallback)(T))
-	{
-		this->overflowCallback = overflowCallback;
-	}
-*/
 private:
 	T GetInternal()
 	{

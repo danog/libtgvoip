@@ -13,7 +13,6 @@ namespace tgvoip
 {
 class VoIPGroupController;
 class VoIPController;
-
 class Endpoint
 {
     friend class VoIPController;
@@ -43,11 +42,11 @@ public:
     Type type;
     unsigned char peerTag[16];
 
-    const bool IsP2P() const
+    inline const bool IsP2P() const
     {
         return type == UDP_P2P_INET || type == UDP_P2P_LAN;
     }
-    const bool IsReflector() const
+    inline const bool IsReflector() const
     {
         return type == UDP_RELAY || type == TCP_RELAY;
     }

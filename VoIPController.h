@@ -477,6 +477,7 @@ protected:
         uint16_t id; // for group calls only
         double sendTime;
         double ackTime;
+        double rttTime;
         uint8_t type;
         uint32_t size;
         PacketSender *sender;
@@ -554,6 +555,7 @@ private:
     void UpdateAudioOutputState();
     void InitUDPProxy();
     void UpdateDataSavingState();
+    size_t decryptPacket(unsigned char *buffer, BufferInputStream &in);
     void KDF(unsigned char *msgKey, size_t x, unsigned char *aesKey, unsigned char *aesIv);
     void KDF2(unsigned char *msgKey, size_t x, unsigned char *aesKey, unsigned char *aesIv);
     void SendPublicEndpointsRequest();
@@ -639,6 +641,9 @@ private:
         }
         return string("unknown(") + std::to_string(type) + ')';
     }
+
+    bool legacyParsePacket(BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen);
+    void legacyHandleQueuedPackets();
 
     void SetupOutgoingVideoStream();
     bool WasOutgoingPacketAcknowledged(uint32_t seq);

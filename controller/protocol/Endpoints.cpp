@@ -3,26 +3,29 @@
 using namespace tgvoip;
 using namespace std;
 
-shared_ptr<VoIPController::Stream> VoIPController::GetStreamByType(int type, bool outgoing)
+Endpoint &VoIPController::GetRemoteEndpoint()
 {
-    shared_ptr<Stream> s;
-    for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
-    {
-        if (ss->type == type)
-            return ss;
-    }
-    return s;
+    return endpoints.at(currentEndpoint);
 }
 
-shared_ptr<VoIPController::Stream> VoIPController::GetStreamByID(unsigned char id, bool outgoing)
+Endpoint *VoIPController::GetEndpointForPacket(const PendingOutgoingPacket &pkt)
 {
-    shared_ptr<Stream> s;
-    for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
+    Endpoint *endpoint = nullptr;
+    if (pkt.endpoint)
     {
-        if (ss->id == id)
-            return ss;
+        try
+        {
+            endpoint = &endpoints.at(pkt.endpoint);
+        }
+        catch (out_of_range &x)
+        {
+            LOGW("Unable to send packet via nonexistent endpoint %" PRIu64, pkt.endpoint);
+            return NULL;
+        }
     }
-    return s;
+    if (!endpoint)
+        endpoint = &endpoints.at(currentEndpoint);
+    return endpoint;
 }
 
 
@@ -105,7 +108,6 @@ void VoIPController::AddIPv6Relays()
 
 void VoIPController::AddTCPRelays()
 {
-
     if (!didAddTcpRelays)
     {
         bool wasSetCurrentToTCP = setCurrentEndpointToTCP;
@@ -146,4 +148,28 @@ void VoIPController::AddTCPRelays()
         }
         didAddTcpRelays = true;
     }
+}
+
+
+
+shared_ptr<VoIPController::Stream> VoIPController::GetStreamByType(int type, bool outgoing)
+{
+    shared_ptr<Stream> s;
+    for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
+    {
+        if (ss->type == type)
+            return ss;
+    }
+    return s;
+}
+
+shared_ptr<VoIPController::Stream> VoIPController::GetStreamByID(unsigned char id, bool outgoing)
+{
+    shared_ptr<Stream> s;
+    for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
+    {
+        if (ss->id == id)
+            return ss;
+    }
+    return s;
 }

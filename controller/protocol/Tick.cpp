@@ -3,6 +3,30 @@
 using namespace tgvoip;
 using namespace std;
 
+void VoIPController::SetState(int state)
+{
+    this->state = state;
+    LOGV("Call state changed to %d", state);
+    stateChangeTime = GetCurrentTime();
+    messageThread.Post([this, state] {
+        if (callbacks.connectionStateChanged)
+            callbacks.connectionStateChanged(this, state);
+    });
+    if (state == STATE_ESTABLISHED)
+    {
+        SetMicMute(micMuted);
+        if (!wasEstablished)
+        {
+            wasEstablished = true;
+            messageThread.Post(std::bind(&VoIPController::UpdateRTT, this), 0.1, 0.5);
+            messageThread.Post(std::bind(&VoIPController::UpdateAudioBitrate, this), 0.0, 0.3);
+            messageThread.Post(std::bind(&VoIPController::UpdateCongestion, this), 0.0, 1.0);
+            messageThread.Post(std::bind(&VoIPController::UpdateSignalBars, this), 1.0, 1.0);
+            messageThread.Post(std::bind(&VoIPController::TickJitterBufferAndCongestionControl, this), 0.0, 0.1);
+        }
+    }
+}
+
 #pragma mark - Timer methods
 
 void VoIPController::SendUdpPings()

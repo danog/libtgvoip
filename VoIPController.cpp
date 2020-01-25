@@ -14,4 +14,7 @@
 #include "controller/protocol/Endpoints.cpp"
 #include "controller/protocol/Loop.cpp"
 #include "controller/protocol/NetworkAPI.cpp"
+#include "controller/protocol/Protocol.cpp"
 #include "controller/protocol/Tick.cpp"
+
+#include "controller/protocol/Legacy.cpp"

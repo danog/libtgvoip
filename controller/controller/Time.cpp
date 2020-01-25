@@ -3,6 +3,17 @@
 using namespace tgvoip;
 using namespace std;
 
+#ifdef __APPLE__
+#include "os/darwin/AudioUnitIO.h"
+#include <mach/mach_time.h>
+double VoIPController::machTimebase = 0;
+uint64_t VoIPController::machTimestart = 0;
+#endif
+
+#ifdef _WIN32
+int64_t VoIPController::win32TimeScale = 0;
+bool VoIPController::didInitWin32TimeScale = false;
+#endif
 
 #if defined(__APPLE__)
 static void initMachTimestart()

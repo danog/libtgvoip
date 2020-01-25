@@ -24,6 +24,8 @@
 
 #define IS_MOBILE_NETWORK(x) (x == NET_TYPE_GPRS || x == NET_TYPE_EDGE || x == NET_TYPE_3G || x == NET_TYPE_HSPA || x == NET_TYPE_LTE || x == NET_TYPE_OTHER_MOBILE)
 
+#define CHECK_ENDPOINT_PROTOCOL(endpointType, packetProtocol) ((endpointType != Endpoint::Type::TCP_RELAY && packetProtocol == NetworkProtocol::UDP) || (endpointType == Endpoint::Type::TCP_RELAY && packetProtocol == NetworkProtocol::TCP))
+
 #define PROTOCOL_NAME 0x50567247 // "GrVP" in little endian (reversed here)
 #define PROTOCOL_VERSION 9
 #define MIN_PROTOCOL_VERSION 3
