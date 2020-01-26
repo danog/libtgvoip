@@ -81,22 +81,22 @@ bool VoIPController::legacyParsePacket(BufferInputStream &in, unsigned char &typ
     }
     return true;
 }
-void VoIPController::legacyHandleQueuedPackets()
+void VoIPController::legacyHandleReliablePackets()
 {
-    for (auto it = queuedPackets.begin(); it != queuedPackets.end();)
+    for (auto it = reliablePackets.begin(); it != reliablePackets.end();)
     {
-        QueuedPacket &qp = *it;
+        ReliableOutgoingPacket &qp = *it;
         bool didAck = false;
         for (uint8_t j = 0; j < 16; j++)
         {
-            LOGD("queued packet %ld, seq %u=%u", queuedPackets.end() - it, j, qp.seqs[j]);
+            LOGD("queued packet %ld, seq %u=%u", reliablePackets.end() - it, j, qp.seqs[j]);
             if (qp.seqs[j] == 0)
                 break;
-            int remoteAcksIndex = lastRemoteAckSeq - qp.seqs[j];
-            //LOGV("remote acks index %u, value %f", remoteAcksIndex, remoteAcksIndex>=0 && remoteAcksIndex<32 ? remoteAcks[remoteAcksIndex] : -1);
-            if (seqgt(lastRemoteAckSeq, qp.seqs[j]) && remoteAcksIndex >= 0 && remoteAcksIndex < 32)
+            int distance = lastRemoteAckSeq - qp.seqs[j];
+            //LOGV("remote acks index %u, value %f", distance, distance>=0 && distance<32 ? distance[remoteAcksIndex] : -1);
+            if (seqgt(lastRemoteAckSeq, qp.seqs[j]) && distance >= 0 && distance < 32)
             {
-                for (const auto &opkt : recentOutgoingPackets)
+                for (const auto &opkt : recentOutgoingPackets) // Optimize this
                 {
                     if (opkt.seq == qp.seqs[j] && opkt.ackTime > 0)
                     {
@@ -111,7 +111,7 @@ void VoIPController::legacyHandleQueuedPackets()
         }
         if (didAck)
         {
-            it = queuedPackets.erase(it);
+            it = reliablePackets.erase(it);
             continue;
         }
         ++it;

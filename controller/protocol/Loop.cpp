@@ -115,7 +115,7 @@ void VoIPController::RunRecvThread()
 
         if (!writeSockets.empty())
         {
-            messageThread.Post(bind(&VoIPController::TrySendQueuedPackets, this));
+            messageThread.Post(bind(&VoIPController::TrySendOutgoingPackets, this));
         }
     }
     LOGI("=== recv thread exiting ===");

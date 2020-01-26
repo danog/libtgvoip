@@ -42,6 +42,7 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
         }
         canSend = endpoint->socket && endpoint->socket->IsReadyToSend();
     }
+    conctl.PacketSent(pkt.seq, pkt.len);
     if (!canSend)
     {
         if (enqueue)
@@ -236,7 +237,7 @@ void VoIPController::InitUDPProxy()
 }
 
 
-void VoIPController::TrySendQueuedPackets()
+void VoIPController::TrySendOutgoingPackets()
 {
     ENFORCE_MSG_THREAD;
 
@@ -373,20 +374,25 @@ void VoIPController::SendRelayPings()
 }
 
 
-void VoIPController::UpdateQueuedPackets()
+void VoIPController::UpdateReliablePackets()
 {
     vector<PendingOutgoingPacket> packetsToSend;
-    for (std::vector<QueuedPacket>::iterator qp = queuedPackets.begin(); qp != queuedPackets.end();)
+    for (std::vector<ReliableOutgoingPacket>::iterator qp = reliablePackets.begin(); qp != reliablePackets.end();)
     {
         if (qp->timeout > 0 && qp->firstSentTime > 0 && GetCurrentTime() - qp->firstSentTime >= qp->timeout)
         {
             LOGD("Removing queued packet because of timeout");
-            qp = queuedPackets.erase(qp);
+            qp = reliablePackets.erase(qp);
+            continue;
+        }
+        if (!qp->tries--) {
+            LOGD("Removing queued packet because of no more tries");
+            qp = reliablePackets.erase(qp);
             continue;
         }
         if (GetCurrentTime() - qp->lastSentTime >= qp->retryInterval)
         {
-            messageThread.Post(std::bind(&VoIPController::UpdateQueuedPackets, this), qp->retryInterval);
+            messageThread.Post(std::bind(&VoIPController::UpdateReliablePackets, this), qp->retryInterval);
             uint32_t seq = GenerateOutSeq();
             qp->seqs.Add(seq);
             qp->lastSentTime = GetCurrentTime();
@@ -486,12 +492,12 @@ Endpoint &VoIPController::GetEndpointByType(const Endpoint::Type type)
     throw out_of_range("no endpoint");
 }
 
-void VoIPController::SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout)
+void VoIPController::SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries)
 {
     ENFORCE_MSG_THREAD;
 
     LOGD("Send reliably, type=%u, len=%u, retry=%.3f, timeout=%.3f", type, unsigned(len), retryInterval, timeout);
-    QueuedPacket pkt;
+    ReliableOutgoingPacket pkt;
     if (data)
     {
         Buffer b(len);
@@ -501,13 +507,14 @@ void VoIPController::SendPacketReliably(unsigned char type, unsigned char *data,
     pkt.type = type;
     pkt.retryInterval = retryInterval;
     pkt.timeout = timeout;
+    pkt.tries = tries;
     pkt.firstSentTime = 0;
     pkt.lastSentTime = 0;
-    queuedPackets.push_back(move(pkt));
-    messageThread.Post(std::bind(&VoIPController::UpdateQueuedPackets, this));
+    reliablePackets.push_back(move(pkt));
+    messageThread.Post(std::bind(&VoIPController::UpdateReliablePackets, this));
     if (timeout > 0.0)
     {
-        messageThread.Post(std::bind(&VoIPController::UpdateQueuedPackets, this), timeout);
+        messageThread.Post(std::bind(&VoIPController::UpdateReliablePackets, this), timeout);
     }
 }
 

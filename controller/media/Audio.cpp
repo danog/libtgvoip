@@ -79,17 +79,21 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
         }
 
         unsentStreamPackets++;
-        PendingOutgoingPacket p{
-            /*.seq=*/GenerateOutSeq(),
-            /*.type=*/PKT_STREAM_DATA,
-            /*.len=*/pkt.GetLength(),
-            /*.data=*/Buffer(move(pkt)),
-            /*.endpoint=*/0,
-        };
 
-        conctl.PacketSent(p.seq, p.len);
+        //PendingOutgoingPacket p{
+        //    /*.seq=*/GenerateOutSeq(),
+        //    /*.type=*/PKT_STREAM_DATA,
+        //    /*.len=*/pkt.GetLength(),
+        //    /*.data=*/Buffer(move(pkt)),
+        //    /*.endpoint=*/0,
+        //};
 
-        SendOrEnqueuePacket(move(p));
+        //conctl.PacketSent(p.seq, p.len);
+
+        shared_ptr<Stream> outgoingAudioStream = GetStreamByType(STREAM_TYPE_AUDIO, true);
+
+        SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), GetAverageRTT(), outgoingAudioStream && outgoingAudioStream->jitterBuffer ? outgoingAudioStream->jitterBuffer->GetTimeoutWindow() : (GetAverageRTT() * 2.0), 10); // Todo Optimize RTT
+        //SendOrEnqueuePacket(move(p));
         if (peerVersion < 7 && secondaryLen && shittyInternetMode)
         {
             Buffer ecBuf(secondaryLen);

@@ -482,9 +482,8 @@ protected:
         uint32_t size;
         PacketSender *sender;
         bool lost;
-        uint8_t retries = 0;
     };
-    struct QueuedPacket
+    struct ReliableOutgoingPacket
     {
         Buffer data;
         unsigned char type;
@@ -493,6 +492,7 @@ protected:
         double lastSentTime;
         double retryInterval;
         double timeout;
+        uint8_t tries;
     };
     virtual void ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcEndpoint);
     virtual void ProcessExtraData(Buffer &data);
@@ -556,7 +556,7 @@ private:
     void SendPublicEndpointsRequest();
     void SendPublicEndpointsRequest(const Endpoint &relay);
     Endpoint &GetEndpointByType(const Endpoint::Type type);
-    void SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout);
+    void SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries = 0xFF);
     inline uint32_t GenerateOutSeq()
     {
         return seq++;
@@ -573,7 +573,7 @@ private:
     void UpdateCongestion();
     void UpdateAudioBitrate();
     void UpdateSignalBars();
-    void UpdateQueuedPackets();
+    void UpdateReliablePackets();
     void SendNopPacket();
     void TickJitterBufferAndCongestionControl();
     void ResetUdpAvailability();
@@ -638,13 +638,13 @@ private:
 
     // More legacy
     bool legacyParsePacket(BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen);
-    void legacyHandleQueuedPackets();
+    void legacyHandleReliablePackets();
 
     void SetupOutgoingVideoStream();
     bool WasOutgoingPacketAcknowledged(uint32_t seq);
     RecentOutgoingPacket *GetRecentOutgoingPacket(uint32_t seq);
     void NetworkPacketReceived(std::shared_ptr<NetworkPacket> packet);
-    void TrySendQueuedPackets();
+    void TrySendOutgoingPackets();
 
     int state = STATE_WAIT_INIT;
     std::map<int64_t, Endpoint> endpoints;
@@ -713,7 +713,7 @@ private:
     bool dataSavingRequestedByPeer = false;
     std::string activeNetItfName;
     double publicEndpointsReqTime = 0;
-    std::vector<QueuedPacket> queuedPackets;
+    std::vector<ReliableOutgoingPacket> reliablePackets;
     double connectionInitTime = 0;
     double lastRecvPacketTime = 0;
     Config config;

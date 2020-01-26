@@ -42,6 +42,8 @@ public:
 	double GetLastMeasuredJitter();
 	double GetLastMeasuredDelay();
 
+	double GetTimeoutWindow();
+
 private:
 	struct jitter_packet_t
 	{

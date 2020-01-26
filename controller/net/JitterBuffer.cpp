@@ -66,6 +66,10 @@ int JitterBuffer::GetMinPacketCount()
 {
 	return (int)minDelay;
 }
+double JitterBuffer::GetTimeoutWindow()
+{
+	return (lossesToReset * step) / 1000.0;
+}
 
 void JitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timestamp, bool isEC)
 {

@@ -231,7 +231,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         recvTS = in.ReadUInt32();
     }
 
-    if (seqgt(ackId, lastRemoteAckSeq)) // If is **not** out of order or retransmission
+    if (seqgt(ackId, lastRemoteAckSeq))
     {
         if (waitingForAcks && lastRemoteAckSeq >= firstSentPing)
         {
@@ -296,8 +296,8 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                 ++x;
             }
         }
-        else
-            legacyHandleQueuedPackets();
+        //else
+        legacyHandleReliablePackets();
     }
 
     Endpoint &_currentEndpoint = endpoints.at(currentEndpoint);

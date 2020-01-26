@@ -44,6 +44,8 @@ VoIPController::VoIPController() : ecAudioPackets(4),
     stm->enabled = 1;
     stm->frameDuration = 60;
     outgoingStreams.push_back(stm);
+
+    recentOutgoingPackets.reserve(MAX_RECENT_PACKETS);
 }
 
 VoIPController::~VoIPController()
