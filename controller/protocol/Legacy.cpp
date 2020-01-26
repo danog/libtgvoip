@@ -83,14 +83,13 @@ bool VoIPController::legacyParsePacket(BufferInputStream &in, unsigned char &typ
 }
 void VoIPController::legacyHandleQueuedPackets()
 {
-    for (unsigned int i = 0; i < queuedPackets.size(); i++)
+    for (auto it = queuedPackets.begin(); it != queuedPackets.end();)
     {
-        QueuedPacket &qp = queuedPackets[i];
-        int j;
+        QueuedPacket &qp = *it;
         bool didAck = false;
-        for (j = 0; j < 16; j++)
+        for (uint8_t j = 0; j < 16; j++)
         {
-            LOGD("queued packet %u, seq %u=%u", i, j, qp.seqs[j]);
+            LOGD("queued packet %ld, seq %u=%u", queuedPackets.end() - it, j, qp.seqs[j]);
             if (qp.seqs[j] == 0)
                 break;
             int remoteAcksIndex = lastRemoteAckSeq - qp.seqs[j];
@@ -112,9 +111,9 @@ void VoIPController::legacyHandleQueuedPackets()
         }
         if (didAck)
         {
-            queuedPackets.erase(queuedPackets.begin() + i);
-            i--;
+            it = queuedPackets.erase(it);
             continue;
         }
+        ++it;
     }
 }

@@ -43,36 +43,3 @@ void VoIPController::InitializeTimers()
 
     messageThread.Post(std::bind(&VoIPController::SendRelayPings, this), 0.0, 2.0);
 }
-
-void VoIPController::RunSendThread()
-{
-    InitializeAudio();
-    InitializeTimers();
-    messageThread.Post(bind(&VoIPController::SendInit, this));
-
-    while (true)
-    {
-        RawPendingOutgoingPacket pkt = rawSendQueue.GetBlocking();
-        if (pkt.packet.IsEmpty())
-            break;
-
-        if (IS_MOBILE_NETWORK(networkType))
-            stats.bytesSentMobile += static_cast<uint64_t>(pkt.packet.data.Length());
-        else
-            stats.bytesSentWifi += static_cast<uint64_t>(pkt.packet.data.Length());
-
-        if (pkt.packet.protocol == NetworkProtocol::TCP)
-        {
-            if (pkt.socket && !pkt.socket->IsFailed())
-            {
-                pkt.socket->Send(std::move(pkt.packet));
-            }
-        }
-        else
-        {
-            udpSocket->Send(std::move(pkt.packet));
-        }
-    }
-
-    LOGI("=== send thread exiting ===");
-}

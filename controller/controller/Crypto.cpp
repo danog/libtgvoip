@@ -112,6 +112,73 @@ size_t VoIPController::decryptPacket(unsigned char *buffer, BufferInputStream &i
     return innerLen;
 }
 
+void VoIPController::encryptPacket(unsigned char *data, size_t len, BufferOutputStream &out)
+{
+    if (useMTProto2)
+    {
+        BufferOutputStream inner(len + 128);
+        size_t sizeSize;
+        if (peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92))
+        {
+            inner.WriteInt16((uint16_t)len);
+            sizeSize = 0;
+        }
+        else
+        {
+            inner.WriteInt32((uint32_t)len);
+            out.WriteBytes(keyFingerprint, 8);
+            sizeSize = 4;
+        }
+        inner.WriteBytes(data, len);
+
+        size_t padLen = 16 - inner.GetLength() % 16;
+        if (padLen < 16)
+            padLen += 16;
+        unsigned char padding[32];
+        crypto.rand_bytes((uint8_t *)padding, padLen);
+        inner.WriteBytes(padding, padLen);
+        assert(inner.GetLength() % 16 == 0);
+
+        unsigned char key[32], iv[32], msgKey[16];
+        BufferOutputStream buf(len + 32);
+        size_t x = isOutgoing ? 0 : 8;
+        buf.WriteBytes(encryptionKey + 88 + x, 32);
+        buf.WriteBytes(inner.GetBuffer() + sizeSize, inner.GetLength() - sizeSize);
+        unsigned char msgKeyLarge[32];
+        crypto.sha256(buf.GetBuffer(), buf.GetLength(), msgKeyLarge);
+        memcpy(msgKey, msgKeyLarge + 8, 16);
+        KDF2(msgKey, isOutgoing ? 0 : 8, key, iv);
+        out.WriteBytes(msgKey, 16);
+        //LOGV("<- MSG KEY: %08x %08x %08x %08x, hashed %u", *reinterpret_cast<int32_t*>(msgKey), *reinterpret_cast<int32_t*>(msgKey+4), *reinterpret_cast<int32_t*>(msgKey+8), *reinterpret_cast<int32_t*>(msgKey+12), inner.GetLength()-4);
+
+        unsigned char aesOut[MSC_STACK_FALLBACK(inner.GetLength(), 1500)];
+        crypto.aes_ige_encrypt(inner.GetBuffer(), aesOut, inner.GetLength(), key, iv);
+        out.WriteBytes(aesOut, inner.GetLength());
+    }
+    else
+    {
+        BufferOutputStream inner(len + 128);
+        inner.WriteInt32(static_cast<int32_t>(len));
+        inner.WriteBytes(data, len);
+        if (inner.GetLength() % 16 != 0)
+        {
+            size_t padLen = 16 - inner.GetLength() % 16;
+            unsigned char padding[16];
+            crypto.rand_bytes((uint8_t *)padding, padLen);
+            inner.WriteBytes(padding, padLen);
+        }
+        assert(inner.GetLength() % 16 == 0);
+        unsigned char key[32], iv[32], msgHash[SHA1_LENGTH];
+        crypto.sha1((uint8_t *)inner.GetBuffer(), len + 4, msgHash);
+        out.WriteBytes(keyFingerprint, 8);
+        out.WriteBytes((msgHash + (SHA1_LENGTH - 16)), 16);
+        KDF(msgHash + (SHA1_LENGTH - 16), isOutgoing ? 0 : 8, key, iv);
+        unsigned char aesOut[MSC_STACK_FALLBACK(inner.GetLength(), 1500)];
+        crypto.aes_ige_encrypt(inner.GetBuffer(), aesOut, inner.GetLength(), key, iv);
+        out.WriteBytes(aesOut, inner.GetLength());
+    }
+}
+
 void VoIPController::SetEncryptionKey(std::vector<uint8_t> key, bool isOutgoing)
 {
     memcpy(encryptionKey, key.data(), 256);

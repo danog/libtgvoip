@@ -537,13 +537,6 @@ private:
         UDP_NOT_AVAILABLE,
         UDP_BAD
     };
-    /*
-    struct DebugLoggedPacket
-    {
-        int32_t seq;
-        double timestamp;
-        int32_t length;
-    };*/
 
     void RunRecvThread();
     void RunSendThread();
@@ -553,9 +546,13 @@ private:
     void UpdateAudioOutputState();
     void InitUDPProxy();
     void UpdateDataSavingState();
+
     size_t decryptPacket(unsigned char *buffer, BufferInputStream &in);
+    void encryptPacket(unsigned char *data, size_t len, BufferOutputStream &out);
+
     void KDF(unsigned char *msgKey, size_t x, unsigned char *aesKey, unsigned char *aesIv);
     void KDF2(unsigned char *msgKey, size_t x, unsigned char *aesKey, unsigned char *aesIv);
+
     void SendPublicEndpointsRequest();
     void SendPublicEndpointsRequest(const Endpoint &relay);
     Endpoint &GetEndpointByType(const Endpoint::Type type);
@@ -565,7 +562,6 @@ private:
         return seq++;
     }
 
-    void ActuallySendPacket(NetworkPacket pkt, Endpoint &ep);
     void InitializeAudio();
     void StartAudio();
     void ProcessAcknowledgedOutgoingExtra(UnacknowledgedExtraData &extra);
@@ -657,9 +653,16 @@ private:
     int64_t peerPreferredRelay = 0;
     std::atomic<bool> runReceiver = ATOMIC_VAR_INIT(false);
     std::atomic<uint32_t> seq = ATOMIC_VAR_INIT(1);
-    uint32_t lastRemoteSeq = 0;    // Seqno of last received packet
-    uint32_t lastRemoteAckSeq = 0; // Seqno of last sent packet acked by remote
-    uint32_t lastSentSeq = 0;      // Seqno of last sent packet
+
+    // Seqno of last received packet
+    uint32_t lastRemoteSeq = 0;
+
+    // Seqno of last sent packet acked by remote
+    uint32_t lastRemoteAckSeq = 0;
+
+    // Seqno of last sent packet
+    uint32_t lastSentSeq = 0;
+
     std::vector<RecentOutgoingPacket> recentOutgoingPackets;
     std::array<uint32_t, MAX_RECENT_PACKETS> recentIncomingSeqs{};
     size_t recentIncomingSeqIdx = 0;
@@ -776,7 +779,6 @@ private:
     HistoricBuffer<unsigned int, 5> unsentStreamPacketsHistory;
     bool needReInitUdpProxy = true;
     bool needRate = false;
-    //std::vector<DebugLoggedPacket> debugLoggedPackets;
     BufferPool<1024, 32> outgoingAudioBufferPool;
     BlockingQueue<RawPendingOutgoingPacket> rawSendQueue;
 
@@ -851,6 +853,15 @@ private:
     uint32_t maxUnsentStreamPackets;
     uint32_t unackNopThreshold;
 
+    /*
+    struct DebugLoggedPacket
+    {
+        int32_t seq;
+        double timestamp;
+        int32_t length;
+    };
+    std::vector<DebugLoggedPacket> debugLoggedPackets;
+    */
 public:
 #ifdef __APPLE__
     static double machTimebase;

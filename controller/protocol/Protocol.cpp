@@ -228,7 +228,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
     uint32_t recvTS = 0;
     if (pflags & XPFLAG_HAS_RECV_TS)
     {
-        recvTS = static_cast<uint32_t>(in.ReadInt32());
+        recvTS = in.ReadUInt32();
     }
 
     if (seqgt(ackId, lastRemoteAckSeq)) // If is **not** out of order or retransmission
@@ -261,7 +261,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
 
         for (auto &opkt : recentOutgoingPackets)
         {
-            if (opkt.ackTime != 0.0)
+            if (opkt.ackTime)
                 continue;
             if (find(peerAcks.begin(), peerAcks.end(), opkt.seq) != peerAcks.end())
             {
@@ -395,7 +395,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             unsigned int numSupportedVideoDecoders = in.ReadByte();
             for (i = 0; i < numSupportedVideoDecoders; i++)
             {
-                uint32_t id = static_cast<uint32_t>(in.ReadInt32());
+                uint32_t id = in.ReadUInt32();
                 peerVideoDecoders.push_back(id);
                 char *_id = reinterpret_cast<char *>(&id);
                 LOGD("%c%c%c%c", _id[3], _id[2], _id[1], _id[0]);
@@ -849,7 +849,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
     if (type == EXTRA_TYPE_STREAM_FLAGS)
     {
         unsigned char id = in.ReadByte();
-        uint32_t flags = static_cast<uint32_t>(in.ReadInt32());
+        uint32_t flags = in.ReadUInt32();
         LOGV("Peer stream state: id %u flags %u", (unsigned int)id, (unsigned int)flags);
         for (shared_ptr<Stream> &s : incomingStreams)
         {
@@ -1066,7 +1066,7 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
         }
         if (peerVersion >= 9 && videoStream && videoStream->enabled)
         {
-            s->WriteInt32(static_cast<uint32_t>((lastRecvPacketTime - connectionInitTime) * 1000.0));
+            s->WriteUInt32((lastRecvPacketTime - connectionInitTime) * 1000.0);
         }
     }
     else
