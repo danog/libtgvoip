@@ -381,7 +381,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         }
 
         unsigned int i;
-        unsigned int numSupportedAudioCodecs = in.ReadByte();
+        unsigned char numSupportedAudioCodecs = in.ReadByte();
         for (i = 0; i < numSupportedAudioCodecs; i++)
         {
             if (peerVersion < 5)
@@ -574,7 +574,12 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                 LOGW("First audio packet - setting state to ESTABLISHED");
             }
         }
-        int count;
+        if (srcEndpoint.type == Endpoint::Type::UDP_RELAY && srcEndpoint.id != peerPreferredRelay)
+        {
+            peerPreferredRelay = srcEndpoint.id;
+        }
+
+        uint8_t count = 1;
         switch (type)
         {
         case PKT_STREAM_DATA_X2:
@@ -583,16 +588,8 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         case PKT_STREAM_DATA_X3:
             count = 3;
             break;
-        case PKT_STREAM_DATA:
-        default:
-            count = 1;
-            break;
         }
-        int i;
-        if (srcEndpoint.type == Endpoint::Type::UDP_RELAY && srcEndpoint.id != peerPreferredRelay)
-        {
-            peerPreferredRelay = srcEndpoint.id;
-        }
+        uint8_t i;
         for (i = 0; i < count; i++)
         {
             unsigned char streamID = in.ReadByte();
@@ -889,17 +886,6 @@ void VoIPController::ProcessExtraData(Buffer &data)
     else if (type == EXTRA_TYPE_STREAM_CSD)
     {
         LOGI("Received codec specific data");
-        /*
-        os.WriteByte(stream.id);
-        os.WriteByte(static_cast<unsigned char>(stream.codecSpecificData.size()));
-        for(Buffer& b:stream.codecSpecificData){
-            assert(b.Length()<255);
-            os.WriteByte(static_cast<unsigned char>(b.Length()));
-            os.WriteBytes(b);
-        }
-        Buffer buf(move(os));
-        SendExtra(buf, EXTRA_TYPE_STREAM_CSD);
-         */
         unsigned char streamID = in.ReadByte();
         for (shared_ptr<Stream> &stm : incomingStreams)
         {
@@ -909,8 +895,8 @@ void VoIPController::ProcessExtraData(Buffer &data)
                 stm->csdIsValid = false;
                 stm->width = static_cast<unsigned int>(in.ReadInt16());
                 stm->height = static_cast<unsigned int>(in.ReadInt16());
-                size_t count = (size_t)in.ReadByte();
-                for (size_t i = 0; i < count; i++)
+                uint8_t count = in.ReadByte();
+                for (uint8_t i = 0; i < count; i++)
                 {
                     size_t len = (size_t)in.ReadByte();
                     Buffer csd(len);
@@ -927,7 +913,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
             return;
         LOGV("received lan endpoint (extra)");
         uint32_t peerAddr = in.ReadUInt32();
-        uint16_t peerPort = (uint16_t)in.ReadInt32();
+        uint16_t peerPort = static_cast<uint16_t>(in.ReadInt32());
         constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
         if (currentEndpoint == lanID)
             currentEndpoint = preferredRelay;

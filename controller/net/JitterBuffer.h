@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <vector>
+#include <algorithm>
 #include <stdio.h>
 #include "controller/media/MediaStreamItf.h"
 #include "tools/BlockingQueue.h"
@@ -58,7 +59,7 @@ private:
 	Mutex mutex;
 	uint32_t step;
 	std::array<jitter_packet_t, JITTER_SLOT_COUNT> slots;
-	int64_t nextTimestamp = 0;
+	int64_t nextFetchTimestamp = 0; // What frame to read next
 	double minDelay = 6;
 	uint32_t minMinDelay;
 	uint32_t maxMinDelay;

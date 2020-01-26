@@ -26,8 +26,14 @@
 
 #define CHECK_ENDPOINT_PROTOCOL(endpointType, packetProtocol) ((endpointType != Endpoint::Type::TCP_RELAY && packetProtocol == NetworkProtocol::UDP) || (endpointType == Endpoint::Type::TCP_RELAY && packetProtocol == NetworkProtocol::TCP))
 
+enum ProtocolVersions
+{
+	PROTOCOL_OLD = 9,
+	PROTOCOL_DANOG = 10
+};
+
 #define PROTOCOL_NAME 0x50567247 // "GrVP" in little endian (reversed here)
-#define PROTOCOL_VERSION 9
+#define PROTOCOL_VERSION 10
 #define MIN_PROTOCOL_VERSION 3
 
 #define STREAM_DATA_FLAG_LEN16 0x40
