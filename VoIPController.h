@@ -397,44 +397,6 @@ public:
     void SetAudioOutputDuckingEnabled(bool enabled);
 #endif
 
-    struct PendingOutgoingPacket
-    {
-        PendingOutgoingPacket(uint32_t seq, uint8_t type, size_t len, Buffer &&data, int64_t endpoint)
-        {
-            this->seq = seq;
-            this->type = type;
-            this->len = len;
-            this->data = std::move(data);
-            this->endpoint = endpoint;
-        }
-        PendingOutgoingPacket(PendingOutgoingPacket &&other)
-        {
-            seq = other.seq;
-            type = other.type;
-            len = other.len;
-            data = std::move(other.data);
-            endpoint = other.endpoint;
-        }
-        PendingOutgoingPacket &operator=(PendingOutgoingPacket &&other)
-        {
-            if (this != &other)
-            {
-                seq = other.seq;
-                type = other.type;
-                len = other.len;
-                data = std::move(other.data);
-                endpoint = other.endpoint;
-            }
-            return *this;
-        }
-        TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
-        uint32_t seq;
-        uint8_t type;
-        size_t len;
-        Buffer data;
-        int64_t endpoint;
-    };
-
     struct Stream
     {
         int32_t userID;
@@ -467,6 +429,44 @@ public:
         bool callUpgradeSupported;
     };
 
+    struct PendingOutgoingPacket
+    {
+        PendingOutgoingPacket(uint32_t seq_, uint8_t type_, size_t len_, Buffer &&data_, int64_t endpoint_)
+            : seq(seq_),
+              type(type_),
+              len(len_),
+              data(std::move(data_)),
+              endpoint(endpoint_)
+        {
+        }
+        PendingOutgoingPacket(PendingOutgoingPacket &&other)
+            : seq(other.seq),
+              type(other.type),
+              len(other.len),
+              data(std::move(other.data)),
+              endpoint(other.endpoint)
+        {
+        }
+        PendingOutgoingPacket &operator=(PendingOutgoingPacket &&other)
+        {
+            if (this != &other)
+            {
+                seq = other.seq;
+                type = other.type;
+                len = other.len;
+                data = std::move(other.data);
+                endpoint = other.endpoint;
+            }
+            return *this;
+        }
+        TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
+        uint32_t seq;
+        uint8_t type;
+        size_t len;
+        Buffer data;
+        int64_t endpoint;
+    };
+
 private:
     struct UnacknowledgedExtraData;
 
@@ -482,6 +482,7 @@ protected:
         uint32_t size;
         PacketSender *sender;
         bool lost;
+        uint8_t retries = 0;
     };
     struct QueuedPacket
     {
@@ -520,11 +521,13 @@ private:
         Buffer data;
         uint32_t firstContainingSeq;
     };
-    struct RecentIncomingPacket
+    struct RawPendingOutgoingPacket
     {
-        uint32_t seq;
-        double recvTime;
+        TGVOIP_MOVE_ONLY(RawPendingOutgoingPacket);
+        NetworkPacket packet;
+        std::shared_ptr<NetworkSocket> socket;
     };
+
     enum
     {
         UDP_UNKNOWN = 0,
@@ -534,18 +537,13 @@ private:
         UDP_NOT_AVAILABLE,
         UDP_BAD
     };
+    /*
     struct DebugLoggedPacket
     {
         int32_t seq;
         double timestamp;
         int32_t length;
-    };
-    struct RawPendingOutgoingPacket
-    {
-        TGVOIP_MOVE_ONLY(RawPendingOutgoingPacket);
-        NetworkPacket packet;
-        std::shared_ptr<NetworkSocket> socket;
-    };
+    };*/
 
     void RunRecvThread();
     void RunSendThread();
@@ -583,7 +581,7 @@ private:
     void SendNopPacket();
     void TickJitterBufferAndCongestionControl();
     void ResetUdpAvailability();
-    static std::string NetworkTypeToString(int type)
+    inline static std::string NetworkTypeToString(int type)
     {
         switch (type)
         {
@@ -614,7 +612,7 @@ private:
         }
     }
 
-    static std::string GetPacketTypeString(unsigned char type)
+    inline static std::string GetPacketTypeString(unsigned char type)
     {
         switch (type)
         {
@@ -642,6 +640,7 @@ private:
         return string("unknown(") + std::to_string(type) + ')';
     }
 
+    // More legacy
     bool legacyParsePacket(BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen);
     void legacyHandleQueuedPackets();
 
@@ -764,7 +763,7 @@ private:
     std::unordered_map<uint8_t, uint64_t> lastReceivedExtrasByType;
     bool useIPv6 = false;
     bool peerIPv6Available = false;
-    NetworkAddress myIPv6 = NetworkAddress::Empty();
+    NetworkAddress myIPv6{NetworkAddress::Empty()};
     bool shittyInternetMode = false;
     uint8_t extraEcLevel = 0;
     std::deque<Buffer> ecAudioPackets;
@@ -777,7 +776,7 @@ private:
     HistoricBuffer<unsigned int, 5> unsentStreamPacketsHistory;
     bool needReInitUdpProxy = true;
     bool needRate = false;
-    std::vector<DebugLoggedPacket> debugLoggedPackets;
+    //std::vector<DebugLoggedPacket> debugLoggedPackets;
     BufferPool<1024, 32> outgoingAudioBufferPool;
     BlockingQueue<RawPendingOutgoingPacket> rawSendQueue;
 
@@ -816,7 +815,7 @@ private:
     uint32_t sendLosses = 0;
     uint32_t unacknowledgedIncomingPacketCount = 0;
 
-    ProtocolInfo protocolInfo = {0};
+    ProtocolInfo protocolInfo{0};
 
     /*** debug report problems ***/
     bool wasReconnecting = false;

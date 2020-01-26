@@ -230,7 +230,8 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
     {
         recvTS = static_cast<uint32_t>(in.ReadInt32());
     }
-    if (seqgt(ackId, lastRemoteAckSeq))
+
+    if (seqgt(ackId, lastRemoteAckSeq)) // If is **not** out of order or retransmission
     {
         if (waitingForAcks && lastRemoteAckSeq >= firstSentPing)
         {
@@ -312,6 +313,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         }
     }
 
+    /*
     if (config.logPacketStats)
     {
         DebugLoggedPacket dpkt = {
@@ -323,7 +325,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         {
             debugLoggedPackets.erase(debugLoggedPackets.begin(), debugLoggedPackets.begin() + 500);
         }
-    }
+    }*/
 
     unacknowledgedIncomingPacketCount++;
     if (unacknowledgedIncomingPacketCount > unackNopThreshold)
