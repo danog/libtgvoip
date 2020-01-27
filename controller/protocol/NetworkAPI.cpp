@@ -267,18 +267,10 @@ void VoIPController::TrySendOutgoingPackets()
 
 bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll)
 {
-    if (seqgt(seq, lastRemoteAckSeq))
-        return false;
-    if (seq == lastRemoteAckSeq)
-        return true;
-
-    uint32_t distance = lastRemoteAckSeq - seq;
-    if (distance > 0 && distance <= 32) {
-        return peerAcks[distance];
+    bool res = wasAcked(seq);
+    if (res || !checkAll) {
+        return res;
     }
-
-    if (!checkAll) 
-        return false;
 
     RecentOutgoingPacket *pkt = GetRecentOutgoingPacket(seq);
     if (!pkt)

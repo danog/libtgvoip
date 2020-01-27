@@ -39,6 +39,7 @@
 #include "controller/audio/EchoCanceller.h"
 #include "controller/net/CongestionControl.h"
 #include "controller/net/NetworkSocket.h"
+#include "controller/protocol/Ack.h"
 #include "tools/Buffers.h"
 #include "controller/net/PacketReassembler.h"
 #include "tools/MessageThread.h"
@@ -141,7 +142,7 @@ namespace video
 class VideoPacketSender;
 }
 
-class VoIPController
+class VoIPController : Ack
 {
     friend class VoIPGroupController;
     friend class PacketSender;
@@ -397,7 +398,7 @@ public:
     void SetAudioOutputDuckingEnabled(bool enabled);
 #endif
 
-    struct Stream
+    struct Stream : Ack
     {
         int32_t userID;
         uint8_t id;
@@ -414,6 +415,13 @@ public:
         bool csdIsValid = false;
         bool paused = false;
         int resolution;
+
+        // Stream-specific seqno
+        std::atomic<uint32_t> seq = ATOMIC_VAR_INIT(1);
+
+        // Status list of acked seqnos, starting from the seq explicitly present in the packet + up to 32 seqs ago
+        std::array<uint32_t, 33> peerAcks{0};
+
         unsigned int width = 0;
         unsigned int height = 0;
         uint16_t rotation = 0;
@@ -659,14 +667,10 @@ private:
     // Seqno of last received packet
     uint32_t lastRemoteSeq = 0;
 
-    // Seqno of last sent packet acked by remote
-    uint32_t lastRemoteAckSeq = 0;
-
     // Seqno of last sent packet
     uint32_t lastSentSeq = 0;
 
-    // Status list of acked seqnos, starting from the seq explicitly present in the packet + up to 32 seqs ago
-    std::array<uint32_t, 33> peerAcks{0};
+    // Acks now handled in Ack
 
     // Recent ougoing packets
     std::vector<RecentOutgoingPacket> recentOutgoingPackets;

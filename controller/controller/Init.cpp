@@ -27,7 +27,7 @@ void VoIPController::InitializeTimers()
                               << endpoints.at(currentEndpoint).rtts[0]
                               << lastRemoteSeq
                               << (uint32_t)seq
-                              << lastRemoteAckSeq
+                              << peerAcks[0]
                               << recvLossCount
                               << conctl.GetSendLossCount()
                               << (int)conctl.GetInflightDataSize()

@@ -277,7 +277,7 @@ string VoIPController::GetDebugString()
              int(conctl.GetInflightDataSize()), int(conctl.GetCongestionWindow()),
              keyFingerprint[0], keyFingerprint[1], keyFingerprint[2], keyFingerprint[3], keyFingerprint[4], keyFingerprint[5], keyFingerprint[6], keyFingerprint[7],
              useMTProto2 ? " (MTProto2.0)" : "",
-             lastSentSeq, lastRemoteAckSeq, lastRemoteSeq,
+             lastSentSeq, peerAcks[0], lastRemoteSeq,
              sendLosses, recvLossCount, encoder ? encoder->GetPacketLoss() : 0,
              encoder ? (encoder->GetBitrate() / 1000) : 0,
              static_cast<unsigned int>(unsentStreamPackets),

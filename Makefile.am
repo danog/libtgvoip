@@ -18,6 +18,7 @@ controller/net/Endpoint.cpp \
 controller/audio/OpusDecoder.cpp \
 controller/audio/OpusEncoder.cpp \
 controller/net/PacketReassembler.cpp \
+controller/protocol/Ack.cpp \
 VoIPGroupController.cpp \
 VoIPServerConfig.cpp \
 audio/AudioIO.cpp \

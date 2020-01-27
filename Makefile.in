@@ -816,7 +816,8 @@ am__libtgvoip_la_SOURCES_DIST = TgVoip.cpp VoIPController.cpp \
 	controller/net/NetworkSocket.cpp controller/net/Endpoint.cpp \
 	controller/audio/OpusDecoder.cpp \
 	controller/audio/OpusEncoder.cpp \
-	controller/net/PacketReassembler.cpp VoIPGroupController.cpp \
+	controller/net/PacketReassembler.cpp \
+	controller/protocol/Ack.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
 	audio/AudioInputTester.cpp os/posix/NetworkSocketPosix.cpp \
@@ -1755,9 +1756,9 @@ am__objects_12 = TgVoip.lo VoIPController.lo tools/Buffers.lo \
 	controller/net/NetworkSocket.lo controller/net/Endpoint.lo \
 	controller/audio/OpusDecoder.lo \
 	controller/audio/OpusEncoder.lo \
-	controller/net/PacketReassembler.lo VoIPGroupController.lo \
-	VoIPServerConfig.lo audio/AudioIO.lo audio/AudioInput.lo \
-	audio/AudioOutput.lo audio/Resampler.lo \
+	controller/net/PacketReassembler.lo controller/protocol/Ack.lo \
+	VoIPGroupController.lo VoIPServerConfig.lo audio/AudioIO.lo \
+	audio/AudioInput.lo audio/AudioOutput.lo audio/Resampler.lo \
 	audio/AudioInputTester.lo os/posix/NetworkSocketPosix.lo \
 	video/VideoSource.lo video/VideoRenderer.lo \
 	video/VideoPacketSender.lo video/VideoFEC.lo \
@@ -2070,6 +2071,7 @@ am__depfiles_remade = ./$(DEPDIR)/TgVoip.Plo \
 	controller/net/$(DEPDIR)/JitterBuffer.Plo \
 	controller/net/$(DEPDIR)/NetworkSocket.Plo \
 	controller/net/$(DEPDIR)/PacketReassembler.Plo \
+	controller/protocol/$(DEPDIR)/Ack.Plo \
 	os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo \
 	os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo \
 	os/darwin/$(DEPDIR)/AudioOutputAudioUnit.Plo \
@@ -2385,7 +2387,8 @@ SRC = TgVoip.cpp VoIPController.cpp tools/Buffers.cpp \
 	controller/net/NetworkSocket.cpp controller/net/Endpoint.cpp \
 	controller/audio/OpusDecoder.cpp \
 	controller/audio/OpusEncoder.cpp \
-	controller/net/PacketReassembler.cpp VoIPGroupController.cpp \
+	controller/net/PacketReassembler.cpp \
+	controller/protocol/Ack.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
 	audio/AudioInputTester.cpp os/posix/NetworkSocketPosix.cpp \
@@ -2551,6 +2554,14 @@ controller/audio/OpusEncoder.lo: controller/audio/$(am__dirstamp) \
 	controller/audio/$(DEPDIR)/$(am__dirstamp)
 controller/net/PacketReassembler.lo: controller/net/$(am__dirstamp) \
 	controller/net/$(DEPDIR)/$(am__dirstamp)
+controller/protocol/$(am__dirstamp):
+	@$(MKDIR_P) controller/protocol
+	@: > controller/protocol/$(am__dirstamp)
+controller/protocol/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) controller/protocol/$(DEPDIR)
+	@: > controller/protocol/$(DEPDIR)/$(am__dirstamp)
+controller/protocol/Ack.lo: controller/protocol/$(am__dirstamp) \
+	controller/protocol/$(DEPDIR)/$(am__dirstamp)
 audio/$(am__dirstamp):
 	@$(MKDIR_P) audio
 	@: > audio/$(am__dirstamp)
@@ -3705,6 +3716,8 @@ mostlyclean-compile:
 	-rm -f controller/media/*.lo
 	-rm -f controller/net/*.$(OBJEXT)
 	-rm -f controller/net/*.lo
+	-rm -f controller/protocol/*.$(OBJEXT)
+	-rm -f controller/protocol/*.lo
 	-rm -f os/darwin/*.$(OBJEXT)
 	-rm -f os/darwin/*.lo
 	-rm -f os/linux/*.$(OBJEXT)
@@ -4015,6 +4028,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/JitterBuffer.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/NetworkSocket.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/PacketReassembler.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/$(DEPDIR)/Ack.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioOutputAudioUnit.Plo@am__quote@ # am--include-marker
@@ -4223,6 +4237,7 @@ clean-libtool:
 	-rm -rf controller/audio/.libs controller/audio/_libs
 	-rm -rf controller/media/.libs controller/media/_libs
 	-rm -rf controller/net/.libs controller/net/_libs
+	-rm -rf controller/protocol/.libs controller/protocol/_libs
 	-rm -rf os/darwin/.libs os/darwin/_libs
 	-rm -rf os/linux/.libs os/linux/_libs
 	-rm -rf os/posix/.libs os/posix/_libs
@@ -4529,6 +4544,8 @@ distclean-generic:
 	-rm -f controller/media/$(am__dirstamp)
 	-rm -f controller/net/$(DEPDIR)/$(am__dirstamp)
 	-rm -f controller/net/$(am__dirstamp)
+	-rm -f controller/protocol/$(DEPDIR)/$(am__dirstamp)
+	-rm -f controller/protocol/$(am__dirstamp)
 	-rm -f os/darwin/$(DEPDIR)/$(am__dirstamp)
 	-rm -f os/darwin/$(am__dirstamp)
 	-rm -f os/linux/$(DEPDIR)/$(am__dirstamp)
@@ -4900,6 +4917,7 @@ distclean: distclean-am
 	-rm -f controller/net/$(DEPDIR)/JitterBuffer.Plo
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f controller/net/$(DEPDIR)/PacketReassembler.Plo
+	-rm -f controller/protocol/$(DEPDIR)/Ack.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioOutputAudioUnit.Plo
@@ -5268,6 +5286,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f controller/net/$(DEPDIR)/JitterBuffer.Plo
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f controller/net/$(DEPDIR)/PacketReassembler.Plo
+	-rm -f controller/protocol/$(DEPDIR)/Ack.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioOutputAudioUnit.Plo

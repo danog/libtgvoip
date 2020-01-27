@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <array>
 
 #define PKT_INIT 1
 #define PKT_INIT_ACK 2
@@ -29,7 +30,7 @@
 enum ProtocolVersions
 {
 	PROTOCOL_OLD = 9,
-	PROTOCOL_DANOG = 10
+	PROTOCOL_RELIABLE = 10
 };
 
 #define PROTOCOL_NAME 0x50567247 // "GrVP" in little endian (reversed here)
