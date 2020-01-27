@@ -1,10 +1,13 @@
 #include "Ack.h"
 #include "../PrivateDefines.h"
+#include "../../tools/logging.h"
 
 using namespace tgvoip;
 using namespace std;
 
-void Ack::ack(uint32_t ackId, uint32_t mask)
+Ack::Ack() : recentIncomingSeqs(MAX_RECENT_PACKETS) {}
+
+void Ack::ackLocal(uint32_t ackId, uint32_t mask)
 {
     peerAcks[0] = ackId;
     for (unsigned int i = 1; i <= 32; i++)
@@ -12,7 +15,7 @@ void Ack::ack(uint32_t ackId, uint32_t mask)
         peerAcks[i] = (mask >> (32 - i)) & 1 ? ackId - i : 0;
     }
 }
-bool Ack::wasAcked(uint32_t seq)
+bool Ack::wasLocalAcked(uint32_t seq)
 {
     if (seqgt(seq, peerAcks[0]))
         return false;
@@ -24,4 +27,44 @@ bool Ack::wasAcked(uint32_t seq)
     }
 
     return false;
+}
+
+bool Ack::ackRemoteSeq(uint32_t ackId)
+{
+    // Duplicate and moving window check
+    if (seqgt(ackId, lastRemoteSeq - MAX_RECENT_PACKETS))
+    {
+        if (find(recentIncomingSeqs.begin(), recentIncomingSeqs.end(), ackId) != recentIncomingSeqs.end())
+        {
+            LOGW("Received duplicated packet for seq %u", ackId);
+            return false;
+        }
+        recentIncomingSeqs.push_front(ackId);
+        recentIncomingSeqs.pop_back();
+
+        if (seqgt(ackId, lastRemoteSeq))
+            lastRemoteSeq = ackId;
+    }
+    else
+    {
+        LOGW("Packet %u is out of order and too late", ackId);
+        return false;
+    }
+    return true;
+}
+uint32_t Ack::getRemoteAckMask()
+{
+    uint32_t acks = 0;
+    uint32_t distance;
+    for (const uint32_t &seq : recentIncomingSeqs)
+    {
+        if (!seq)
+            break;
+        distance = lastRemoteSeq - seq;
+        if (distance > 0 && distance <= 32)
+        {
+            acks |= (1 << (32 - distance));
+        }
+    }
+    return acks;
 }

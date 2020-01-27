@@ -84,9 +84,9 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, P
     }
 
     //LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
-#ifdef LOG_PACKETS
+//#ifdef LOG_PACKETS
     LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s", ep.GetAddress().ToString().c_str(), ep.port, srcPacket.seq, (unsigned int)out.GetLength(), GetPacketTypeString(srcPacket.type).c_str());
-#endif
+//#endif
 
     rawSendQueue.Put(
         RawPendingOutgoingPacket{
@@ -267,7 +267,7 @@ void VoIPController::TrySendOutgoingPackets()
 
 bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll)
 {
-    bool res = wasAcked(seq);
+    bool res = wasLocalAcked(seq);
     if (res || !checkAll) {
         return res;
     }
@@ -278,7 +278,7 @@ bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll)
     return pkt->ackTime != 0.0;
 }
 
-VoIPController::RecentOutgoingPacket *VoIPController::GetRecentOutgoingPacket(uint32_t seq)
+RecentOutgoingPacket *VoIPController::GetRecentOutgoingPacket(uint32_t seq)
 {
     for (RecentOutgoingPacket &opkt : recentOutgoingPackets)
     {
@@ -287,7 +287,7 @@ VoIPController::RecentOutgoingPacket *VoIPController::GetRecentOutgoingPacket(ui
             return &opkt;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 void VoIPController::SendRelayPings()

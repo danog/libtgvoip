@@ -40,6 +40,7 @@
 #include "controller/net/CongestionControl.h"
 #include "controller/net/NetworkSocket.h"
 #include "controller/protocol/Ack.h"
+#include "controller/protocol/PacketStructs.h"
 #include "tools/Buffers.h"
 #include "controller/net/PacketReassembler.h"
 #include "tools/MessageThread.h"
@@ -398,11 +399,17 @@ public:
     void SetAudioOutputDuckingEnabled(bool enabled);
 #endif
 
+    enum StreamType
+    {
+        STREAM_TYPE_AUDIO = 1,
+        STREAM_TYPE_VIDEO
+    };
+
     struct Stream : Ack
     {
         int32_t userID;
         uint8_t id;
-        unsigned char type;
+        StreamType type;
         uint32_t codec;
         bool enabled;
         bool extraECEnabled;
@@ -411,16 +418,11 @@ public:
         std::shared_ptr<OpusDecoder> decoder;
         std::shared_ptr<PacketReassembler> packetReassembler;
         std::shared_ptr<CallbackWrapper> callbackWrapper;
+        std::unique_ptr<PacketSender> packetSender;
         std::vector<Buffer> codecSpecificData;
         bool csdIsValid = false;
         bool paused = false;
         int resolution;
-
-        // Stream-specific seqno
-        std::atomic<uint32_t> seq = ATOMIC_VAR_INIT(1);
-
-        // Status list of acked seqnos, starting from the seq explicitly present in the packet + up to 32 seqs ago
-        std::array<uint32_t, 33> peerAcks{0};
 
         unsigned int width = 0;
         unsigned int height = 0;
@@ -437,71 +439,7 @@ public:
         bool callUpgradeSupported;
     };
 
-    struct PendingOutgoingPacket
-    {
-        PendingOutgoingPacket(uint32_t seq_, uint8_t type_, size_t len_, Buffer &&data_, int64_t endpoint_)
-            : seq(seq_),
-              type(type_),
-              len(len_),
-              data(std::move(data_)),
-              endpoint(endpoint_)
-        {
-        }
-        PendingOutgoingPacket(PendingOutgoingPacket &&other)
-            : seq(other.seq),
-              type(other.type),
-              len(other.len),
-              data(std::move(other.data)),
-              endpoint(other.endpoint)
-        {
-        }
-        PendingOutgoingPacket &operator=(PendingOutgoingPacket &&other)
-        {
-            if (this != &other)
-            {
-                seq = other.seq;
-                type = other.type;
-                len = other.len;
-                data = std::move(other.data);
-                endpoint = other.endpoint;
-            }
-            return *this;
-        }
-        TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
-        uint32_t seq;
-        uint8_t type;
-        size_t len;
-        Buffer data;
-        int64_t endpoint;
-    };
-
-private:
-    struct UnacknowledgedExtraData;
-
 protected:
-    struct RecentOutgoingPacket
-    {
-        uint32_t seq;
-        uint16_t id; // for group calls only
-        double sendTime;
-        double ackTime;
-        double rttTime;
-        uint8_t type;
-        uint32_t size;
-        PacketSender *sender;
-        bool lost;
-    };
-    struct ReliableOutgoingPacket
-    {
-        Buffer data;
-        unsigned char type;
-        HistoricBuffer<uint32_t, 16> seqs;
-        double firstSentTime;
-        double lastSentTime;
-        double retryInterval;
-        double timeout;
-        uint8_t tries;
-    };
     virtual void ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcEndpoint);
     virtual void ProcessExtraData(Buffer &data);
     virtual void WritePacketHeader(uint32_t seq, BufferOutputStream *s, unsigned char type, uint32_t length, PacketSender *source);
@@ -516,26 +454,19 @@ protected:
     void ResetEndpointPingStats();
     void SendVideoFrame(const Buffer &frame, uint32_t flags, uint32_t rotation);
     void ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe, uint16_t rotation);
-    std::shared_ptr<Stream> GetStreamByType(int type, bool outgoing);
+    std::shared_ptr<Stream> GetStreamByType(StreamType type, bool outgoing);
     std::shared_ptr<Stream> GetStreamByID(unsigned char id, bool outgoing);
     Endpoint *GetEndpointForPacket(const PendingOutgoingPacket &pkt);
     bool SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue = true, PacketSender *source = NULL);
     CellularCarrierInfo GetCarrierInfo();
 
 private:
-    struct UnacknowledgedExtraData
-    {
-        unsigned char type;
-        Buffer data;
-        uint32_t firstContainingSeq;
-    };
     struct RawPendingOutgoingPacket
     {
         TGVOIP_MOVE_ONLY(RawPendingOutgoingPacket);
         NetworkPacket packet;
         std::shared_ptr<NetworkSocket> socket;
     };
-
     enum
     {
         UDP_UNKNOWN = 0,
@@ -565,10 +496,6 @@ private:
     void SendPublicEndpointsRequest(const Endpoint &relay);
     Endpoint &GetEndpointByType(const Endpoint::Type type);
     void SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries = 0xFF);
-    inline uint32_t GenerateOutSeq()
-    {
-        return seq++;
-    }
 
     void InitializeAudio();
     void StartAudio();
@@ -662,22 +589,8 @@ private:
     int64_t preferredRelay = 0;
     int64_t peerPreferredRelay = 0;
     std::atomic<bool> runReceiver = ATOMIC_VAR_INIT(false);
-    std::atomic<uint32_t> seq = ATOMIC_VAR_INIT(1);
-
-    // Seqno of last received packet
-    uint32_t lastRemoteSeq = 0;
-
-    // Seqno of last sent packet
-    uint32_t lastSentSeq = 0;
 
     // Acks now handled in Ack
-
-    // Recent ougoing packets
-    std::vector<RecentOutgoingPacket> recentOutgoingPackets;
-
-    // Recent incoming packets
-    std::array<uint32_t, MAX_RECENT_PACKETS> recentIncomingSeqs{};
-    size_t recentIncomingSeqIdx = 0;
 
     HistoricBuffer<uint32_t, 10, double> sendLossCountHistory;
     uint32_t audioTimestampIn = 0;
@@ -825,7 +738,6 @@ private:
     video::VideoRenderer *videoRenderer = nullptr;
     uint32_t lastReceivedVideoFrameNumber = UINT32_MAX;
 
-    std::unique_ptr<video::VideoPacketSender> videoPacketSender;
     uint32_t sendLosses = 0;
     uint32_t unacknowledgedIncomingPacketCount = 0;
 
@@ -865,15 +777,6 @@ private:
     uint32_t maxUnsentStreamPackets;
     uint32_t unackNopThreshold;
 
-    /*
-    struct DebugLoggedPacket
-    {
-        int32_t seq;
-        double timestamp;
-        int32_t length;
-    };
-    std::vector<DebugLoggedPacket> debugLoggedPackets;
-    */
 public:
 #ifdef __APPLE__
     static double machTimebase;

@@ -22,10 +22,10 @@ void VoIPController::SetVideoSource(video::VideoSource *source)
             messageThread.Post([this, stm] { SendStreamFlags(*stm); });
         }
 
-        if (!videoPacketSender)
-            videoPacketSender.reset(new video::VideoPacketSender(this, source, stm));
+        if (!stm->packetSender)
+            stm->packetSender.reset(new video::VideoPacketSender(this, source, stm));
         else
-            videoPacketSender->SetSource(source);
+            dynamic_cast<video::VideoPacketSender *>(stm->packetSender.get())->SetSource(source);
     }
     else
     {
@@ -34,9 +34,9 @@ void VoIPController::SetVideoSource(video::VideoSource *source)
             stm->enabled = false;
             messageThread.Post([this, stm] { SendStreamFlags(*stm); });
         }
-        if (videoPacketSender)
+        if (stm->packetSender)
         {
-            videoPacketSender->SetSource(NULL);
+            dynamic_cast<video::VideoPacketSender *>(stm->packetSender.get())->SetSource(NULL);
         }
     }
 }

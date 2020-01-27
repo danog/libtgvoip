@@ -150,26 +150,3 @@ void VoIPController::AddTCPRelays()
     }
 }
 
-
-
-shared_ptr<VoIPController::Stream> VoIPController::GetStreamByType(int type, bool outgoing)
-{
-    shared_ptr<Stream> s;
-    for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
-    {
-        if (ss->type == type)
-            return ss;
-    }
-    return s;
-}
-
-shared_ptr<VoIPController::Stream> VoIPController::GetStreamByID(unsigned char id, bool outgoing)
-{
-    shared_ptr<Stream> s;
-    for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
-    {
-        if (ss->id == id)
-            return ss;
-    }
-    return s;
-}

@@ -164,7 +164,7 @@ vector<shared_ptr<VoIPController::Stream>> VoIPGroupController::DeserializeStrea
 			BufferInputStream inner = in.GetPartBuffer(len, true);
 			shared_ptr<Stream> s = make_shared<Stream>();
 			s->id = inner.ReadByte();
-			s->type = inner.ReadByte();
+			s->type = static_cast<StreamType>(inner.ReadByte());
 			s->codec = (uint32_t)inner.ReadInt32();
 			uint32_t flags = (uint32_t)inner.ReadInt32();
 			s->enabled = (flags & STREAM_FLAG_ENABLED) == STREAM_FLAG_ENABLED;

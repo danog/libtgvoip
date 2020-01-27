@@ -6,6 +6,7 @@
 #define LIBTGVOIP_PACKETSENDER_H
 
 #include "../VoIPController.h"
+#include "../protocol/PacketStructs.h"
 #include <functional>
 #include <stdint.h>
 
@@ -15,58 +16,28 @@ class PacketSender
 {
 public:
 	PacketSender(VoIPController *controller) : controller(controller){};
-	virtual ~PacketSender(){};
+	virtual ~PacketSender() = default;
 	virtual void PacketAcknowledged(uint32_t seq, double sendTime, double ackTime, uint8_t type, uint32_t size) = 0;
 	virtual void PacketLost(uint32_t seq, uint8_t type, uint32_t size) = 0;
 
 protected:
-	void SendExtra(Buffer &data, unsigned char type)
-	{
-		controller->SendExtra(data, type);
-	}
+	void SendExtra(Buffer &data, unsigned char type);
 
-	void IncrementUnsentStreamPackets()
-	{
-		controller->unsentStreamPackets++;
-	}
+	void IncrementUnsentStreamPackets();
 
-	uint32_t SendPacket(VoIPController::PendingOutgoingPacket pkt)
-	{
-		uint32_t seq = controller->GenerateOutSeq();
-		pkt.seq = seq;
-		controller->SendOrEnqueuePacket(std::move(pkt), true, this);
-		return seq;
-	}
+	uint32_t SendPacket(PendingOutgoingPacket pkt);
 
-	double GetConnectionInitTime()
-	{
-		return controller->connectionInitTime;
-	}
+	double GetConnectionInitTime();
 
-	const HistoricBuffer<double, 32> &RTTHistory() const
-	{
-		return controller->rttHistory;
-	}
+	const HistoricBuffer<double, 32> &RTTHistory() const;
 
-	MessageThread &GetMessageThread()
-	{
-		return controller->messageThread;
-	}
+	MessageThread &GetMessageThread();
 
-	const VoIPController::ProtocolInfo &GetProtocolInfo() const
-	{
-		return controller->protocolInfo;
-	}
+	const VoIPController::ProtocolInfo &GetProtocolInfo() const;
 
-	void SendStreamFlags(VoIPController::Stream &stm)
-	{
-		controller->SendStreamFlags(stm);
-	}
+	void SendStreamFlags(VoIPController::Stream &stm);
 
-	const VoIPController::Config &GetConfig() const
-	{
-		return controller->config;
-	}
+	const VoIPController::Config &GetConfig() const;
 
 	VoIPController *controller;
 };

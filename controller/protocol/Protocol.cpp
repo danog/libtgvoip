@@ -192,23 +192,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
     }
     packetsReceived++;
 
-    // Duplicate and moving window check
-    if (seqgt(pseq, lastRemoteSeq - MAX_RECENT_PACKETS))
-    {
-        if (find(recentIncomingSeqs.begin(), recentIncomingSeqs.end(), pseq) != recentIncomingSeqs.end())
-        {
-            LOGW("Received duplicated packet for seq %u", pseq);
-            return;
-        }
-        recentIncomingSeqs[recentIncomingSeqIdx++] = pseq;
-        recentIncomingSeqIdx %= recentIncomingSeqs.size();
-
-        if (seqgt(pseq, lastRemoteSeq))
-            lastRemoteSeq = pseq;
-    }
-    else
-    {
-        LOGW("Packet %u is out of order and too late", pseq);
+    if (!ackRemoteSeq(pseq)) {
         return;
     }
 
@@ -247,13 +231,13 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         }
         conctl.PacketAcknowledged(ackId);
 
-        ack(ackId, acks);
+        ackLocal(ackId, acks);
 
         for (auto &opkt : recentOutgoingPackets)
         {
             if (opkt.ackTime)
                 continue;
-            if (wasAcked(opkt.seq))
+            if (wasLocalAcked(opkt.seq))
             {
                 opkt.ackTime = GetCurrentTime();
                 opkt.rttTime = opkt.ackTime - opkt.sendTime;
@@ -324,9 +308,9 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         SendNopPacket();
     }
 
-#ifdef LOG_PACKETS
+//#ifdef LOG_PACKETS
     LOGV("Received: from=%s:%u, seq=%u, length=%u, type=%s", srcEndpoint.GetAddress().ToString().c_str(), srcEndpoint.port, pseq, (unsigned int)packet.data.Length(), GetPacketTypeString(type).c_str());
-#endif
+//#endif
 
     //LOGV("acks: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", peerAcks[0], remoteAcks[0], remoteAcks[1], remoteAcks[2], remoteAcks[3], remoteAcks[4], remoteAcks[5], remoteAcks[6], remoteAcks[7]);
     //LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", lastRemoteSeq, recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
@@ -476,7 +460,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             {
                 shared_ptr<Stream> stm = make_shared<Stream>();
                 stm->id = in.ReadByte();
-                stm->type = in.ReadByte();
+                stm->type = static_cast<StreamType>(in.ReadByte());
                 if (peerVersion < 5)
                 {
                     unsigned char codec = in.ReadByte();
@@ -993,16 +977,7 @@ void VoIPController::ProcessAcknowledgedOutgoingExtra(UnacknowledgedExtraData &e
 
 void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, unsigned char type, uint32_t length, PacketSender *source)
 {
-    uint32_t acks = 0;
-    uint32_t distance;
-    for (const uint32_t &seq : recentIncomingSeqs)
-    {
-        distance = lastRemoteSeq - seq;
-        if (distance > 0 && distance <= 32)
-        {
-            acks |= (1 << (32 - distance));
-        }
-    }
+    uint32_t acks = getRemoteAckMask();
 
     if (peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92))
     {

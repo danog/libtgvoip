@@ -1,6 +1,5 @@
 #include "../PrivateDefines.cpp"
 
-
 using namespace tgvoip;
 using namespace std;
 
@@ -290,9 +289,9 @@ string VoIPController::GetDebugString()
     if (config.enableVideoSend)
     {
         shared_ptr<Stream> vstm = GetStreamByType(STREAM_TYPE_VIDEO, true);
-        if (vstm && vstm->enabled && videoPacketSender)
+        if (vstm && vstm->enabled && vstm->packetSender)
         {
-            snprintf(buffer, sizeof(buffer), "\nVideo out: %ux%u '%c%c%c%c' %u kbit", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec), videoPacketSender->GetBitrate());
+            snprintf(buffer, sizeof(buffer), "\nVideo out: %ux%u '%c%c%c%c' %u kbit", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec), dynamic_cast<video::VideoPacketSender *>(vstm->packetSender.get())->GetBitrate());
             r += buffer;
         }
     }
@@ -317,7 +316,6 @@ string VoIPController::GetDebugString()
 
     return r;
 }
-
 
 const char *VoIPController::GetVersion()
 {
@@ -677,7 +675,6 @@ vector<uint8_t> VoIPController::GetPersistentState()
     return vector<uint8_t>(jstr, jstr + strlen(jstr));
 }
 
-
 void VoIPController::SetOutputVolume(float level)
 {
     outputVolume->SetLevel(level);
@@ -700,7 +697,6 @@ void VoIPController::SetAudioOutputDuckingEnabled(bool enabled)
 }
 #endif
 
-
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
 void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t *, size_t)> input, std::function<void(int16_t *, size_t)> output, std::function<void(int16_t *, size_t)> preproc = nullptr)
 {
@@ -709,7 +705,6 @@ void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t *, size_t)
     audioPreprocDataCallback = preproc;
 }
 #endif
-
 
 CellularCarrierInfo VoIPController::GetCarrierInfo()
 {
@@ -737,4 +732,3 @@ CellularCarrierInfo VoIPController::GetCarrierInfo()
     return CellularCarrierInfo();
 #endif
 }
-

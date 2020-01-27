@@ -249,7 +249,7 @@ void VideoPacketSender::SendFrame(const Buffer &_frame, uint32_t flags, uint32_t
 
 			Buffer packetData(std::move(pkt));
 
-			VoIPController::PendingOutgoingPacket p{
+			PendingOutgoingPacket p{
 					/*.seq=*/0,
 					/*.type=*/PKT_STREAM_DATA,
 					/*.len=*/packetData.Length(),
@@ -277,7 +277,7 @@ void VideoPacketSender::SendFrame(const Buffer &_frame, uint32_t flags, uint32_t
 			out.WriteInt16((int16_t) fecPacket.Length());
 			out.WriteBytes(fecPacket);
 
-			VoIPController::PendingOutgoingPacket p{
+			PendingOutgoingPacket p{
 					0,
 					PKT_STREAM_EC,
 					out.GetLength(),

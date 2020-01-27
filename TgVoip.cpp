@@ -193,7 +193,7 @@ public:
             break;
         }
 
-        tgvoip::VoIPController::Config mappedConfig(
+        tgvoip::Config mappedConfig(
             config.initializationTimeout,
             config.receiveTimeout,
             mappedDataSaving,

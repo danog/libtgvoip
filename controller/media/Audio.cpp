@@ -91,9 +91,18 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
 
         //conctl.PacketSent(p.seq, p.len);
 
-        shared_ptr<Stream> outgoingAudioStream = GetStreamByType(STREAM_TYPE_AUDIO, true);
+        shared_ptr<Stream> outgoingAudioStream = GetStreamByType(STREAM_TYPE_AUDIO, false);
+        
+        double rtt = rttHistory[0];
 
-        SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), GetAverageRTT(), outgoingAudioStream && outgoingAudioStream->jitterBuffer ? outgoingAudioStream->jitterBuffer->GetTimeoutWindow() : (GetAverageRTT() * 2.0), 10); // Todo Optimize RTT
+        rtt = !rtt || rtt > 0.3 ? 0.5 : rtt; // Tweak this (a lot) later
+
+        double timeout = (outgoingAudioStream && outgoingAudioStream->jitterBuffer ? outgoingAudioStream->jitterBuffer->GetTimeoutWindow() : 0) - rtt;
+        LOGE("TIMEOUT %lf", timeout + rtt);
+
+        timeout = timeout <= 0 ? rtt : timeout;
+        
+        SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), rtt, timeout, 10); // Todo Optimize RTT
         //SendOrEnqueuePacket(move(p));
         if (peerVersion < 7 && secondaryLen && shittyInternetMode)
         {
