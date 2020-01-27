@@ -358,7 +358,7 @@ public:
 		return data[_i];
 	}
 
-	size_t Size() const
+	constexpr size_t Size() const
 	{
 		return size;
 	}

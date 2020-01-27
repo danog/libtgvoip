@@ -24,6 +24,7 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
     shared_ptr<Buffer> secondaryDataBufPtr = make_shared<Buffer>(move(secondaryDataBuf));
 
     messageThread.Post([this, dataBufPtr, secondaryDataBufPtr, len, secondaryLen]() {
+        /*
         unsentStreamPacketsHistory.Add(static_cast<unsigned int>(unsentStreamPackets));
         if (unsentStreamPacketsHistory.Average() >= maxUnsentStreamPackets && !videoPacketSender)
         {
@@ -32,11 +33,11 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
             unsentStreamPacketsHistory.Reset();
             unsentStreamPackets = 0;
         }
-        if (waitingForAcks || dontSendPackets > 0 || ((unsigned int)unsentStreamPackets >= maxUnsentStreamPackets /*&& endpoints[currentEndpoint].type==Endpoint::Type::TCP_RELAY*/))
-        {
+        //if (waitingForAcks || dontSendPackets > 0 || ((unsigned int)unsentStreamPackets >= maxUnsentStreamPackets))
+        /*{
             LOGV("waiting for queue, dropping outgoing audio packet, %d %d %d [%d]", (unsigned int)unsentStreamPackets, waitingForAcks, dontSendPackets, maxUnsentStreamPackets);
             return;
-        }
+        }*/
         //LOGV("Audio packet size %u", (unsigned int)len);
         if (!receivedInitAck)
             return;

@@ -16,5 +16,6 @@
 #include "controller/protocol/NetworkAPI.cpp"
 #include "controller/protocol/Protocol.cpp"
 #include "controller/protocol/Tick.cpp"
+#include "controller/protocol/Reliable.cpp"
 
 #include "controller/protocol/Legacy.cpp"

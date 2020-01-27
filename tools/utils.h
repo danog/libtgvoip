@@ -4,8 +4,7 @@
 // you should have received with this source code distribution.
 //
 
-#ifndef LIBTGVOIP_UTILS_H
-#define LIBTGVOIP_UTILS_H
+#pragma once
 
 #define TGVOIP_DISALLOW_COPY_AND_ASSIGN(TypeName) \
 TypeName(const TypeName&) = delete;   \
@@ -16,4 +15,4 @@ TGVOIP_DISALLOW_COPY_AND_ASSIGN(TypeName); \
 TypeName(TypeName&&) = default; \
 TypeName& operator=(TypeName&&) = default
 
-#endif /* LIBTGVOIP_UTILS_H */
+

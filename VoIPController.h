@@ -638,10 +638,12 @@ private:
 
     // More legacy
     bool legacyParsePacket(BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen);
-    void legacyHandleReliablePackets();
+    void legacyWritePacketHeader(uint32_t pseq, uint32_t acks, BufferOutputStream *s, unsigned char type, uint32_t length, PacketSender *source);
+
+    void handleReliablePackets();
 
     void SetupOutgoingVideoStream();
-    bool WasOutgoingPacketAcknowledged(uint32_t seq);
+    bool WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll = true);
     RecentOutgoingPacket *GetRecentOutgoingPacket(uint32_t seq);
     void NetworkPacketReceived(std::shared_ptr<NetworkPacket> packet);
     void TrySendOutgoingPackets();
@@ -663,7 +665,13 @@ private:
     // Seqno of last sent packet
     uint32_t lastSentSeq = 0;
 
+    // Status list of acked seqnos, starting from the seq explicitly present in the packet + up to 32 seqs ago
+    std::array<uint32_t, 33> peerAcks{0};
+
+    // Recent ougoing packets
     std::vector<RecentOutgoingPacket> recentOutgoingPackets;
+
+    // Recent incoming packets
     std::array<uint32_t, MAX_RECENT_PACKETS> recentIncomingSeqs{};
     size_t recentIncomingSeqIdx = 0;
 

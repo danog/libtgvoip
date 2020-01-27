@@ -161,7 +161,6 @@ void VoIPController::TickJitterBufferAndCongestionControl()
 void VoIPController::UpdateRTT()
 {
     rttHistory.Add(GetAverageRTT());
-    //double v=rttHistory.Average();
     if (rttHistory[0] > 10.0 && rttHistory[8] > 10.0 && (networkType == NET_TYPE_EDGE || networkType == NET_TYPE_GPRS))
     {
         waitingForAcks = true;

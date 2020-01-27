@@ -248,15 +248,10 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         lastRemoteAckSeq = ackId;
         conctl.PacketAcknowledged(ackId);
 
-        // Status list of acked seqnos, starting from the seq explicitly present in the packet + up to 32 seqs ago
-        std::array<uint32_t, 33> peerAcks{0};
         peerAcks[0] = ackId;
         for (unsigned int i = 1; i <= 32; i++)
         {
-            if ((acks >> (32 - i)) & 1)
-            {
-                peerAcks[i] = ackId - i;
-            }
+            peerAcks[i] = (acks >> (32 - i)) & 1 ? ackId - i : 0;
         }
 
         for (auto &opkt : recentOutgoingPackets)
@@ -297,7 +292,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             }
         }
         //else
-        legacyHandleReliablePackets();
+        handleReliablePackets();
     }
 
     Endpoint &_currentEndpoint = endpoints.at(currentEndpoint);
@@ -1020,15 +1015,8 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
         s->WriteInt32(lastRemoteSeq);
         s->WriteInt32(pseq);
         s->WriteInt32(acks);
-        unsigned char flags;
-        if (currentExtras.empty())
-        {
-            flags = 0;
-        }
-        else
-        {
-            flags = XPFLAG_HAS_EXTRA;
-        }
+
+        unsigned char flags = currentExtras.empty() ? 0 : XPFLAG_HAS_EXTRA;
 
         shared_ptr<Stream> videoStream = GetStreamByType(STREAM_TYPE_VIDEO, false);
         if (peerVersion >= 9 && videoStream && videoStream->enabled)
@@ -1039,15 +1027,15 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
         if (!currentExtras.empty())
         {
             s->WriteByte(static_cast<unsigned char>(currentExtras.size()));
-            for (vector<UnacknowledgedExtraData>::iterator x = currentExtras.begin(); x != currentExtras.end(); ++x)
+            for (auto &x : currentExtras)
             {
-                LOGV("Writing extra into header: type %u, length %d", x->type, int(x->data.Length()));
-                assert(x->data.Length() <= 254);
-                s->WriteByte(static_cast<unsigned char>(x->data.Length() + 1));
-                s->WriteByte(x->type);
-                s->WriteBytes(*x->data, x->data.Length());
-                if (x->firstContainingSeq == 0)
-                    x->firstContainingSeq = pseq;
+                LOGV("Writing extra into header: type %u, length %d", x.type, int(x.data.Length()));
+                assert(x.data.Length() <= 254);
+                s->WriteByte(static_cast<unsigned char>(x.data.Length() + 1));
+                s->WriteByte(x.type);
+                s->WriteBytes(*x.data, x.data.Length());
+                if (x.firstContainingSeq == 0)
+                    x.firstContainingSeq = pseq;
             }
         }
         if (peerVersion >= 9 && videoStream && videoStream->enabled)
@@ -1057,104 +1045,7 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
     }
     else
     {
-        if (state == STATE_WAIT_INIT || state == STATE_WAIT_INIT_ACK)
-        {
-            s->WriteInt32(TLID_DECRYPTED_AUDIO_BLOCK);
-            int64_t randomID;
-            crypto.rand_bytes((uint8_t *)&randomID, 8);
-            s->WriteInt64(randomID);
-            unsigned char randBytes[7];
-            crypto.rand_bytes(randBytes, 7);
-            s->WriteByte(7);
-            s->WriteBytes(randBytes, 7);
-            uint32_t pflags = PFLAG_HAS_RECENT_RECV | PFLAG_HAS_SEQ;
-            if (length > 0)
-                pflags |= PFLAG_HAS_DATA;
-            if (state == STATE_WAIT_INIT || state == STATE_WAIT_INIT_ACK)
-            {
-                pflags |= PFLAG_HAS_CALL_ID | PFLAG_HAS_PROTO;
-            }
-            pflags |= ((uint32_t)type) << 24;
-            s->WriteInt32(pflags);
-
-            if (pflags & PFLAG_HAS_CALL_ID)
-            {
-                s->WriteBytes(callID, 16);
-            }
-            s->WriteInt32(lastRemoteSeq);
-            s->WriteInt32(pseq);
-            s->WriteInt32(acks);
-            if (pflags & PFLAG_HAS_PROTO)
-            {
-                s->WriteInt32(PROTOCOL_NAME);
-            }
-            if (length > 0)
-            {
-                if (length <= 253)
-                {
-                    s->WriteByte((unsigned char)length);
-                }
-                else
-                {
-                    s->WriteByte(254);
-                    s->WriteByte((unsigned char)(length & 0xFF));
-                    s->WriteByte((unsigned char)((length >> 8) & 0xFF));
-                    s->WriteByte((unsigned char)((length >> 16) & 0xFF));
-                }
-            }
-        }
-        else
-        {
-            s->WriteInt32(TLID_SIMPLE_AUDIO_BLOCK);
-            int64_t randomID;
-            crypto.rand_bytes((uint8_t *)&randomID, 8);
-            s->WriteInt64(randomID);
-            unsigned char randBytes[7];
-            crypto.rand_bytes(randBytes, 7);
-            s->WriteByte(7);
-            s->WriteBytes(randBytes, 7);
-            uint32_t lenWithHeader = length + 13;
-            if (lenWithHeader > 0)
-            {
-                if (lenWithHeader <= 253)
-                {
-                    s->WriteByte((unsigned char)lenWithHeader);
-                }
-                else
-                {
-                    s->WriteByte(254);
-                    s->WriteByte((unsigned char)(lenWithHeader & 0xFF));
-                    s->WriteByte((unsigned char)((lenWithHeader >> 8) & 0xFF));
-                    s->WriteByte((unsigned char)((lenWithHeader >> 16) & 0xFF));
-                }
-            }
-            s->WriteByte(type);
-            s->WriteInt32(lastRemoteSeq);
-            s->WriteInt32(pseq);
-            s->WriteInt32(acks);
-            if (peerVersion >= 6)
-            {
-                if (currentExtras.empty())
-                {
-                    s->WriteByte(0);
-                }
-                else
-                {
-                    s->WriteByte(XPFLAG_HAS_EXTRA);
-                    s->WriteByte(static_cast<unsigned char>(currentExtras.size()));
-                    for (vector<UnacknowledgedExtraData>::iterator x = currentExtras.begin(); x != currentExtras.end(); ++x)
-                    {
-                        LOGV("Writing extra into header: type %u, length %d", x->type, int(x->data.Length()));
-                        assert(x->data.Length() <= 254);
-                        s->WriteByte(static_cast<unsigned char>(x->data.Length() + 1));
-                        s->WriteByte(x->type);
-                        s->WriteBytes(*x->data, x->data.Length());
-                        if (x->firstContainingSeq == 0)
-                            x->firstContainingSeq = pseq;
-                    }
-                }
-            }
-        }
+        legacyWritePacketHeader(pseq, acks, s, type, length, source);
     }
 
     unacknowledgedIncomingPacketCount = 0;
