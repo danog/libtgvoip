@@ -1,15 +1,27 @@
 #pragma once
 #include <atomic>
 #include <list>
-#include "../PrivateDefines.h"
 #include "PacketStructs.h"
 
 namespace tgvoip
 {
-// Local and remote packet history management
-struct Ack
+
+#define SEQ_MAX 0xFFFFFFFF
+
+inline bool seqgt(uint32_t s1, uint32_t s2)
 {
-    Ack();
+    return ((s1 > s2) && (s1 - s2 <= SEQ_MAX / 2)) || ((s1 < s2) && (s2 - s1 > SEQ_MAX / 2));
+}
+
+inline bool seqgte(uint32_t s1, uint32_t s2)
+{
+    return s1 == s2 || seqgt(s1, s2);
+}
+
+// Local and remote packet history management
+struct PacketManager
+{
+    PacketManager();
 
     /* Local seqno ack */
     // Ack specified local seq + up to 32 seqs ago, specified by mask
@@ -24,9 +36,17 @@ struct Ack
         return seq++;
     }
 
+    // Get current local seqno
+    inline uint32_t getLocalSeq()
+    {
+        return seq;
+    }
+
+private:
     // Stream-specific local seqno
     std::atomic<uint32_t> seq = ATOMIC_VAR_INIT(1);
 
+public:
     // Recent ougoing packets
     std::vector<RecentOutgoingPacket> recentOutgoingPackets;
 

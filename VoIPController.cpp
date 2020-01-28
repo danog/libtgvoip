@@ -8,6 +8,7 @@
 #include "controller/controller/Init.cpp"
 #include "controller/controller/Crypto.cpp"
 #include "controller/controller/Time.cpp"
+#include "controller/controller/Streams.cpp"
 #include "controller/media/Audio.cpp"
 #include "controller/media/Video.cpp"
 #include "controller/protocol/Bandwidth.cpp"

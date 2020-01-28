@@ -1,13 +1,12 @@
-#include "Ack.h"
-#include "../PrivateDefines.h"
+#include "PacketManager.h"
 #include "../../tools/logging.h"
 
 using namespace tgvoip;
 using namespace std;
 
-Ack::Ack() : recentIncomingSeqs(MAX_RECENT_PACKETS) {}
+PacketManager::PacketManager() : recentIncomingSeqs(MAX_RECENT_PACKETS) {}
 
-void Ack::ackLocal(uint32_t ackId, uint32_t mask)
+void PacketManager::ackLocal(uint32_t ackId, uint32_t mask)
 {
     peerAcks[0] = ackId;
     for (unsigned int i = 1; i <= 32; i++)
@@ -15,7 +14,7 @@ void Ack::ackLocal(uint32_t ackId, uint32_t mask)
         peerAcks[i] = (mask >> (32 - i)) & 1 ? ackId - i : 0;
     }
 }
-bool Ack::wasLocalAcked(uint32_t seq)
+bool PacketManager::wasLocalAcked(uint32_t seq)
 {
     if (seqgt(seq, peerAcks[0]))
         return false;
@@ -29,7 +28,7 @@ bool Ack::wasLocalAcked(uint32_t seq)
     return false;
 }
 
-bool Ack::ackRemoteSeq(uint32_t ackId)
+bool PacketManager::ackRemoteSeq(uint32_t ackId)
 {
     // Duplicate and moving window check
     if (seqgt(ackId, lastRemoteSeq - MAX_RECENT_PACKETS))
@@ -52,7 +51,7 @@ bool Ack::ackRemoteSeq(uint32_t ackId)
     }
     return true;
 }
-uint32_t Ack::getRemoteAckMask()
+uint32_t PacketManager::getRemoteAckMask()
 {
     uint32_t acks = 0;
     uint32_t distance;

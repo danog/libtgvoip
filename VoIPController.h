@@ -38,7 +38,7 @@
 #include "controller/audio/OpusEncoder.h"
 #include "controller/audio/EchoCanceller.h"
 #include "controller/net/CongestionControl.h"
-#include "controller/protocol/Ack.h"
+#include "controller/protocol/PacketManager.h"
 #include "controller/protocol/PacketStructs.h"
 #include "tools/Buffers.h"
 #include "controller/net/PacketReassembler.h"
@@ -138,7 +138,7 @@ struct CellularCarrierInfo
 
 class PacketSender;
 
-class VoIPController : Ack
+class VoIPController : PacketManager
 {
     friend class VoIPGroupController;
     friend class PacketSender;
@@ -400,7 +400,7 @@ public:
         STREAM_TYPE_VIDEO
     };
 
-    struct Stream : Ack
+    struct Stream : PacketManager
     {
         int32_t userID;
         uint8_t id;

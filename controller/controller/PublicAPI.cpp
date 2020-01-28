@@ -452,7 +452,7 @@ string VoIPController::GetDebugLog()
                             {"tcp_used", useTCP},
                             {"p2p_type", p2pType},
                             {"packet_stats", json11::Json::object{
-                                                 {"out", (int)seq},
+                                                 {"out", (int)getLocalSeq()},
                                                  {"in", (int)packetsReceived},
                                                  {"lost_out", (int)conctl.GetSendLossCount()},
                                                  {"lost_in", (int)recvLossCount}}},
