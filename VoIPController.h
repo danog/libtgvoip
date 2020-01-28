@@ -447,7 +447,6 @@ protected:
     void SendStreamFlags(Stream &stream);
     void InitializeTimers();
     void ResetEndpointPingStats();
-    void SendVideoFrame(const Buffer &frame, uint32_t flags, uint32_t rotation);
     void ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe, uint16_t rotation);
     std::shared_ptr<Stream> GetStreamByType(StreamType type, bool outgoing);
     std::shared_ptr<Stream> GetStreamByID(unsigned char id, bool outgoing);
@@ -474,7 +473,6 @@ private:
 
     void RunRecvThread();
     void RunSendThread();
-    void HandleAudioInput(unsigned char *data, size_t len, unsigned char *secondaryData, size_t secondaryLen);
     void UpdateAudioBitrateLimit();
     void SetState(int state);
     void UpdateAudioOutputState();
@@ -589,9 +587,8 @@ private:
 
     HistoricBuffer<uint32_t, 10, double> sendLossCountHistory;
     uint32_t audioTimestampIn = 0;
-    uint32_t audioTimestampOut = 0;
 
-    std::unique_ptr<OpusEncoder> encoder;
+    std::shared_ptr<OpusEncoder> encoder;
     std::unique_ptr<tgvoip::audio::AudioIO> audioIO;
 
     // Obtained from audioIO
@@ -687,9 +684,6 @@ private:
     bool useIPv6 = false;
     bool peerIPv6Available = false;
     NetworkAddress myIPv6{NetworkAddress::Empty()};
-    bool shittyInternetMode = false;
-    uint8_t extraEcLevel = 0;
-    std::deque<Buffer> ecAudioPackets;
     bool didAddIPv6Relays = false;
     bool didSendIPv6Endpoint = false;
     int publicEndpointsReqCount = 0;
@@ -699,7 +693,6 @@ private:
     HistoricBuffer<unsigned int, 5> unsentStreamPacketsHistory;
     bool needReInitUdpProxy = true;
     bool needRate = false;
-    BufferPool<1024, 32> outgoingAudioBufferPool;
     BlockingQueue<RawPendingOutgoingPacket> rawSendQueue;
 
     uint32_t initTimeoutID = MessageThread::INVALID_ID;
@@ -722,9 +715,6 @@ private:
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
     std::function<void(int16_t *, size_t)> audioInputDataCallback;
     std::function<void(int16_t *, size_t)> audioOutputDataCallback;
-    std::function<void(int16_t *, size_t)> audioPreprocDataCallback;
-    std::unique_ptr<::OpusDecoder, decltype(&opus_decoder_destroy)> preprocDecoder{opus_decoder_create(48000, 1, NULL), &opus_decoder_destroy};
-    int16_t preprocBuffer[4096];
 #endif
 #if defined(__APPLE__) && defined(TARGET_OS_OSX)
     bool macAudioDuckingEnabled = true;

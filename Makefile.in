@@ -816,8 +816,8 @@ am__libtgvoip_la_SOURCES_DIST = TgVoip.cpp VoIPController.cpp \
 	controller/net/NetworkSocket.cpp controller/net/Endpoint.cpp \
 	controller/audio/OpusDecoder.cpp \
 	controller/audio/OpusEncoder.cpp \
+	controller/audio/AudioPacketSender.cpp \
 	controller/net/PacketReassembler.cpp \
-	controller/net/PacketSender.cpp \
 	controller/protocol/PacketManager.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
@@ -1757,8 +1757,8 @@ am__objects_12 = TgVoip.lo VoIPController.lo tools/Buffers.lo \
 	controller/net/NetworkSocket.lo controller/net/Endpoint.lo \
 	controller/audio/OpusDecoder.lo \
 	controller/audio/OpusEncoder.lo \
+	controller/audio/AudioPacketSender.lo \
 	controller/net/PacketReassembler.lo \
-	controller/net/PacketSender.lo \
 	controller/protocol/PacketManager.lo VoIPGroupController.lo \
 	VoIPServerConfig.lo audio/AudioIO.lo audio/AudioInput.lo \
 	audio/AudioOutput.lo audio/Resampler.lo \
@@ -2065,6 +2065,7 @@ am__depfiles_remade = ./$(DEPDIR)/TgVoip.Plo \
 	audio/$(DEPDIR)/AudioInput.Plo \
 	audio/$(DEPDIR)/AudioInputTester.Plo \
 	audio/$(DEPDIR)/AudioOutput.Plo audio/$(DEPDIR)/Resampler.Plo \
+	controller/audio/$(DEPDIR)/AudioPacketSender.Plo \
 	controller/audio/$(DEPDIR)/EchoCanceller.Plo \
 	controller/audio/$(DEPDIR)/OpusDecoder.Plo \
 	controller/audio/$(DEPDIR)/OpusEncoder.Plo \
@@ -2074,7 +2075,6 @@ am__depfiles_remade = ./$(DEPDIR)/TgVoip.Plo \
 	controller/net/$(DEPDIR)/JitterBuffer.Plo \
 	controller/net/$(DEPDIR)/NetworkSocket.Plo \
 	controller/net/$(DEPDIR)/PacketReassembler.Plo \
-	controller/net/$(DEPDIR)/PacketSender.Plo \
 	controller/protocol/$(DEPDIR)/PacketManager.Plo \
 	os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo \
 	os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo \
@@ -2265,7 +2265,7 @@ CCAS = @CCAS@
 CCASDEPMODE = @CCASDEPMODE@
 CCASFLAGS = @CCASFLAGS@ $(am__append_9) $(am__append_20)
 CCDEPMODE = @CCDEPMODE@
-CFLAGS = -Wall -DHAVE_CONFIG_H -Wno-unknown-pragmas $(am__append_8) \
+CFLAGS = -Wall -DHAVE_CONFIG_H -Wno-unknown-pragmas -g $(am__append_8) \
 	$(am__append_11) $(am__append_13) $(am__append_15) \
 	$(am__append_19) $(am__append_24)
 CPP = @CPP@
@@ -2391,8 +2391,8 @@ SRC = TgVoip.cpp VoIPController.cpp tools/Buffers.cpp \
 	controller/net/NetworkSocket.cpp controller/net/Endpoint.cpp \
 	controller/audio/OpusDecoder.cpp \
 	controller/audio/OpusEncoder.cpp \
+	controller/audio/AudioPacketSender.cpp \
 	controller/net/PacketReassembler.cpp \
-	controller/net/PacketSender.cpp \
 	controller/protocol/PacketManager.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
@@ -2557,9 +2557,10 @@ controller/audio/OpusDecoder.lo: controller/audio/$(am__dirstamp) \
 	controller/audio/$(DEPDIR)/$(am__dirstamp)
 controller/audio/OpusEncoder.lo: controller/audio/$(am__dirstamp) \
 	controller/audio/$(DEPDIR)/$(am__dirstamp)
+controller/audio/AudioPacketSender.lo:  \
+	controller/audio/$(am__dirstamp) \
+	controller/audio/$(DEPDIR)/$(am__dirstamp)
 controller/net/PacketReassembler.lo: controller/net/$(am__dirstamp) \
-	controller/net/$(DEPDIR)/$(am__dirstamp)
-controller/net/PacketSender.lo: controller/net/$(am__dirstamp) \
 	controller/net/$(DEPDIR)/$(am__dirstamp)
 controller/protocol/$(am__dirstamp):
 	@$(MKDIR_P) controller/protocol
@@ -4027,6 +4028,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@audio/$(DEPDIR)/AudioInputTester.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@audio/$(DEPDIR)/AudioOutput.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@audio/$(DEPDIR)/Resampler.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@controller/audio/$(DEPDIR)/AudioPacketSender.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/audio/$(DEPDIR)/EchoCanceller.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/audio/$(DEPDIR)/OpusDecoder.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/audio/$(DEPDIR)/OpusEncoder.Plo@am__quote@ # am--include-marker
@@ -4036,7 +4038,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/JitterBuffer.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/NetworkSocket.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/PacketReassembler.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/PacketSender.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/$(DEPDIR)/PacketManager.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo@am__quote@ # am--include-marker
@@ -4917,6 +4918,7 @@ distclean: distclean-am
 	-rm -f audio/$(DEPDIR)/AudioInputTester.Plo
 	-rm -f audio/$(DEPDIR)/AudioOutput.Plo
 	-rm -f audio/$(DEPDIR)/Resampler.Plo
+	-rm -f controller/audio/$(DEPDIR)/AudioPacketSender.Plo
 	-rm -f controller/audio/$(DEPDIR)/EchoCanceller.Plo
 	-rm -f controller/audio/$(DEPDIR)/OpusDecoder.Plo
 	-rm -f controller/audio/$(DEPDIR)/OpusEncoder.Plo
@@ -4926,7 +4928,6 @@ distclean: distclean-am
 	-rm -f controller/net/$(DEPDIR)/JitterBuffer.Plo
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f controller/net/$(DEPDIR)/PacketReassembler.Plo
-	-rm -f controller/net/$(DEPDIR)/PacketSender.Plo
 	-rm -f controller/protocol/$(DEPDIR)/PacketManager.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo
@@ -5287,6 +5288,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f audio/$(DEPDIR)/AudioInputTester.Plo
 	-rm -f audio/$(DEPDIR)/AudioOutput.Plo
 	-rm -f audio/$(DEPDIR)/Resampler.Plo
+	-rm -f controller/audio/$(DEPDIR)/AudioPacketSender.Plo
 	-rm -f controller/audio/$(DEPDIR)/EchoCanceller.Plo
 	-rm -f controller/audio/$(DEPDIR)/OpusDecoder.Plo
 	-rm -f controller/audio/$(DEPDIR)/OpusEncoder.Plo
@@ -5296,7 +5298,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f controller/net/$(DEPDIR)/JitterBuffer.Plo
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f controller/net/$(DEPDIR)/PacketReassembler.Plo
-	-rm -f controller/net/$(DEPDIR)/PacketSender.Plo
 	-rm -f controller/protocol/$(DEPDIR)/PacketManager.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo

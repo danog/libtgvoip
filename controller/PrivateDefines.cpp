@@ -18,6 +18,7 @@
 #include "../controller/net/Endpoint.h"
 #include "../tools/json11.hpp"
 #include "../controller/net/PacketSender.h"
+#include "../controller/audio/AudioPacketSender.h"
 #include "../video/VideoPacketSender.h"
 #include <assert.h>
 #include <time.h>

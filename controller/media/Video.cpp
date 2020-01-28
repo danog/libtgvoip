@@ -56,15 +56,6 @@ void VoIPController::SetVideoCodecSpecificData(const std::vector<Buffer> &data)
     LOGI("Set outgoing video stream CSD");
 }
 
-void VoIPController::SendVideoFrame(const Buffer &frame, uint32_t flags, uint32_t rotation)
-{
-    //LOGI("Send video frame %u flags %u", (unsigned int)frame.Length(), flags);
-    shared_ptr<Stream> stm = GetStreamByType(STREAM_TYPE_VIDEO, true);
-    if (stm)
-    {
-    }
-}
-
 void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe, uint16_t rotation)
 {
     //LOGI("Incoming video frame size %u pts %u", (unsigned int)frame.Length(), pts);

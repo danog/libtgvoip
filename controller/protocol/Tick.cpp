@@ -192,12 +192,13 @@ void VoIPController::UpdateCongestion()
         double avgSendLossCount = sendLossCountHistory.Average() / packetsPerSec;
         //LOGV("avg send loss: %.3f%%", avgSendLossCount*100);
 
+        AudioPacketSender *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get());
         if (avgSendLossCount > packetLossToEnableExtraEC && networkType != NET_TYPE_GPRS && networkType != NET_TYPE_EDGE)
         {
-            if (!shittyInternetMode)
+            if (!sender->getShittyInternetMode())
             {
                 // Shitty Internet Mode™. Redundant redundancy you can trust.
-                shittyInternetMode = true;
+                sender->setShittyInternetMode( true);
                 for (shared_ptr<Stream> &s : outgoingStreams)
                 {
                     if (s->type == STREAM_TYPE_AUDIO)
@@ -218,27 +219,27 @@ void VoIPController::UpdateCongestion()
 
         if (avgSendLossCount > 0.08)
         {
-            extraEcLevel = 4;
+            sender->setExtraEcLevel(4);
         }
         else if (avgSendLossCount > 0.05)
         {
-            extraEcLevel = 3;
+            sender->setExtraEcLevel(3);
         }
         else if (avgSendLossCount > 0.02)
         {
-            extraEcLevel = 2;
+            sender->setExtraEcLevel(2);
         }
         else
         {
-            extraEcLevel = 0;
+            sender->setExtraEcLevel(0);
         }
         encoder->SetPacketLoss((int)(avgSendLossCount * 100.0));
         if (avgSendLossCount > rateMaxAcceptableSendLoss)
             needRate = true;
 
-        if ((avgSendLossCount < packetLossToEnableExtraEC || networkType == NET_TYPE_EDGE || networkType == NET_TYPE_GPRS) && shittyInternetMode)
+        if ((avgSendLossCount < packetLossToEnableExtraEC || networkType == NET_TYPE_EDGE || networkType == NET_TYPE_GPRS) && sender->getShittyInternetMode())
         {
-            shittyInternetMode = false;
+            sender->setShittyInternetMode(false);
             for (shared_ptr<Stream> &s : outgoingStreams)
             {
                 if (s->type == STREAM_TYPE_AUDIO)
@@ -270,7 +271,7 @@ void VoIPController::UpdateAudioBitrate()
         }
 
         int act = conctl.GetBandwidthControlAction();
-        if (shittyInternetMode)
+        if (dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get())->getShittyInternetMode())
         {
             encoder->SetBitrate(8000);
         }

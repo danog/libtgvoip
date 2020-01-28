@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS = -Wall -DHAVE_CONFIG_H -Wno-unknown-pragmas
+CFLAGS = -Wall -DHAVE_CONFIG_H -Wno-unknown-pragmas -g
 
 lib_LTLIBRARIES = libtgvoip.la
 
@@ -17,8 +17,8 @@ controller/net/NetworkSocket.cpp \
 controller/net/Endpoint.cpp \
 controller/audio/OpusDecoder.cpp \
 controller/audio/OpusEncoder.cpp \
+controller/audio/AudioPacketSender.cpp \
 controller/net/PacketReassembler.cpp \
-controller/net/PacketSender.cpp \
 controller/protocol/PacketManager.cpp \
 VoIPGroupController.cpp \
 VoIPServerConfig.cpp \

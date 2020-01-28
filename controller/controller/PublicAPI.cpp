@@ -7,46 +7,6 @@ extern FILE *tgvoipLogFile;
 
 #pragma mark - Public API
 
-VoIPController::VoIPController() : ecAudioPackets(4),
-                                   rawSendQueue(64)
-{
-    selectCanceller = SocketSelectCanceller::Create();
-    udpSocket = NetworkSocket::Create(NetworkProtocol::UDP);
-    realUdpSocket = udpSocket;
-
-    maxAudioBitrate = ServerConfig::GetSharedInstance()->GetUInt("audio_max_bitrate", 20000);
-    maxAudioBitrateGPRS = ServerConfig::GetSharedInstance()->GetUInt("audio_max_bitrate_gprs", 8000);
-    maxAudioBitrateEDGE = ServerConfig::GetSharedInstance()->GetUInt("audio_max_bitrate_edge", 16000);
-    maxAudioBitrateSaving = ServerConfig::GetSharedInstance()->GetUInt("audio_max_bitrate_saving", 8000);
-    initAudioBitrate = ServerConfig::GetSharedInstance()->GetUInt("audio_init_bitrate", 16000);
-    initAudioBitrateGPRS = ServerConfig::GetSharedInstance()->GetUInt("audio_init_bitrate_gprs", 8000);
-    initAudioBitrateEDGE = ServerConfig::GetSharedInstance()->GetUInt("audio_init_bitrate_edge", 8000);
-    initAudioBitrateSaving = ServerConfig::GetSharedInstance()->GetUInt("audio_init_bitrate_saving", 8000);
-    audioBitrateStepIncr = ServerConfig::GetSharedInstance()->GetUInt("audio_bitrate_step_incr", 1000);
-    audioBitrateStepDecr = ServerConfig::GetSharedInstance()->GetUInt("audio_bitrate_step_decr", 1000);
-    minAudioBitrate = ServerConfig::GetSharedInstance()->GetUInt("audio_min_bitrate", 8000);
-    relaySwitchThreshold = ServerConfig::GetSharedInstance()->GetDouble("relay_switch_threshold", 0.8);
-    p2pToRelaySwitchThreshold = ServerConfig::GetSharedInstance()->GetDouble("p2p_to_relay_switch_threshold", 0.6);
-    relayToP2pSwitchThreshold = ServerConfig::GetSharedInstance()->GetDouble("relay_to_p2p_switch_threshold", 0.8);
-    reconnectingTimeout = ServerConfig::GetSharedInstance()->GetDouble("reconnecting_state_timeout", 2.0);
-    needRateFlags = ServerConfig::GetSharedInstance()->GetUInt("rate_flags", 0xFFFFFFFF);
-    rateMaxAcceptableRTT = ServerConfig::GetSharedInstance()->GetDouble("rate_min_rtt", 0.6);
-    rateMaxAcceptableSendLoss = ServerConfig::GetSharedInstance()->GetDouble("rate_min_send_loss", 0.2);
-    packetLossToEnableExtraEC = ServerConfig::GetSharedInstance()->GetDouble("packet_loss_for_extra_ec", 0.02);
-    maxUnsentStreamPackets = ServerConfig::GetSharedInstance()->GetUInt("max_unsent_stream_packets", 2);
-    unackNopThreshold = ServerConfig::GetSharedInstance()->GetUInt("unack_nop_threshold", 10);
-
-    shared_ptr<Stream> stm = make_shared<Stream>();
-    stm->id = 1;
-    stm->type = STREAM_TYPE_AUDIO;
-    stm->codec = CODEC_OPUS;
-    stm->enabled = 1;
-    stm->frameDuration = 60;
-    outgoingStreams.push_back(stm);
-
-    recentOutgoingPackets.reserve(MAX_RECENT_PACKETS);
-}
-
 VoIPController::~VoIPController()
 {
     LOGD("Entered VoIPController::~VoIPController");
@@ -243,9 +203,10 @@ string VoIPController::GetDebugString()
         snprintf(buffer, sizeof(buffer), "%s:%u %dms %d 0x%" PRIx64 " [%s%s]\n", endpoint.address.IsEmpty() ? ("[" + endpoint.v6address.ToString() + "]").c_str() : endpoint.address.ToString().c_str(), endpoint.port, (int)(endpoint.averageRTT * 1000), endpoint.udpPongCount, (uint64_t)endpoint.id, type, currentEndpoint == endpoint.id ? ", IN_USE" : "");
         r += buffer;
     }
-    if (shittyInternetMode)
+    AudioPacketSender *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get());
+    if (sender->getShittyInternetMode())
     {
-        snprintf(buffer, sizeof(buffer), "ShittyInternetMode: level %u\n", extraEcLevel);
+        snprintf(buffer, sizeof(buffer), "ShittyInternetMode: level %u\n", sender->getExtraEcLevel());
         r += buffer;
     }
     double avgLate[3];
@@ -702,7 +663,7 @@ void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t *, size_t)
 {
     audioInputDataCallback = input;
     audioOutputDataCallback = output;
-    audioPreprocDataCallback = preproc;
+    dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get())->setAudioPreprocDataCallback(preproc);
 }
 #endif
 

@@ -5,7 +5,7 @@
 #ifndef LIBTGVOIP_PACKETSENDER_H
 #define LIBTGVOIP_PACKETSENDER_H
 
-#include "../VoIPController.h"
+#include "../../VoIPController.h"
 #include "../protocol/PacketStructs.h"
 #include <functional>
 #include <stdint.h>
@@ -21,23 +21,76 @@ public:
 	virtual void PacketLost(uint32_t seq, uint8_t type, uint32_t size) = 0;
 
 protected:
-	void SendExtra(Buffer &data, unsigned char type);
+	inline void SendExtra(Buffer &data, unsigned char type)
+	{
+		controller->SendExtra(data, type);
+	}
 
-	void IncrementUnsentStreamPackets();
+	inline void IncrementUnsentStreamPackets()
+	{
+		controller->unsentStreamPackets++;
+	}
 
-	uint32_t SendPacket(PendingOutgoingPacket pkt);
+	inline uint32_t SendPacket(PendingOutgoingPacket pkt)
+	{
+		uint32_t seq = controller->nextLocalSeq();
+		pkt.seq = seq;
+		controller->SendOrEnqueuePacket(std::move(pkt), true, this);
+		return seq;
+	}
 
-	double GetConnectionInitTime();
+    inline void SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries = 0xFF)
+	{
+		controller->SendPacketReliably(type, data, len, retryInterval, timeout, tries);
+	}
 
-	const HistoricBuffer<double, 32> &RTTHistory() const;
+	inline double GetConnectionInitTime()
+	{
+		return controller->connectionInitTime;
+	}
 
-	MessageThread &GetMessageThread();
+	inline const HistoricBuffer<double, 32> &RTTHistory() const
+	{
+		return controller->rttHistory;
+	}
 
-	const VoIPController::ProtocolInfo &GetProtocolInfo() const;
+	inline MessageThread &GetMessageThread()
+	{
+		return controller->messageThread;
+	}
 
-	void SendStreamFlags(VoIPController::Stream &stm);
+	inline const VoIPController::ProtocolInfo &GetProtocolInfo() const
+	{
+		return controller->protocolInfo;
+	}
 
-	const VoIPController::Config &GetConfig() const;
+	inline void SendStreamFlags(VoIPController::Stream &stm)
+	{
+		controller->SendStreamFlags(stm);
+	}
+
+	inline const VoIPController::Config &GetConfig() const
+	{
+		return controller->config;
+	}
+	inline const bool IsStopping() const
+	{
+		return controller->stopping;
+	}
+	inline const bool ReceivedInitAck() const
+	{
+		return controller->receivedInitAck;
+	}
+
+	inline const int32_t PeerVersion() const
+	{
+		return controller->peerVersion;
+	}
+
+	inline const double LastRtt() const
+	{
+		return controller->rttHistory[0];
+	}
 
 	VoIPController *controller;
 };
