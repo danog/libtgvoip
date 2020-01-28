@@ -3,7 +3,7 @@
 
 using namespace tgvoip;
 
-AudioPacketSender::AudioPacketSender(VoIPController *controller, const std::shared_ptr<OpusEncoder> &encoder, const std::shared_ptr<VoIPController::Stream> &stream) : PacketSender(controller), encoder(encoder), stream(stream)
+AudioPacketSender::AudioPacketSender(VoIPController *controller, const std::shared_ptr<OpusEncoder> &encoder, const std::shared_ptr<VoIPController::Stream> &stream) : PacketSender(controller, stream), encoder(encoder)
 {
     SetSource(encoder);
 }
@@ -121,9 +121,16 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         }
         else
         {
-            
+            PendingOutgoingPacket p{
+                /*.seq=*/0,
+                /*.type=*/PKT_STREAM_DATA,
+                /*.len=*/pkt.GetLength(),
+                /*.data=*/Buffer(move(pkt)),
+                /*.endpoint=*/0,
+            };
+
+            SendPacket(move(p));
         }
-        //SendOrEnqueuePacket(move(p));
         if (PeerVersion() < 7 && secondaryLen && shittyInternetMode)
         {
             Buffer ecBuf(secondaryLen);

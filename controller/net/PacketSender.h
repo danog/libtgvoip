@@ -7,6 +7,7 @@
 
 #include "../../VoIPController.h"
 #include "../protocol/PacketStructs.h"
+#include "../protocol/PacketManager.h"
 #include <functional>
 #include <stdint.h>
 
@@ -15,11 +16,15 @@ namespace tgvoip
 class PacketSender
 {
 public:
-	PacketSender(VoIPController *controller) : controller(controller){};
+	PacketSender(VoIPController *controller, const std::shared_ptr<VoIPController::Stream> &stream) : controller(controller), stream(stream), packetManager(stream->id){};
 	virtual ~PacketSender() = default;
 	virtual void PacketAcknowledged(uint32_t seq, double sendTime, double ackTime, uint8_t type, uint32_t size) = 0;
 	virtual void PacketLost(uint32_t seq, uint8_t type, uint32_t size) = 0;
 
+	inline PacketManager &getPacketManager()
+	{
+		return packetManager;
+	}
 protected:
 	inline void SendExtra(Buffer &data, unsigned char type)
 	{
@@ -33,13 +38,13 @@ protected:
 
 	inline uint32_t SendPacket(PendingOutgoingPacket pkt)
 	{
-		uint32_t seq = controller->nextLocalSeq();
+		uint32_t seq = controller->peerVersion < PROTOCOL_RELIABLE ? controller->packetManager.nextLocalSeq() : packetManager.nextLocalSeq();
 		pkt.seq = seq;
 		controller->SendOrEnqueuePacket(std::move(pkt), true, this);
 		return seq;
 	}
 
-    inline void SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries = 0xFF)
+	inline void SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries = 0xFF)
 	{
 		controller->SendPacketReliably(type, data, len, retryInterval, timeout, tries);
 	}
@@ -93,6 +98,10 @@ protected:
 	}
 
 	VoIPController *controller;
+
+	std::shared_ptr<VoIPController::Stream> stream;
+
+	PacketManager packetManager;
 };
 } // namespace tgvoip
 

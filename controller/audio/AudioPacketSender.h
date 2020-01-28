@@ -45,7 +45,6 @@ private:
     void SendFrame(unsigned char *data, size_t len, unsigned char *secondaryData, size_t secondaryLen);
 
     std::shared_ptr<OpusEncoder> encoder;
-    std::shared_ptr<VoIPController::Stream> stream;
 
     uint32_t audioTimestampOut = 0;
 

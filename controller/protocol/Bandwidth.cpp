@@ -9,10 +9,10 @@ using namespace std;
 double VoIPController::GetAverageRTT()
 {
     ENFORCE_MSG_THREAD;
-
-    if (lastSentSeq >= getLastAckedSeq())
+    PacketManager &pm = getBestPacketManager();
+    if (pm.getLastSentSeq() >= pm.getLastAckedSeq())
     {
-        uint32_t diff = lastSentSeq - getLastAckedSeq();
+        uint32_t diff = pm.getLastSentSeq() - pm.getLastAckedSeq();
         //LOGV("rtt diff=%u", diff);
         if (diff < 32)
         {

@@ -138,7 +138,7 @@ struct CellularCarrierInfo
 
 class PacketSender;
 
-class VoIPController : PacketManager
+class VoIPController
 {
     friend class VoIPGroupController;
     friend class PacketSender;
@@ -400,7 +400,7 @@ public:
         STREAM_TYPE_VIDEO
     };
 
-    struct Stream : PacketManager
+    struct Stream
     {
         int32_t userID;
         uint8_t id;
@@ -566,7 +566,7 @@ private:
 
     // More legacy
     bool legacyParsePacket(BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen);
-    void legacyWritePacketHeader(uint32_t pseq, uint32_t acks, BufferOutputStream *s, unsigned char type, uint32_t length, PacketSender *source);
+    void legacyWritePacketHeader(uint32_t pseq, uint32_t acks, BufferOutputStream *s, unsigned char type, uint32_t length);
 
     void handleReliablePackets();
 
@@ -616,13 +616,14 @@ private:
     bool micMuted = false;
     uint32_t maxBitrate;
 
-
     // Recent ougoing packets
     std::vector<RecentOutgoingPacket> recentOutgoingPackets;
-    
+
     //
     std::vector<std::shared_ptr<Stream>> outgoingStreams;
     std::vector<std::shared_ptr<Stream>> incomingStreams;
+
+    PacketManager &getBestPacketManager();
 
     unsigned char encryptionKey[256];
     unsigned char keyFingerprint[8];
@@ -698,6 +699,8 @@ private:
     bool needReInitUdpProxy = true;
     bool needRate = false;
     BlockingQueue<RawPendingOutgoingPacket> rawSendQueue;
+
+    PacketManager packetManager;
 
     uint32_t initTimeoutID = MessageThread::INVALID_ID;
     uint32_t udpPingTimeoutID = MessageThread::INVALID_ID;

@@ -22,9 +22,18 @@ inline bool seqgte(uint32_t s1, uint32_t s2)
 class PacketManager
 {
 public:
-    PacketManager() = default;
+    PacketManager(uint8_t transportId = 0xFF);
     virtual ~PacketManager() = default;
 
+    // Transport ID for multiplexing
+    inline uint8_t getTransportId() 
+    {
+        return transportId;
+    }
+
+    uint8_t transportId = 0xFF; // Default transport ID
+
+public:
     /* Local seqno generation */
 
     // Get next local seqno
@@ -42,6 +51,11 @@ public:
     inline uint32_t getLastSentSeq()
     {
         return lastSentSeq;
+    }
+
+    inline void setLastSentSeq(uint32_t lastSentSeq)
+    {
+        this->lastSentSeq = lastSentSeq;
     }
 
     // Seqno of last sent local packet

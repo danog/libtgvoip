@@ -4,6 +4,9 @@
 using namespace tgvoip;
 using namespace std;
 
+PacketManager::PacketManager(uint8_t transportId) : transportId(transportId)
+{
+}
 void PacketManager::ackLocal(uint32_t ackId, uint32_t mask)
 {
     lastAckedSeq = ackId;

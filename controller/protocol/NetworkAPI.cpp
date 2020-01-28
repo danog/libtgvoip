@@ -102,7 +102,7 @@ void VoIPController::SendInit()
 {
     ENFORCE_MSG_THREAD;
 
-    uint32_t initSeq = nextLocalSeq();
+    uint32_t initSeq = packetManager.nextLocalSeq();
     for (pair<const int64_t, Endpoint> &_e : endpoints)
     {
         Endpoint &e = _e.second;
@@ -265,19 +265,6 @@ void VoIPController::TrySendOutgoingPackets()
     }
 }
 
-bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll)
-{
-    bool res = wasLocalAcked(seq);
-    if (res || !checkAll)
-    {
-        return res;
-    }
-
-    RecentOutgoingPacket *pkt = GetRecentOutgoingPacket(seq);
-    if (!pkt)
-        return false;
-    return pkt->ackTime != 0.0;
-}
 
 RecentOutgoingPacket *VoIPController::GetRecentOutgoingPacket(uint32_t seq)
 {
@@ -314,7 +301,7 @@ void VoIPController::SendRelayPings()
             {
                 LOGV("Sending ping to %s", endpoint.GetAddress().ToString().c_str());
                 SendOrEnqueuePacket(PendingOutgoingPacket{
-                    /*.seq=*/(endpoint.lastPingSeq = nextLocalSeq()),
+                    /*.seq=*/(endpoint.lastPingSeq = packetManager.nextLocalSeq()),
                     /*.type=*/PKT_PING,
                     /*.len=*/0,
                     /*.data=*/Buffer(),
@@ -381,7 +368,7 @@ void VoIPController::SendNopPacket()
     if (state != STATE_ESTABLISHED)
         return;
     SendOrEnqueuePacket(PendingOutgoingPacket{
-        /*.seq=*/(firstSentPing = nextLocalSeq()),
+        /*.seq=*/(firstSentPing = packetManager.nextLocalSeq()),
         /*.type=*/PKT_NOP,
         /*.len=*/0,
         /*.data=*/Buffer(),

@@ -438,7 +438,7 @@ void VoIPGroupController::SendPacket(unsigned char *data, size_t len, Endpoint &
 		while (recentSentPackets.size() > 64)
 			recentSentPackets.erase(recentSentPackets.begin());
 	}
-	lastSentSeq = srcPacket.seq;
+	packetManager.setLastSentSeq(srcPacket.seq);
 
 	if (IS_MOBILE_NETWORK(networkType))
 		stats.bytesSentMobile += (uint64_t)out.GetLength();
@@ -599,7 +599,7 @@ std::string VoIPGroupController::GetDebugString()
 			 (int)(conctl.GetAverageRTT() * 1000), (int)(conctl.GetMinimumRTT() * 1000),
 			 int(conctl.GetInflightDataSize()), int(conctl.GetCongestionWindow()),
 			 keyFingerprint[0], keyFingerprint[1], keyFingerprint[2], keyFingerprint[3], keyFingerprint[4], keyFingerprint[5], keyFingerprint[6], keyFingerprint[7],
-			 lastSentSeq, getLastAckedSeq(),
+			 getBestPacketManager().getLastSentSeq(), getBestPacketManager().getLastAckedSeq(),
 			 conctl.GetSendLossCount(), recvLossCount, encoder ? encoder->GetPacketLoss() : 0,
 			 encoder ? (encoder->GetBitrate() / 1000) : 0,
 			 (long long unsigned int)(stats.bytesSentMobile + stats.bytesSentWifi),

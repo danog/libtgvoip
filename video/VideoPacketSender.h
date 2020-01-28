@@ -21,7 +21,7 @@ class VideoSource;
 class VideoPacketSender : public PacketSender
 {
 public:
-	VideoPacketSender(VoIPController *controller, VideoSource *videoSource, std::shared_ptr<VoIPController::Stream> stream);
+	VideoPacketSender(VoIPController *controller, VideoSource *videoSource, const std::shared_ptr<VoIPController::Stream> &stream);
 	virtual ~VideoPacketSender();
 	virtual void PacketAcknowledged(uint32_t seq, double sendTime, double ackTime, uint8_t type, uint32_t size) override;
 	virtual void PacketLost(uint32_t seq, uint8_t type, uint32_t size) override;
@@ -45,7 +45,6 @@ private:
 	int GetVideoResolutionForCurrentBitrate();
 
 	VideoSource *source = NULL;
-	std::shared_ptr<VoIPController::Stream> stm;
 	video::ScreamCongestionController videoCongestionControl;
 	double firstVideoFrameTime = 0.0;
 	uint32_t videoFrameCount = 0;

@@ -218,6 +218,7 @@ string VoIPController::GetDebugString()
         jitterBuffer->GetAverageLateCount(avgLate);
     else
         memset(avgLate, 0, 3 * sizeof(double));
+    PacketManager &manager = getBestPacketManager();
     snprintf(buffer, sizeof(buffer),
              "Jitter buffer: %d/%.2f | %.1f, %.1f, %.1f\n"
              "RTT avg/min: %d/%d\n"
@@ -237,7 +238,7 @@ string VoIPController::GetDebugString()
              int(conctl.GetInflightDataSize()), int(conctl.GetCongestionWindow()),
              keyFingerprint[0], keyFingerprint[1], keyFingerprint[2], keyFingerprint[3], keyFingerprint[4], keyFingerprint[5], keyFingerprint[6], keyFingerprint[7],
              useMTProto2 ? " (MTProto2.0)" : "",
-             lastSentSeq, getLastAckedSeq(), getLastRemoteSeq(),
+             manager.getLastSentSeq(), manager.getLastAckedSeq(), manager.getLastRemoteSeq(),
              sendLosses, recvLossCount, encoder ? encoder->GetPacketLoss() : 0,
              encoder ? (encoder->GetBitrate() / 1000) : 0,
              static_cast<unsigned int>(unsentStreamPackets),
@@ -413,7 +414,7 @@ string VoIPController::GetDebugLog()
                             {"tcp_used", useTCP},
                             {"p2p_type", p2pType},
                             {"packet_stats", json11::Json::object{
-                                                 {"out", (int)getLocalSeq()},
+                                                 {"out", (int)getBestPacketManager().getLocalSeq()},
                                                  {"in", (int)packetsReceived},
                                                  {"lost_out", (int)conctl.GetSendLossCount()},
                                                  {"lost_in", (int)recvLossCount}}},

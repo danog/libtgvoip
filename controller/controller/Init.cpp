@@ -66,9 +66,9 @@ void VoIPController::InitializeTimers()
                     statsDump << std::setprecision(3)
                               << GetCurrentTime() - connectionInitTime
                               << endpoints.at(currentEndpoint).rtts[0]
-                              << getLastRemoteSeq()
-                              << (uint32_t)getLocalSeq()
-                              << getLastAckedSeq()
+                              << getBestPacketManager().getLastRemoteSeq()
+                              << (uint32_t)getBestPacketManager().getLocalSeq()
+                              << getBestPacketManager().getLastAckedSeq()
                               << recvLossCount
                               << conctl.GetSendLossCount()
                               << (int)conctl.GetInflightDataSize()
