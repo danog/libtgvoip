@@ -44,6 +44,15 @@ public:
 
 	double GetTimeoutWindow();
 
+	// Get minimum refetchable seq for (reverse) NACK logic.
+	// Any sequence numbers smaller than this cannot possibly arrive in time for playing.
+	inline uint32_t GetSeqTooLate(double rtt)
+	{
+		// The absolute minimum time(stamp) that will (barely) be accepted by the jitter buffer in time + RTT time
+		// Then convert timestamp into a seqno: remember, in protocol >= PROTOCOL_RELIABLE, seq = ts * step
+		return ((nextFetchTimestamp + (rtt * 1000)) / static_cast<uint64_t>(step)) / 1000;
+	}
+
 private:
 	struct jitter_packet_t
 	{

@@ -1,11 +1,11 @@
 #include "AudioPacketSender.h"
+#include "../PrivateDefines.h"
 
 using namespace tgvoip;
 
-
 AudioPacketSender::AudioPacketSender(VoIPController *controller, const std::shared_ptr<OpusEncoder> &encoder, const std::shared_ptr<VoIPController::Stream> &stream) : PacketSender(controller), encoder(encoder), stream(stream)
 {
-	SetSource(encoder);
+    SetSource(encoder);
 }
 
 AudioPacketSender::~AudioPacketSender()
@@ -105,17 +105,24 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         //conctl.PacketSent(p.seq, p.len);
 
         //shared_ptr<VoIPController::Stream> outgoingAudioStream = GetStreamByType(STREAM_TYPE_AUDIO, false);
-        
-        double rtt = LastRtt();
 
-        rtt = !rtt || rtt > 0.3 ? 0.5 : rtt; // Tweak this (a lot) later
+        if (PeerVersion() < PROTOCOL_RELIABLE)
+        {
+            double rtt = LastRtt();
 
-        double timeout = 0; //(outgoingAudioStream && outgoingAudioStream->jitterBuffer ? outgoingAudioStream->jitterBuffer->GetTimeoutWindow() : 0) - rtt;
-        LOGE("TIMEOUT %lf", timeout + rtt);
+            rtt = !rtt || rtt > 0.3 ? 0.5 : rtt; // Tweak this (a lot) later
 
-        timeout = timeout <= 0 ? rtt : timeout;
-        
-        SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), rtt, timeout, 10); // Todo Optimize RTT
+            double timeout = 0; //(outgoingAudioStream && outgoingAudioStream->jitterBuffer ? outgoingAudioStream->jitterBuffer->GetTimeoutWindow() : 0) - rtt;
+            LOGE("TIMEOUT %lf", timeout + rtt);
+
+            timeout = timeout <= 0 ? rtt : timeout;
+
+            SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), rtt, timeout, 10); // Todo Optimize RTT
+        }
+        else
+        {
+            
+        }
         //SendOrEnqueuePacket(move(p));
         if (PeerVersion() < 7 && secondaryLen && shittyInternetMode)
         {

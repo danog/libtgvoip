@@ -12,8 +12,8 @@
 
 using namespace tgvoip;
 
-JitterBuffer::JitterBuffer(uint32_t _step) : step(_step),
-											 slots{}
+JitterBuffer::JitterBuffer(uint32_t step) : step(step),
+											slots{}
 {
 	if (step < 30)
 	{
@@ -83,7 +83,6 @@ void JitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timesta
 	//LOGV("in, ts=%d, ec=%d", timestamp, isEC);
 }
 
-
 void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 {
 	if (pkt->size > JITTER_SLOT_SIZE)
@@ -114,13 +113,14 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 		outstandingDelayChange = 0;
 		nextFetchTimestamp = static_cast<int64_t>(static_cast<int64_t>(pkt->timestamp) - step * minDelay);
 		first = true;
-		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%f)", (long long int)nextFetchTimestamp, step, minDelay);
+		LOGI("jitter: resyncing, next timeDecodeNextFramestamp = %lld (step=%d, minDelay=%f)", (long long int)nextFetchTimestamp, step, minDelay);
 	}
 
 	for (i = 0; i < JITTER_SLOT_COUNT; i++)
 	{
 		if (!slots[i].buffer.IsEmpty())
 		{
+			// Clear packets older than the last fetched packet
 			if (slots[i].timestamp < nextFetchTimestamp - 1)
 			{
 				slots[i].buffer = Buffer();
@@ -237,7 +237,7 @@ size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetI
 		if (GetCurrentDelay() > 5)
 		{
 			LOGW("jitter: delay too big upon start (%u), dropping packets", delay);
-			for (;delay > GetMinPacketCount(); --delay)
+			for (; delay > GetMinPacketCount(); --delay)
 			{
 				for (int i = 0; i < JITTER_SLOT_COUNT; i++)
 				{
@@ -445,7 +445,11 @@ void JitterBuffer::Tick()
 	lastMeasuredJitter = stddev;
 	lastMeasuredDelay = stddevDelay;
 	//LOGV("stddev=%.3f, avg=%.3f, ndelay=%d, dontDec=%u", stddev, avgdev, stddevDelay, dontDecMinDelay);
-	if (dontChangeDelay == 0)
+	if (dontChangeDelay)
+	{
+		--dontChangeDelay;
+	}
+	else
 	{
 		if (avgDelay > minDelay + 0.5)
 		{
@@ -458,8 +462,6 @@ void JitterBuffer::Tick()
 			dontChangeDelay += 10;
 		}
 	}
-	if (dontChangeDelay > 0)
-		dontChangeDelay--;
 
 	//LOGV("jitter: avg delay=%d, delay=%d, late16=%.1f, dontDecMinDelay=%d", avgDelay, delayHistory[0], avgLate16, dontDecMinDelay);
 	/*if(!adjustingDelay) {

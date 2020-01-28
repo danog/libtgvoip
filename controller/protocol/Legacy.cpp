@@ -109,7 +109,7 @@ void VoIPController::legacyWritePacketHeader(uint32_t pseq, uint32_t acks, Buffe
         {
             s->WriteBytes(callID, 16);
         }
-        s->WriteInt32(lastRemoteSeq);
+        s->WriteInt32(getLastRemoteSeq());
         s->WriteInt32(pseq);
         s->WriteInt32(acks);
         if (pflags & PFLAG_HAS_PROTO)
@@ -157,7 +157,7 @@ void VoIPController::legacyWritePacketHeader(uint32_t pseq, uint32_t acks, Buffe
             }
         }
         s->WriteByte(type);
-        s->WriteInt32(lastRemoteSeq);
+        s->WriteInt32(getLastRemoteSeq());
         s->WriteInt32(pseq);
         s->WriteInt32(acks);
         if (peerVersion >= 6)

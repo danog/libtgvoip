@@ -616,6 +616,10 @@ private:
     bool micMuted = false;
     uint32_t maxBitrate;
 
+
+    // Recent ougoing packets
+    std::vector<RecentOutgoingPacket> recentOutgoingPackets;
+    
     //
     std::vector<std::shared_ptr<Stream>> outgoingStreams;
     std::vector<std::shared_ptr<Stream>> incomingStreams;

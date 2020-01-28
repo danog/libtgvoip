@@ -10,9 +10,9 @@ double VoIPController::GetAverageRTT()
 {
     ENFORCE_MSG_THREAD;
 
-    if (lastSentSeq >= peerAcks[0])
+    if (lastSentSeq >= getLastAckedSeq())
     {
-        uint32_t diff = lastSentSeq - peerAcks[0];
+        uint32_t diff = lastSentSeq - getLastAckedSeq();
         //LOGV("rtt diff=%u", diff);
         if (diff < 32)
         {

@@ -215,9 +215,9 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         recvTS = in.ReadUInt32();
     }
 
-    if (seqgt(ackId, peerAcks[0]))
+    if (seqgt(ackId, getLastAckedSeq()))
     {
-        if (waitingForAcks && peerAcks[0] >= firstSentPing)
+        if (waitingForAcks && getLastAckedSeq() >= firstSentPing)
         {
             rttHistory.Reset();
             waitingForAcks = false;
@@ -260,7 +260,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         {
             for (auto x = currentExtras.begin(); x != currentExtras.end();)
             {
-                if (x->firstContainingSeq != 0 && seqgte(peerAcks[0], x->firstContainingSeq))
+                if (x->firstContainingSeq != 0 && seqgte(getLastAckedSeq(), x->firstContainingSeq))
                 {
                     LOGV("Peer acknowledged extra type %u length %u", x->type, (unsigned int)x->data.Length());
                     ProcessAcknowledgedOutgoingExtra(*x);
@@ -277,7 +277,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
     Endpoint &_currentEndpoint = endpoints.at(currentEndpoint);
     if (srcEndpoint.id != currentEndpoint && srcEndpoint.IsReflector() && (_currentEndpoint.IsP2P() || _currentEndpoint.averageRTT == 0))
     {
-        if (seqgt(lastSentSeq - 32, peerAcks[0]))
+        if (seqgt(lastSentSeq - 32, getLastAckedSeq()))
         {
             currentEndpoint = srcEndpoint.id;
             _currentEndpoint = srcEndpoint;
@@ -312,8 +312,8 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
     LOGV("Received: from=%s:%u, seq=%u, length=%u, type=%s", srcEndpoint.GetAddress().ToString().c_str(), srcEndpoint.port, pseq, (unsigned int)packet.data.Length(), GetPacketTypeString(type).c_str());
 //#endif
 
-    //LOGV("acks: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", peerAcks[0], remoteAcks[0], remoteAcks[1], remoteAcks[2], remoteAcks[3], remoteAcks[4], remoteAcks[5], remoteAcks[6], remoteAcks[7]);
-    //LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", lastRemoteSeq, recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
+    //LOGV("acks: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", getLastAckedSeq(), remoteAcks[0], remoteAcks[1], remoteAcks[2], remoteAcks[3], remoteAcks[4], remoteAcks[5], remoteAcks[6], remoteAcks[7]);
+    //LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", getLastRemoteSeq(), recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
     //LOGI("RTT = %.3lf", GetAverageRTT());
     //LOGV("Packet %u type is %d", pseq, type);
     if (type == PKT_INIT)
@@ -982,7 +982,7 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
     if (peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92))
     {
         s->WriteByte(type);
-        s->WriteInt32(lastRemoteSeq);
+        s->WriteInt32(getLastRemoteSeq());
         s->WriteInt32(pseq);
         s->WriteInt32(acks);
 

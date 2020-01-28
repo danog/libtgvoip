@@ -84,9 +84,9 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, P
     }
 
     //LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
-//#ifdef LOG_PACKETS
+    //#ifdef LOG_PACKETS
     LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s", ep.GetAddress().ToString().c_str(), ep.port, srcPacket.seq, (unsigned int)out.GetLength(), GetPacketTypeString(srcPacket.type).c_str());
-//#endif
+    //#endif
 
     rawSendQueue.Put(
         RawPendingOutgoingPacket{
@@ -268,7 +268,8 @@ void VoIPController::TrySendOutgoingPackets()
 bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll)
 {
     bool res = wasLocalAcked(seq);
-    if (res || !checkAll) {
+    if (res || !checkAll)
+    {
         return res;
     }
 
@@ -375,7 +376,6 @@ void VoIPController::SendRelayPings()
     }
 }
 
-
 void VoIPController::SendNopPacket()
 {
     if (state != STATE_ESTABLISHED)
@@ -448,7 +448,6 @@ Endpoint &VoIPController::GetEndpointByType(const Endpoint::Type type)
     }
     throw out_of_range("no endpoint");
 }
-
 
 void VoIPController::SendExtra(Buffer &data, unsigned char type)
 {
