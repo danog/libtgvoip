@@ -23,7 +23,7 @@ void VoIPController::SetVideoSource(video::VideoSource *source)
         }
 
         if (!stm->packetSender)
-            stm->packetSender.reset(new video::VideoPacketSender(this, source, stm));
+            stm->packetSender = std::make_unique<video::VideoPacketSender>(this, source, stm);
         else
             dynamic_cast<video::VideoPacketSender *>(stm->packetSender.get())->SetSource(source);
     }

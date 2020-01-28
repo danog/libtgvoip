@@ -102,7 +102,7 @@ void VoIPController::SendInit()
 {
     ENFORCE_MSG_THREAD;
 
-    uint32_t initSeq = GenerateOutSeq();
+    uint32_t initSeq = nextLocalSeq();
     for (pair<const int64_t, Endpoint> &_e : endpoints)
     {
         Endpoint &e = _e.second;
@@ -313,7 +313,7 @@ void VoIPController::SendRelayPings()
             {
                 LOGV("Sending ping to %s", endpoint.GetAddress().ToString().c_str());
                 SendOrEnqueuePacket(PendingOutgoingPacket{
-                    /*.seq=*/(endpoint.lastPingSeq = GenerateOutSeq()),
+                    /*.seq=*/(endpoint.lastPingSeq = nextLocalSeq()),
                     /*.type=*/PKT_PING,
                     /*.len=*/0,
                     /*.data=*/Buffer(),
@@ -381,7 +381,7 @@ void VoIPController::SendNopPacket()
     if (state != STATE_ESTABLISHED)
         return;
     SendOrEnqueuePacket(PendingOutgoingPacket{
-        /*.seq=*/(firstSentPing = GenerateOutSeq()),
+        /*.seq=*/(firstSentPing = nextLocalSeq()),
         /*.type=*/PKT_NOP,
         /*.len=*/0,
         /*.data=*/Buffer(),

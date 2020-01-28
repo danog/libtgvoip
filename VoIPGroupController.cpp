@@ -5,6 +5,7 @@
 //
 
 #include "VoIPGroupController.h"
+#include "controller/net/PacketSender.h"
 #include "tools/logging.h"
 #include "VoIPServerConfig.h"
 #include "controller/PrivateDefines.h"

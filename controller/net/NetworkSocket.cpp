@@ -241,9 +241,9 @@ SocketSelectCanceller::~SocketSelectCanceller()
 std::unique_ptr<SocketSelectCanceller> SocketSelectCanceller::Create()
 {
 #ifndef _WIN32
-	return std::move(std::unique_ptr<SocketSelectCanceller>{new SocketSelectCancellerPosix()});
+	return std::make_unique<SocketSelectCancellerPosix>();
 #else
-	return std::move(std::unique_ptr<SocketSelectCanceller>{new SocketSelectCancellerWin32()});
+	return std::make_unique<SocketSelectCancellerWin32>();
 #endif
 }
 

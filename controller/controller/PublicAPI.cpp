@@ -139,7 +139,7 @@ void VoIPController::Start()
     }
 
     runReceiver = true;
-    recvThread.reset(new Thread(bind(&VoIPController::RunRecvThread, this)));
+    recvThread = std::make_unique<Thread>(bind(&VoIPController::RunRecvThread, this));
     recvThread->SetName("VoipRecv");
     recvThread->Start();
 
@@ -158,7 +158,7 @@ void VoIPController::Connect()
 
     //InitializeTimers();
     //SendInit();
-    sendThread.reset(new Thread(bind(&VoIPController::RunSendThread, this)));
+    sendThread = std::make_unique<Thread>(bind(&VoIPController::RunSendThread, this));
     sendThread->SetName("VoipSend");
     sendThread->Start();
 }

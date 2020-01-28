@@ -49,7 +49,7 @@ void VoIPController::UpdateReliablePackets()
         if (GetCurrentTime() - qp->lastSentTime >= qp->retryInterval)
         {
             messageThread.Post(std::bind(&VoIPController::UpdateReliablePackets, this), qp->retryInterval);
-            uint32_t seq = GenerateOutSeq();
+            uint32_t seq = nextLocalSeq();
             qp->seqs.Add(seq);
             qp->lastSentTime = GetCurrentTime();
             //LOGD("Sending queued packet, seq=%u, type=%u, len=%u", seq, qp.type, qp.data.Length());

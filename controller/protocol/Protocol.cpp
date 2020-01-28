@@ -399,7 +399,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         LOGI("Sending init ack");
         size_t outLength = out.GetLength();
         SendOrEnqueuePacket(PendingOutgoingPacket{
-            /*.seq=*/GenerateOutSeq(),
+            /*.seq=*/nextLocalSeq(),
             /*.type=*/PKT_INIT_ACK,
             /*.len=*/outLength,
             /*.data=*/Buffer(move(out)),
@@ -679,7 +679,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         pkt.WriteInt32(pseq);
         size_t pktLength = pkt.GetLength();
         SendOrEnqueuePacket(PendingOutgoingPacket{
-            /*.seq=*/GenerateOutSeq(),
+            /*.seq=*/nextLocalSeq(),
             /*.type=*/PKT_PONG,
             /*.len=*/pktLength,
             /*.data=*/Buffer(move(pkt)),

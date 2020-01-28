@@ -82,7 +82,7 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
         unsentStreamPackets++;
 
         //PendingOutgoingPacket p{
-        //    /*.seq=*/GenerateOutSeq(),
+        //    /*.seq=*/nextLocalSeq(),
         //    /*.type=*/PKT_STREAM_DATA,
         //    /*.len=*/pkt.GetLength(),
         //    /*.data=*/Buffer(move(pkt)),
@@ -125,7 +125,7 @@ void VoIPController::HandleAudioInput(unsigned char *data, size_t len, unsigned 
             }
 
             PendingOutgoingPacket p{
-                GenerateOutSeq(),
+                nextLocalSeq(),
                 PKT_STREAM_EC,
                 pkt.GetLength(),
                 Buffer(move(pkt)),
@@ -173,8 +173,8 @@ void VoIPController::InitializeAudio()
     SetAudioOutputDuckingEnabled(macAudioDuckingEnabled);
 #endif
     LOGI("AEC: %d NS: %d AGC: %d", config.enableAEC, config.enableNS, config.enableAGC);
-    echoCanceller.reset(new EchoCanceller(config.enableAEC, config.enableNS, config.enableAGC));
-    encoder.reset(new OpusEncoder(audioInput, true));
+    echoCanceller = std::make_unique<EchoCanceller>(config.enableAEC, config.enableNS, config.enableAGC);
+    encoder = std::make_unique<OpusEncoder>(audioInput, true);
     encoder->SetCallback(bind(&VoIPController::HandleAudioInput, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
     encoder->SetOutputFrameDuration(outgoingAudioStream->frameDuration);
     encoder->SetEchoCanceller(echoCanceller);

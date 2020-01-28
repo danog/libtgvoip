@@ -38,7 +38,6 @@
 #include "controller/audio/OpusEncoder.h"
 #include "controller/audio/EchoCanceller.h"
 #include "controller/net/CongestionControl.h"
-#include "controller/net/NetworkSocket.h"
 #include "controller/protocol/Ack.h"
 #include "controller/protocol/PacketStructs.h"
 #include "tools/Buffers.h"
@@ -138,10 +137,6 @@ struct CellularCarrierInfo
 };
 
 class PacketSender;
-namespace video
-{
-class VideoPacketSender;
-}
 
 class VoIPController : Ack
 {

@@ -75,7 +75,7 @@ void PacketReassembler::AddFragment(Buffer pkt, unsigned int fragmentIndex, unsi
 
 	maxTimestamp = std::max(maxTimestamp, pts);
 
-	packets.push_back(std::unique_ptr<Packet>(new Packet(fseq, pts, fragmentCount, 0, keyframe, rotation)));
+	packets.push_back(std::make_unique<Packet>(fseq, pts, fragmentCount, 0, keyframe, rotation));
 	packets[packets.size() - 1]->AddFragment(std::move(pkt), fragmentIndex);
 	while (packets.size() > 3)
 	{
