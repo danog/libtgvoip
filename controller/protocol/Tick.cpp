@@ -149,14 +149,13 @@ void VoIPController::TickJitterBufferAndCongestionControl()
             {
                 pkt.sender->PacketLost(pkt.seq, pkt.type, pkt.size);
             }
-            else if (pkt.type == PKT_STREAM_DATA)
+            if (pkt.type == PKT_STREAM_DATA)
             {
                 conctl.PacketLost(pkt.seq);
             }
         }
     }
 }
-
 
 void VoIPController::UpdateRTT()
 {
@@ -188,17 +187,22 @@ void VoIPController::UpdateCongestion()
         uint32_t sendLossCount = conctl.GetSendLossCount();
         sendLossCountHistory.Add(sendLossCount - prevSendLossCount);
         prevSendLossCount = sendLossCount;
-        double packetsPerSec = 1000 / (double)outgoingStreams[0]->frameDuration;
+        uint32_t lastSentSeq = getBestPacketManager().getLastSentSeq();
+        double packetsPerSec = 1000 / (lastSentSeq - prevSeq);
+        prevSeq = lastSentSeq;
+        //double packetsPerSec = 1000 / (double)outgoingStreams[0]->frameDuration;
         double avgSendLossCount = sendLossCountHistory.Average() / packetsPerSec;
-        //LOGV("avg send loss: %.3f%%", avgSendLossCount*100);
+        LOGE("avg send loss: %.3f%%", avgSendLossCount*100);
 
         AudioPacketSender *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get());
+        //avgSendLossCount = sender->setPacketLoss(avgSendLossCount * 100.0) / 100.0;
+        sender->setPacketLoss(avgSendLossCount * 100.0);
         if (avgSendLossCount > packetLossToEnableExtraEC && networkType != NET_TYPE_GPRS && networkType != NET_TYPE_EDGE)
         {
             if (!sender->getShittyInternetMode())
             {
                 // Shitty Internet Mode™. Redundant redundancy you can trust.
-                sender->setShittyInternetMode( true);
+                sender->setShittyInternetMode(true);
                 for (shared_ptr<Stream> &s : outgoingStreams)
                 {
                     if (s->type == STREAM_TYPE_AUDIO)

@@ -8,7 +8,11 @@ using namespace std;
 
 PacketManager &VoIPController::getBestPacketManager()
 {
+#if PROTOCOL_VERSION == 9
+    return packetManager;
+#else
     return outgoingStreams.empty() ? packetManager : outgoingStreams[0]->packetSender->getPacketManager();
+#endif
 }
 
 void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcEndpoint)
@@ -212,9 +216,9 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         return;
     }
 
-    #ifdef LOG_PACKETS
+#ifdef LOG_PACKETS
     LOGV("Received: from=%s:%u, seq=%u, length=%u, type=%s, transportId=%hhu", srcEndpoint.GetAddress().ToString().c_str(), srcEndpoint.port, pseq, (unsigned int)packet.data.Length(), GetPacketTypeString(type).c_str(), transportId);
-    #endif
+#endif
 
     // Extra data
     if (pflags & XPFLAG_HAS_EXTRA)
@@ -252,7 +256,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         conctl.PacketAcknowledged(ackId);
 
         manager->ackLocal(ackId, acks);
-        
+
         if (transportId != 0xFF && !incomingStreams.empty() && incomingStreams[transportId]->jitterBuffer)
         {
             // Technically I should be using the specific packet manager's rtt history but will separate later
@@ -1071,7 +1075,7 @@ uint8_t VoIPController::WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutp
             s.WriteByte(static_cast<unsigned char>(currentExtras.size()));
             for (auto &x : currentExtras)
             {
-                LOGV("Writing extra into header: type %u, length %d", x.type, int(x.data.Length()));
+                //LOGV("Writing extra into header: type %u, length %d", x.type, int(x.data.Length()));
                 assert(x.data.Length() <= 254);
                 s.WriteByte(static_cast<unsigned char>(x.data.Length() + 1));
                 s.WriteByte(x.type);

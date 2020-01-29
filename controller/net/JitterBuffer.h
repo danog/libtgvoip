@@ -60,10 +60,10 @@ private:
 	struct jitter_packet_t
 	{
 		Buffer buffer = Buffer();
-		size_t size;
-		uint32_t timestamp;
-		bool isEC;
-		double recvTimeDiff;
+		size_t size = 0;
+		uint32_t timestamp = 0;
+		bool isEC = 0;
+		double recvTimeDiff = 0.0;
 	};
 	void PutInternal(jitter_packet_t *pkt, bool overwriteExisting);
 	int GetInternal(jitter_packet_t *pkt, int offset, bool advance);
@@ -72,7 +72,7 @@ private:
 	BufferPool<JITTER_SLOT_SIZE, JITTER_SLOT_COUNT> bufferPool;
 	Mutex mutex;
 	uint32_t step;
-	std::array<jitter_packet_t, JITTER_SLOT_COUNT> slots;
+	std::array<jitter_packet_t, JITTER_SLOT_COUNT> slots{0};
 	std::atomic<int64_t> nextFetchTimestamp = ATOMIC_VAR_INIT(0); // What frame to read next
 	double minDelay = 6;
 	uint32_t minMinDelay;

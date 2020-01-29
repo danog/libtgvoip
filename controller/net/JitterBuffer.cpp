@@ -96,7 +96,7 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 	{
 		if (!slots[i].buffer.IsEmpty() && slots[i].timestamp == pkt->timestamp)
 		{
-			LOGV("Found existing packet for timestamp %u, overwrite %d", pkt->timestamp, overwriteExisting);
+			//LOGV("Found existing packet for timestamp %u, overwrite %d", pkt->timestamp, overwriteExisting);
 			if (overwriteExisting)
 			{
 				slots[i].buffer.CopyFrom(pkt->buffer, pkt->size);
@@ -142,7 +142,7 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 	if (expectNextAtTime != 0)
 	{
 		double dev = expectNextAtTime - time;
-		//LOGV("packet dev %f", dev);
+		LOGV("packet dev %f", dev);
 		deviationHistory.Add(dev);
 		expectNextAtTime += step / 1000.0;
 	}

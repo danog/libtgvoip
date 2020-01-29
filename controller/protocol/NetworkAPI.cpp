@@ -56,10 +56,10 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
         BufferOutputStream out(1500);
         uint8_t transportId = WritePacketHeader(pkt, out, source);
         SendPacket(out.GetBuffer(), out.GetLength(), *endpoint, pkt.seq, pkt.type, transportId);
-        if (pkt.type == PKT_STREAM_DATA)
+        /*if (pkt.type == PKT_STREAM_DATA)
         {
             unsentStreamPackets--;
-        }
+        }*/
     }
     return true;
 }

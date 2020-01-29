@@ -25,6 +25,7 @@ public:
 	{
 		return packetManager;
 	}
+
 protected:
 	inline void SendExtra(Buffer &data, unsigned char type)
 	{
@@ -85,6 +86,11 @@ protected:
 	inline const bool ReceivedInitAck() const
 	{
 		return controller->receivedInitAck;
+	}
+
+	inline auto &GetConctl()
+	{
+		return controller->conctl;
 	}
 
 	inline const int32_t PeerVersion() const

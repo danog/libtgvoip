@@ -96,33 +96,29 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
 
         //unsentStreamPackets++;
 
-        //PendingOutgoingPacket p{
-        //    /*.seq=*/nextLocalSeq(),
-        //    /*.type=*/PKT_STREAM_DATA,
-        //    /*.len=*/pkt.GetLength(),
-        //    /*.data=*/Buffer(move(pkt)),
-        //    /*.endpoint=*/0,
-        //};
-
-        //conctl.PacketSent(p.seq, p.len);
-
-        //shared_ptr<VoIPController::Stream> outgoingAudioStream = GetStreamByType(STREAM_TYPE_AUDIO, false);
-
         if (PeerVersion() < PROTOCOL_RELIABLE)
         {
             // Need to increase this anyway to go hand in hand with timestamp
-            packetManager.nextLocalSeq();
+            // packetManager.nextLocalSeq();
 
-            double rtt = LastRtt();
+            if (!packetLoss)
+            {
+                PendingOutgoingPacket p{
+                    0,
+                    PKT_STREAM_DATA,
+                    pkt.GetLength(),
+                    Buffer(move(pkt)),
+                    0,
+                };
 
-            rtt = !rtt || rtt > 0.3 ? 0.5 : rtt; // Tweak this (a lot) later
+                uint32_t seq = SendPacket(std::move(p));
+            }
+            else
+            {
+                double retry = stream->frameDuration / (resendCount * 2.0);
 
-            double timeout = 0; //(outgoingAudioStream && outgoingAudioStream->jitterBuffer ? outgoingAudioStream->jitterBuffer->GetTimeoutWindow() : 0) - rtt;
-            LOGE("TIMEOUT %lf", timeout + rtt);
-
-            timeout = timeout <= 0 ? rtt : timeout;
-
-            SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), rtt, timeout, 10); // Todo Optimize RTT
+                SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), retry / 1000.0, (stream->frameDuration * 4) / 1000.0 , resendCount); // Todo Optimize RTT
+            }
         }
         else
         {
@@ -175,4 +171,32 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         audioPreprocDataCallback(preprocBuffer, size);
     }
 #endif
+}
+
+double AudioPacketSender::setPacketLoss(double percent)
+{
+    packetLoss = percent;
+
+    if (percent > 2)
+    {
+        resendCount = std::clamp(percent / 2, 0.0, 5.0);
+    }
+    /*else if (percent > 5)
+    {
+        resendCount = 1.5;
+    }
+    else if (percent > 2)
+    {
+        resendCount = 1.3;
+    }*/
+    else
+    {
+        resendCount = 1;
+    }
+
+    ++resendCount;
+    double newLoss = percent / resendCount;
+    LOGE("Packet loss %lf / resend count %lf = new packet loss %lf", percent, resendCount, newLoss);
+
+    return newLoss;
 }

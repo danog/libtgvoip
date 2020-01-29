@@ -41,6 +41,8 @@ public:
         this->extraEcLevel = extraEcLevel;
     }
 
+    double setPacketLoss(double percent);
+
 private:
     void SendFrame(unsigned char *data, size_t len, unsigned char *secondaryData, size_t secondaryLen);
 
@@ -50,6 +52,10 @@ private:
 
     bool shittyInternetMode = false;
     uint8_t extraEcLevel = 0;
+
+    double packetLoss = 0.0;
+
+    double resendCount = 1.0;
 
     std::deque<Buffer> ecAudioPackets;
 

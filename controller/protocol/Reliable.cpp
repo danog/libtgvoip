@@ -6,8 +6,9 @@ using namespace std;
 void VoIPController::SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries)
 {
     ENFORCE_MSG_THREAD;
-
+#ifdef LOG_PACKETS
     LOGV("Send reliably, type=%u, len=%u, retry=%.3f, timeout=%.3f, tries=%hhu", type, unsigned(len), retryInterval, timeout, tries);
+#endif
     ReliableOutgoingPacket pkt;
     if (data)
     {
@@ -36,13 +37,17 @@ void VoIPController::UpdateReliablePackets()
     {
         if (qp->timeout > 0 && qp->firstSentTime > 0 && GetCurrentTime() - qp->firstSentTime >= qp->timeout)
         {
+//#ifdef LOG_PACKETS
             LOGD("Removing queued packet because of timeout");
+//#endif
             qp = reliablePackets.erase(qp);
             continue;
         }
         if (!qp->tries--)
         {
+//#ifdef LOG_PACKETS
             LOGD("Removing queued packet because of no more tries");
+//#endif
             qp = reliablePackets.erase(qp);
             continue;
         }
@@ -52,7 +57,9 @@ void VoIPController::UpdateReliablePackets()
             uint32_t seq = packetManager.nextLocalSeq();
             qp->seqs.Add(seq);
             qp->lastSentTime = GetCurrentTime();
-            //LOGD("Sending queued packet, seq=%u, type=%u, len=%u", seq, qp.type, qp.data.Length());
+//#ifdef LOG_PACKETS
+            LOGD("Sending reliable queued packet, seq=%u, type=%u, len=%lu", seq, qp->type, qp->data.Length());
+//#endif
             Buffer buf(qp->data.Length());
             if (qp->firstSentTime == 0)
                 qp->firstSentTime = qp->lastSentTime;
@@ -80,7 +87,7 @@ void VoIPController::handleReliablePackets()
         bool didAck = false;
         for (uint8_t i = 0; i < qp.seqs.Size(); ++i)
         {
-            if (!qp.seqs[i] || (didAck = WasOutgoingPacketAcknowledged(qp.seqs[i], false)))
+            if (!qp.seqs[i] || (didAck = packetManager.wasLocalAcked(qp.seqs[i])))
                 break;
         }
         if (didAck)
@@ -91,18 +98,4 @@ void VoIPController::handleReliablePackets()
         }
         ++it;
     }
-}
-
-bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll)
-{
-    bool res = packetManager.wasLocalAcked(seq);
-    if (res || !checkAll)
-    {
-        return res;
-    }
-
-    RecentOutgoingPacket *pkt = packetManager.GetRecentOutgoingPacket(seq);
-    if (!pkt)
-        return false;
-    return pkt->ackTime != 0.0;
 }

@@ -572,7 +572,6 @@ private:
     void handleReliablePackets();
 
     void SetupOutgoingVideoStream();
-    bool WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll = true);
     void NetworkPacketReceived(std::shared_ptr<NetworkPacket> packet);
     void TrySendOutgoingPackets();
 
@@ -607,6 +606,7 @@ private:
     uint32_t packetsReceived = 0;
     uint32_t recvLossCount = 0;
     uint32_t prevSendLossCount = 0;
+    uint32_t prevSeq = 1;
     uint32_t firstSentPing;
     HistoricBuffer<double, 32> rttHistory;
     bool waitingForAcks = false;
