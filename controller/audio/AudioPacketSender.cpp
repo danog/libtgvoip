@@ -74,6 +74,8 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         pkt.WriteInt32(audioTimestampOut);
         pkt.WriteBytes(*dataBufPtr, 0, len);
 
+        //LOGE("SEND: For pts %u = seq %u, using seq %u", audioTimestampOut, audioTimestampOut/60 + 1, packetManager.getLocalSeq());
+
         if (hasExtraFEC)
         {
             Buffer ecBuf(secondaryLen);
@@ -108,6 +110,9 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
 
         if (PeerVersion() < PROTOCOL_RELIABLE)
         {
+            // Need to increase this anyway to go hand in hand with timestamp
+            packetManager.nextLocalSeq();
+
             double rtt = LastRtt();
 
             rtt = !rtt || rtt > 0.3 ? 0.5 : rtt; // Tweak this (a lot) later

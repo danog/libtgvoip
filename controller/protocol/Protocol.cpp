@@ -187,15 +187,16 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
     if (peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92))
     {
         type = in.ReadByte();
-        if (peerVersion >= PROTOCOL_RELIABLE)
-        {
-            transportId = in.ReadByte();
-        }
         ackId = in.ReadUInt32();
         pseq = in.ReadUInt32();
         acks = in.ReadUInt32();
         pflags = in.ReadByte();
         packetInnerLen = innerLen - 14;
+
+        if (pflags & XPFLAG_HAS_TRANSPORT_ID)
+        {
+            transportId = in.ReadByte();
+        }
     }
     else if (!legacyParsePacket(in, type, ackId, pseq, acks, pflags, packetInnerLen))
     {
@@ -210,6 +211,10 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
     {
         return;
     }
+
+    #ifdef LOG_PACKETS
+    LOGV("Received: from=%s:%u, seq=%u, length=%u, type=%s, transportId=%hhu", srcEndpoint.GetAddress().ToString().c_str(), srcEndpoint.port, pseq, (unsigned int)packet.data.Length(), GetPacketTypeString(type).c_str(), transportId);
+    #endif
 
     // Extra data
     if (pflags & XPFLAG_HAS_EXTRA)
@@ -247,18 +252,29 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         conctl.PacketAcknowledged(ackId);
 
         manager->ackLocal(ackId, acks);
+        
+        if (transportId != 0xFF && !incomingStreams.empty() && incomingStreams[transportId]->jitterBuffer)
+        {
+            // Technically I should be using the specific packet manager's rtt history but will separate later
+            uint32_t tooOldSeq = incomingStreams[transportId]->jitterBuffer->GetSeqTooLate(rttHistory[0]);
+            LOGW("Reverse acking seqs older than %u, newest seq received from remote %u (transportId %hhu)", tooOldSeq, manager->getLastRemoteSeq(), transportId);
+            manager->ackRemoteSeqsOlderThan(tooOldSeq);
+        }
 
-        for (auto &opkt : recentOutgoingPackets)
+        for (auto &opkt : manager->getRecentOutgoingPackets())
         {
             if (opkt.ackTime)
+            {
                 continue;
+            }
             if (manager->wasLocalAcked(opkt.seq))
             {
+                opkt.data = Buffer();
                 opkt.ackTime = GetCurrentTime();
                 opkt.rttTime = opkt.ackTime - opkt.sendTime;
                 if (opkt.lost)
                 {
-                    LOGW("acknowledged lost packet %u", opkt.seq);
+                    LOGW("acknowledged lost packet %u (transportId %hhu)", opkt.seq, transportId);
                     sendLosses--;
                 }
                 if (opkt.sender && !opkt.lost)
@@ -268,6 +284,34 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
 
                 // TODO move this to a PacketSender
                 conctl.PacketAcknowledged(opkt.seq);
+            }
+            else if (peerVersion >= PROTOCOL_RELIABLE && opkt.data.Length() && opkt.seq < manager->getLastAckedSeq())
+            {
+                if (manager->getLastAckedSeq() - opkt.seq > 32)
+                {
+                    LOGW("Marking reliable NACK packet %u as lost, since is more than 32 seqs old (last acked %u, transportId %hhu)", opkt.seq, manager->getLastAckedSeq(), transportId);
+                    opkt.lost = true;
+                    opkt.data = Buffer();
+                    continue;
+                }
+                if (opkt.sendTime + rttHistory[0] < VoIPController::GetCurrentTime())
+                {
+                    LOGW("It is possibly a bit too early to resend NACK packet %u (transportId %hhu)", opkt.seq, transportId);
+                }
+                LOGW("Resending reliable NACK packet %u, (transportId %hhu)", opkt.seq, transportId);
+                BufferOutputStream copy(opkt.data.Length());
+                copy.WriteBytes(opkt.data);
+                Endpoint *endpoint = GetEndpointById(opkt.endpoint);
+                if (!endpoint)
+                {
+                    LOGE("Recent NACK queue contained packet (%u) for nonexistent endpoint, (transportId %hhu)", opkt.seq, transportId);
+                    opkt.lost = true;
+                    opkt.data = Buffer();
+                    continue;
+                }
+                opkt.sendTime = GetCurrentTime();
+                SendPacket(copy.GetBuffer(), copy.GetLength(), *endpoint, opkt.seq, opkt.type, transportId);
+                //SendOrEnqueuePacket()
             }
         }
 
@@ -316,16 +360,11 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         }
     }*/
 
-    unacknowledgedIncomingPacketCount++;
-    if (unacknowledgedIncomingPacketCount > unackNopThreshold)
+    if (unacknowledgedIncomingPacketCount++ > unackNopThreshold)
     {
         //LOGV("Sending nop packet as ack");
-        SendNopPacket();
+        SendNopPacket(packetManager);
     }
-
-    //#ifdef LOG_PACKETS
-    LOGV("Received: from=%s:%u, seq=%u, length=%u, type=%s", srcEndpoint.GetAddress().ToString().c_str(), srcEndpoint.port, pseq, (unsigned int)packet.data.Length(), GetPacketTypeString(type).c_str());
-    //#endif
 
     //LOGV("acks: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", manager.getLastAckedSeq()(), remoteAcks[0], remoteAcks[1], remoteAcks[2], remoteAcks[3], remoteAcks[4], remoteAcks[5], remoteAcks[6], remoteAcks[7]);
     //LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", getLastRemoteSeq(), recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
@@ -588,6 +627,8 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             uint32_t pts = in.ReadUInt32();
             unsigned char fragmentCount = 1;
             unsigned char fragmentIndex = 0;
+            //LOGE("RECV: For pts %u = seq %u, got seq %u", pts, pts/60 + 1, pseq);
+
             //LOGD("stream data, pts=%d, len=%d, rem=%d", pts, sdlen, in.Remaining());
             audioTimestampIn = pts;
             if (!audioOutStarted && audioOutput)
@@ -622,10 +663,14 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             {
                 if (stm->jitterBuffer)
                 {
-                    if (peerVersion >= PROTOCOL_RELIABLE) {
-                        manager->ackRemoteSeqsOlderThan(stm->jitterBuffer->GetSeqTooLate(rttHistory[0]));
-                    }
                     stm->jitterBuffer->HandleInput(static_cast<unsigned char *>(buffer + in.GetOffset()), sdlen, pts, false);
+                    /*if (peerVersion >= PROTOCOL_RELIABLE)
+                    {
+                        // Technically I should be using the specific packet manager's rtt history but will separate later
+                        uint32_t tooOldSeq = stm->jitterBuffer->GetSeqTooLate(rttHistory[0]) - 1;
+                        LOGW("Reverse acking seqs older than %u, newest acked seq %u (transportId %hhu)", tooOldSeq, manager->getLastRemoteSeq(), transportId);
+                        manager->ackRemoteSeqsOlderThan(tooOldSeq);
+                    }*/
                     if (extraFEC)
                     {
                         in.Seek(in.GetOffset() + sdlen);
@@ -993,21 +1038,17 @@ void VoIPController::ProcessAcknowledgedOutgoingExtra(UnacknowledgedExtraData &e
     }
 }
 
-void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, unsigned char type, uint32_t length, PacketSender *source)
+uint8_t VoIPController::WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutputStream &s, PacketSender *source)
 {
-    PacketManager &manager = peerVersion >= PROTOCOL_RELIABLE ? source->getPacketManager() : packetManager;
+    PacketManager &manager = peerVersion >= PROTOCOL_RELIABLE && source ? source->getPacketManager() : packetManager;
     uint32_t acks = manager.getRemoteAckMask();
 
     if (peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92))
     {
-        s->WriteByte(type);
-        if (peerVersion >= PROTOCOL_RELIABLE)
-        {
-            s->WriteByte(manager.getTransportId());
-        }
-        s->WriteInt32(manager.getLastRemoteSeq());
-        s->WriteInt32(pseq);
-        s->WriteInt32(acks);
+        s.WriteByte(pkt.type);
+        s.WriteInt32(manager.getLastRemoteSeq());
+        s.WriteInt32(pkt.seq);
+        s.WriteInt32(acks);
 
         unsigned char flags = currentExtras.empty() ? 0 : XPFLAG_HAS_EXTRA;
 
@@ -1015,47 +1056,68 @@ void VoIPController::WritePacketHeader(uint32_t pseq, BufferOutputStream *s, uns
         if (peerVersion >= 9 && videoStream && videoStream->enabled)
             flags |= XPFLAG_HAS_RECV_TS;
 
-        s->WriteByte(flags);
+        if (peerVersion >= PROTOCOL_RELIABLE && manager.getTransportId() != 0xFF)
+            flags |= XPFLAG_HAS_TRANSPORT_ID;
+
+        s.WriteByte(flags);
+
+        if (flags & XPFLAG_HAS_TRANSPORT_ID)
+        {
+            s.WriteByte(manager.getTransportId());
+        }
 
         if (!currentExtras.empty())
         {
-            s->WriteByte(static_cast<unsigned char>(currentExtras.size()));
+            s.WriteByte(static_cast<unsigned char>(currentExtras.size()));
             for (auto &x : currentExtras)
             {
                 LOGV("Writing extra into header: type %u, length %d", x.type, int(x.data.Length()));
                 assert(x.data.Length() <= 254);
-                s->WriteByte(static_cast<unsigned char>(x.data.Length() + 1));
-                s->WriteByte(x.type);
-                s->WriteBytes(*x.data, x.data.Length());
+                s.WriteByte(static_cast<unsigned char>(x.data.Length() + 1));
+                s.WriteByte(x.type);
+                s.WriteBytes(*x.data, x.data.Length());
                 if (x.firstContainingSeq == 0)
-                    x.firstContainingSeq = pseq;
+                    x.firstContainingSeq = pkt.seq;
             }
         }
         if (peerVersion >= 9 && videoStream && videoStream->enabled)
         {
-            s->WriteUInt32((lastRecvPacketTime - connectionInitTime) * 1000.0);
+            s.WriteUInt32((lastRecvPacketTime - connectionInitTime) * 1000.0);
         }
     }
     else
     {
-        legacyWritePacketHeader(pseq, acks, s, type, length);
+        legacyWritePacketHeader(pkt.seq, acks, &s, pkt.type, pkt.len);
     }
 
+    s.WriteBytes(pkt.data);
+
+    Buffer copyBuf(s.GetLength());
+    if (peerVersion >= PROTOCOL_RELIABLE)
+        copyBuf.CopyFrom(s.GetBuffer(), 0, s.GetLength());
+
     unacknowledgedIncomingPacketCount = 0;
+
+    auto &recentOutgoingPackets = manager.getRecentOutgoingPackets();
+
     recentOutgoingPackets.push_back(RecentOutgoingPacket{
-        pseq,
+        pkt.endpoint,
+        std::move(copyBuf),
+        pkt.seq,
         0,
         GetCurrentTime(),
         0,
         0,
-        type,
-        length,
+        pkt.type,
+        static_cast<uint32_t>(pkt.len),
         source,
         false});
     while (recentOutgoingPackets.size() > MAX_RECENT_PACKETS)
     {
         recentOutgoingPackets.erase(recentOutgoingPackets.begin());
     }
-    manager.setLastSentSeq(pseq);
+    manager.setLastSentSeq(pkt.seq);
+
+    return manager.getTransportId();
     //LOGI("packet header size %d", s->GetLength());
 }

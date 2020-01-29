@@ -95,13 +95,13 @@ void VoIPController::handleReliablePackets()
 
 bool VoIPController::WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll)
 {
-    bool res = getBestPacketManager().wasLocalAcked(seq);
+    bool res = packetManager.wasLocalAcked(seq);
     if (res || !checkAll)
     {
         return res;
     }
 
-    RecentOutgoingPacket *pkt = GetRecentOutgoingPacket(seq);
+    RecentOutgoingPacket *pkt = packetManager.GetRecentOutgoingPacket(seq);
     if (!pkt)
         return false;
     return pkt->ackTime != 0.0;

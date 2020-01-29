@@ -10,30 +10,30 @@ Endpoint &VoIPController::GetRemoteEndpoint()
 
 Endpoint *VoIPController::GetEndpointForPacket(const PendingOutgoingPacket &pkt)
 {
-    Endpoint *endpoint = nullptr;
-    if (pkt.endpoint)
+    return GetEndpointById(pkt.endpoint);
+}
+
+Endpoint *VoIPController::GetEndpointById(const int64_t id)
+{
+    if (id)
     {
         try
         {
-            endpoint = &endpoints.at(pkt.endpoint);
+            return &endpoints.at(id);
         }
         catch (out_of_range &x)
         {
-            LOGW("Unable to send packet via nonexistent endpoint %" PRIu64, pkt.endpoint);
+            LOGW("Unable to send packet via nonexistent endpoint %" PRIu64, id);
             return NULL;
         }
     }
-    if (!endpoint)
-        endpoint = &endpoints.at(currentEndpoint);
-    return endpoint;
+    return &endpoints.at(currentEndpoint);
 }
-
 
 int64_t VoIPController::GetPreferredRelayID()
 {
     return preferredRelay;
 }
-
 
 void VoIPController::SetRemoteEndpoints(vector<Endpoint> endpoints, bool allowP2p, int32_t connectionMaxLayer)
 {
@@ -68,10 +68,6 @@ void VoIPController::SetRemoteEndpoints(vector<Endpoint> endpoints, bool allowP2
     }
     AddIPv6Relays();
 }
-
-
-
-
 
 void VoIPController::AddIPv6Relays()
 {
@@ -149,4 +145,3 @@ void VoIPController::AddTCPRelays()
         didAddTcpRelays = true;
     }
 }
-

@@ -18,7 +18,7 @@ double VoIPController::GetAverageRTT()
         {
             double res = 0;
             int count = 0;
-            for (const auto &packet : recentOutgoingPackets)
+            for (const auto &packet : pm.getRecentOutgoingPackets())
             {
                 if (packet.rttTime)
                 {

@@ -41,7 +41,6 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
         }
         canSend = endpoint->socket && endpoint->socket->IsReadyToSend();
     }
-    conctl.PacketSent(pkt.seq, pkt.len);
     if (!canSend)
     {
         if (enqueue)
@@ -51,13 +50,12 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
         }
         return false;
     }
+    conctl.PacketSent(pkt.seq, pkt.len);
     if ((endpoint->type == Endpoint::Type::TCP_RELAY && useTCP) || (endpoint->type != Endpoint::Type::TCP_RELAY && useUDP))
     {
-        //BufferOutputStream p(buf, sizeof(buf));
-        BufferOutputStream p(1500);
-        WritePacketHeader(pkt.seq, &p, pkt.type, (uint32_t)pkt.len, source);
-        p.WriteBytes(pkt.data);
-        SendPacket(p.GetBuffer(), p.GetLength(), *endpoint, pkt);
+        BufferOutputStream out(1500);
+        uint8_t transportId = WritePacketHeader(pkt, out, source);
+        SendPacket(out.GetBuffer(), out.GetLength(), *endpoint, pkt.seq, pkt.type, transportId);
         if (pkt.type == PKT_STREAM_DATA)
         {
             unsentStreamPackets--;
@@ -66,7 +64,7 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
     return true;
 }
 
-void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, PendingOutgoingPacket &srcPacket)
+void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, uint32_t seq, uint8_t type, uint8_t transportId)
 {
     if (stopping)
         return;
@@ -84,9 +82,9 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, P
     }
 
     //LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
-    //#ifdef LOG_PACKETS
-    LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s", ep.GetAddress().ToString().c_str(), ep.port, srcPacket.seq, (unsigned int)out.GetLength(), GetPacketTypeString(srcPacket.type).c_str());
-    //#endif
+    #ifdef LOG_PACKETS
+    LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, transportId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), transportId);
+    #endif
 
     rawSendQueue.Put(
         RawPendingOutgoingPacket{
@@ -266,17 +264,6 @@ void VoIPController::TrySendOutgoingPackets()
 }
 
 
-RecentOutgoingPacket *VoIPController::GetRecentOutgoingPacket(uint32_t seq)
-{
-    for (RecentOutgoingPacket &opkt : recentOutgoingPackets)
-    {
-        if (opkt.seq == seq)
-        {
-            return &opkt;
-        }
-    }
-    return nullptr;
-}
 
 void VoIPController::SendRelayPings()
 {
@@ -363,16 +350,17 @@ void VoIPController::SendRelayPings()
     }
 }
 
-void VoIPController::SendNopPacket()
+void VoIPController::SendNopPacket(PacketManager &pm)
 {
     if (state != STATE_ESTABLISHED)
         return;
+    PacketSender *source = pm.getTransportId() == 0xFF ? nullptr : outgoingStreams[pm.getTransportId()]->packetSender.get();
     SendOrEnqueuePacket(PendingOutgoingPacket{
-        /*.seq=*/(firstSentPing = packetManager.nextLocalSeq()),
+        /*.seq=*/(firstSentPing = pm.nextLocalSeq()),
         /*.type=*/PKT_NOP,
         /*.len=*/0,
         /*.data=*/Buffer(),
-        /*.endpoint=*/0});
+        /*.endpoint=*/0}, source);
 }
 
 void VoIPController::SendPublicEndpointsRequest()

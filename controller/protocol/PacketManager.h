@@ -26,7 +26,7 @@ public:
     virtual ~PacketManager() = default;
 
     // Transport ID for multiplexing
-    inline uint8_t getTransportId() 
+    inline uint8_t getTransportId()
     {
         return transportId;
     }
@@ -114,5 +114,17 @@ private:
 
     // Recent incoming remote packets
     uint32_t lastRemoteSeqsMask;
+
+public: // Recent outgoing packet list
+    inline std::vector<RecentOutgoingPacket> &getRecentOutgoingPackets()
+    {
+        return recentOutgoingPackets;
+    }
+
+    RecentOutgoingPacket *GetRecentOutgoingPacket(uint32_t seq);
+
+private:
+    // Recent ougoing packets
+    std::vector<RecentOutgoingPacket> recentOutgoingPackets;
 };
 } // namespace tgvoip

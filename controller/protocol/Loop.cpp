@@ -216,12 +216,12 @@ void VoIPController::NetworkPacketReceived(shared_ptr<NetworkPacket> _packet)
     else
         stats.bytesRecvdWifi += (uint64_t)packet.data.Length();
 
-    try
-    {
+    /*try
+    {*/
         ProcessIncomingPacket(packet, endpoints.at(srcEndpointID));
-    }
+    /*}
     catch (out_of_range &x)
     {
         LOGW("Error parsing packet: %s", x.what());
-    }
+    }*/
 }

@@ -8,6 +8,10 @@ namespace tgvoip
 class PacketSender;
 struct RecentOutgoingPacket
 {
+    // For simple NACK reliable resending
+    int64_t endpoint;
+    Buffer data;
+
     uint32_t seq;
     uint16_t id; // for group calls only
     double sendTime;

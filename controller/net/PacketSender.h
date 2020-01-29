@@ -16,7 +16,7 @@ namespace tgvoip
 class PacketSender
 {
 public:
-	PacketSender(VoIPController *controller, const std::shared_ptr<VoIPController::Stream> &stream) : controller(controller), stream(stream), packetManager(stream->id){};
+	PacketSender(VoIPController *controller, const std::shared_ptr<VoIPController::Stream> &stream) : controller(controller), stream(stream), packetManager(stream->id - 1){};
 	virtual ~PacketSender() = default;
 	virtual void PacketAcknowledged(uint32_t seq, double sendTime, double ackTime, uint8_t type, uint32_t size) = 0;
 	virtual void PacketLost(uint32_t seq, uint8_t type, uint32_t size) = 0;
@@ -102,6 +102,8 @@ protected:
 	std::shared_ptr<VoIPController::Stream> stream;
 
 	PacketManager packetManager;
+
+	std::vector<PendingOutgoingPacket> reliableQueue;
 };
 } // namespace tgvoip
 

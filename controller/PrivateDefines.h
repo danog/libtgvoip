@@ -34,7 +34,7 @@ enum ProtocolVersions
 };
 
 #define PROTOCOL_NAME 0x50567247 // "GrVP" in little endian (reversed here)
-#define PROTOCOL_VERSION 10
+#define PROTOCOL_VERSION 9
 #define MIN_PROTOCOL_VERSION 3
 
 #define STREAM_DATA_FLAG_LEN16 0x40
@@ -72,6 +72,7 @@ enum ProtocolVersions
 
 #define XPFLAG_HAS_EXTRA 1
 #define XPFLAG_HAS_RECV_TS 2
+#define XPFLAG_HAS_TRANSPORT_ID 4
 
 #define EXTRA_TYPE_STREAM_FLAGS 1
 #define EXTRA_TYPE_STREAM_CSD 2

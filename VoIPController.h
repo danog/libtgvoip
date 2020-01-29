@@ -437,8 +437,8 @@ public:
 protected:
     virtual void ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcEndpoint);
     virtual void ProcessExtraData(Buffer &data);
-    virtual void WritePacketHeader(uint32_t seq, BufferOutputStream *s, unsigned char type, uint32_t length, PacketSender *source);
-    virtual void SendPacket(unsigned char *data, size_t len, Endpoint &ep, PendingOutgoingPacket &srcPacket);
+    virtual uint8_t WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutputStream &s, PacketSender *source);
+    virtual void SendPacket(unsigned char *data, size_t len, Endpoint &ep, uint32_t seq, uint8_t type, uint8_t transportId);
     virtual void SendInit();
     virtual void SendUdpPing(Endpoint &endpoint);
     virtual void SendRelayPings();
@@ -451,6 +451,7 @@ protected:
     std::shared_ptr<Stream> GetStreamByType(StreamType type, bool outgoing);
     std::shared_ptr<Stream> GetStreamByID(unsigned char id, bool outgoing);
     Endpoint *GetEndpointForPacket(const PendingOutgoingPacket &pkt);
+    Endpoint *GetEndpointById(const int64_t id);
     bool SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue = true, PacketSender *source = NULL);
     CellularCarrierInfo GetCarrierInfo();
 
@@ -502,7 +503,7 @@ private:
     void UpdateAudioBitrate();
     void UpdateSignalBars();
     void UpdateReliablePackets();
-    void SendNopPacket();
+    void SendNopPacket(PacketManager &pm);
     void TickJitterBufferAndCongestionControl();
     void ResetUdpAvailability();
     inline static std::string NetworkTypeToString(int type)
@@ -572,7 +573,6 @@ private:
 
     void SetupOutgoingVideoStream();
     bool WasOutgoingPacketAcknowledged(uint32_t seq, bool checkAll = true);
-    RecentOutgoingPacket *GetRecentOutgoingPacket(uint32_t seq);
     void NetworkPacketReceived(std::shared_ptr<NetworkPacket> packet);
     void TrySendOutgoingPackets();
 
@@ -615,9 +615,6 @@ private:
     int lastError;
     bool micMuted = false;
     uint32_t maxBitrate;
-
-    // Recent ougoing packets
-    std::vector<RecentOutgoingPacket> recentOutgoingPackets;
 
     //
     std::vector<std::shared_ptr<Stream>> outgoingStreams;

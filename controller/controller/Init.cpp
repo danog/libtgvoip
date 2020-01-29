@@ -42,8 +42,6 @@ VoIPController::VoIPController() : rawSendQueue(64)
     stm->packetSender = std::make_unique<AudioPacketSender>(this, nullptr, stm);
 
     outgoingStreams.push_back(stm);
-
-    recentOutgoingPackets.reserve(MAX_RECENT_PACKETS);
 }
 
 void VoIPController::InitializeTimers()

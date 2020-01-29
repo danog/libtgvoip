@@ -96,7 +96,7 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 	{
 		if (!slots[i].buffer.IsEmpty() && slots[i].timestamp == pkt->timestamp)
 		{
-			//LOGV("Found existing packet for timestamp %u, overwrite %d", pkt->timestamp, overwriteExisting);
+			LOGV("Found existing packet for timestamp %u, overwrite %d", pkt->timestamp, overwriteExisting);
 			if (overwriteExisting)
 			{
 				slots[i].buffer.CopyFrom(pkt->buffer, pkt->size);
@@ -113,7 +113,7 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 		outstandingDelayChange = 0;
 		nextFetchTimestamp = static_cast<int64_t>(static_cast<int64_t>(pkt->timestamp) - step * minDelay);
 		first = true;
-		LOGI("jitter: resyncing, next timeDecodeNextFramestamp = %lld (step=%d, minDelay=%f)", (long long int)nextFetchTimestamp, step, minDelay);
+		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%f)", (long long int)nextFetchTimestamp, step, minDelay);
 	}
 
 	for (i = 0; i < JITTER_SLOT_COUNT; i++)
@@ -154,13 +154,13 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 	// Late packet check
 	if (pkt->timestamp < nextFetchTimestamp)
 	{
-		//LOGW("jitter: would drop packet with timestamp %d because it is late but not hopelessly", pkt->timestamp);
+		LOGW("jitter: would drop packet with timestamp %d because it is late but not hopelessly", pkt->timestamp);
 		latePacketCount++;
 		lostPackets--;
 	}
 	else if (pkt->timestamp < nextFetchTimestamp - 1)
 	{
-		//LOGW("jitter: dropping packet with timestamp %d because it is too late", pkt->timestamp);
+		LOGW("jitter: dropping packet with timestamp %d because it is too late", pkt->timestamp);
 		latePacketCount++;
 		return;
 	}

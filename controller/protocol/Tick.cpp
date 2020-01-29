@@ -136,7 +136,7 @@ void VoIPController::TickJitterBufferAndCongestionControl()
     double currentTime = GetCurrentTime();
     double rtt = GetAverageRTT();
     double packetLossTimeout = std::max(rtt * 2.0, 0.1);
-    for (RecentOutgoingPacket &pkt : recentOutgoingPackets)
+    for (RecentOutgoingPacket &pkt : getBestPacketManager().getRecentOutgoingPackets())
     {
         if (pkt.ackTime != 0.0 || pkt.lost)
             continue;

@@ -6,6 +6,7 @@ using namespace std;
 
 PacketManager::PacketManager(uint8_t transportId) : transportId(transportId)
 {
+    recentOutgoingPackets.reserve(MAX_RECENT_PACKETS);
 }
 void PacketManager::ackLocal(uint32_t ackId, uint32_t mask)
 {
@@ -60,4 +61,16 @@ bool PacketManager::ackRemoteSeq(uint32_t ackId)
         return false;
     }
     return true;
+}
+
+RecentOutgoingPacket *PacketManager::GetRecentOutgoingPacket(uint32_t seq)
+{
+    for (RecentOutgoingPacket &opkt : recentOutgoingPackets)
+    {
+        if (opkt.seq == seq)
+        {
+            return &opkt;
+        }
+    }
+    return nullptr;
 }
