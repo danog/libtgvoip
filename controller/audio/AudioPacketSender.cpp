@@ -115,7 +115,7 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
             }
             else
             {
-                double retry = stream->frameDuration / (resendCount * 2.0);
+                double retry = stream->frameDuration / (resendCount * 4.0);
 
                 SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), retry / 1000.0, (stream->frameDuration * 4) / 1000.0 , resendCount); // Todo Optimize RTT
             }
@@ -179,7 +179,7 @@ double AudioPacketSender::setPacketLoss(double percent)
 
     if (percent > 2)
     {
-        resendCount = std::clamp(percent / 2, 0.0, 5.0);
+        resendCount = std::clamp(percent / 2, 0.0, 10.0);
     }
     /*else if (percent > 5)
     {

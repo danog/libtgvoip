@@ -33,6 +33,8 @@ VoIPController::VoIPController() : rawSendQueue(64)
     maxUnsentStreamPackets = ServerConfig::GetSharedInstance()->GetUInt("max_unsent_stream_packets", 2);
     unackNopThreshold = ServerConfig::GetSharedInstance()->GetUInt("unack_nop_threshold", 10);
 
+    //audioBitrateStepDecr /= 2;
+
     shared_ptr<Stream> stm = make_shared<Stream>();
     stm->id = 1;
     stm->type = STREAM_TYPE_AUDIO;
