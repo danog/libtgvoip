@@ -8,16 +8,31 @@
 #include <dlfcn.h>
 #include "../../tools/logging.h"
 
-#define DECLARE_DL_FUNCTION(name) typeof(name)* AudioPulse::_import_##name=NULL
-#define CHECK_DL_ERROR(res, msg) if(!res){LOGE(msg ": %s", dlerror()); return false;}
-#define LOAD_DL_FUNCTION(name) {_import_##name=(typeof(_import_##name))dlsym(lib, #name); CHECK_DL_ERROR(_import_##name, "Error getting entry point for " #name);}
-#define CHECK_ERROR(res, msg) if(res!=0){LOGE(msg " failed: %s", pa_strerror(res)); failed=true; return;}
+#define DECLARE_DL_FUNCTION(name) typeof(name) *AudioPulse::_import_##name = NULL
+#define CHECK_DL_ERROR(res, msg)     \
+	if (!res)                        \
+	{                                \
+		LOGE(msg ": %s", dlerror()); \
+		return false;                \
+	}
+#define LOAD_DL_FUNCTION(name)                                                  \
+	{                                                                           \
+		_import_##name = (typeof(_import_##name))dlsym(lib, #name);             \
+		CHECK_DL_ERROR(_import_##name, "Error getting entry point for " #name); \
+	}
+#define CHECK_ERROR(res, msg)                      \
+	if (res != 0)                                  \
+	{                                              \
+		LOGE(msg " failed: %s", pa_strerror(res)); \
+		failed = true;                             \
+		return;                                    \
+	}
 
 using namespace tgvoip;
 using namespace tgvoip::audio;
 
-bool AudioPulse::loaded=false;
-void* AudioPulse::lib=NULL;
+bool AudioPulse::loaded = false;
+void *AudioPulse::lib = NULL;
 
 DECLARE_DL_FUNCTION(pa_threaded_mainloop_new);
 DECLARE_DL_FUNCTION(pa_threaded_mainloop_get_api);
@@ -65,14 +80,16 @@ DECLARE_DL_FUNCTION(pa_stream_get_latency);
 
 #include "PulseFunctions.h"
 
-bool AudioPulse::Load(){
-	if(loaded)
+bool AudioPulse::Load()
+{
+	if (loaded)
 		return true;
 
-	lib=dlopen("libpulse.so.0", RTLD_LAZY);
-	if(!lib)
-		lib=dlopen("libpulse.so", RTLD_LAZY);
-	if(!lib){
+	lib = dlopen("libpulse.so.0", RTLD_LAZY);
+	if (!lib)
+		lib = dlopen("libpulse.so", RTLD_LAZY);
+	if (!lib)
+	{
 		LOGE("Error loading libpulse: %s", dlerror());
 		return false;
 	}
@@ -121,162 +138,179 @@ bool AudioPulse::Load(){
 	LOAD_DL_FUNCTION(pa_proplist_free);
 	LOAD_DL_FUNCTION(pa_stream_get_latency);
 
-	loaded=true;
+	loaded = true;
 	return true;
 }
 
-AudioPulse::AudioPulse(std::string inputDevice, std::string outputDevice){
-	if(!Load()){
-		failed=true;
+AudioPulse::AudioPulse(std::string inputDevice, std::string outputDevice)
+{
+	if (!Load())
+	{
+		failed = true;
 		LOGE("Failed to load libpulse");
 		return;
 	}
-		
-	mainloop=pa_threaded_mainloop_new();
-	if(!mainloop){
+
+	mainloop = pa_threaded_mainloop_new();
+	if (!mainloop)
+	{
 		LOGE("Error initializing PulseAudio (pa_threaded_mainloop_new)");
-		failed=true;
+		failed = true;
 		return;
 	}
-	mainloopApi=pa_threaded_mainloop_get_api(mainloop);
+	mainloopApi = pa_threaded_mainloop_get_api(mainloop);
 #ifndef MAXPATHLEN
 	char exeName[20];
 #else
 	char exePath[MAXPATHLEN];
 	char exeName[MAXPATHLEN];
-	ssize_t lres=readlink("/proc/self/exe", exePath, sizeof(exePath));
-	if(lres==-1)
-		lres=readlink("/proc/curproc/file", exePath, sizeof(exePath));
-	if(lres==-1)
-		lres=readlink("/proc/curproc/exe", exePath, sizeof(exePath));
-	if(lres>0){
+	ssize_t lres = readlink("/proc/self/exe", exePath, sizeof(exePath));
+	if (lres == -1)
+		lres = readlink("/proc/curproc/file", exePath, sizeof(exePath));
+	if (lres == -1)
+		lres = readlink("/proc/curproc/exe", exePath, sizeof(exePath));
+	if (lres > 0)
+	{
 		strcpy(exeName, basename(exePath));
-	}else
+	}
+	else
 #endif
 	{
 		snprintf(exeName, sizeof(exeName), "Process %d", getpid());
 	}
-	pa_proplist* proplist=pa_proplist_new();
+	pa_proplist *proplist = pa_proplist_new();
 	pa_proplist_sets(proplist, PA_PROP_MEDIA_ROLE, "phone");
-	context=pa_context_new_with_proplist(mainloopApi, exeName, proplist);
+	context = pa_context_new_with_proplist(mainloopApi, exeName, proplist);
 	pa_proplist_free(proplist);
-	if(!context){
+	if (!context)
+	{
 		LOGE("Error initializing PulseAudio (pa_context_new)");
-		failed=true;
+		failed = true;
 		return;
 	}
-	pa_context_set_state_callback(context, [](pa_context* context, void* arg){
-		AudioPulse* self=reinterpret_cast<AudioPulse*>(arg);
+	pa_context_set_state_callback(context, [](pa_context *context, void *arg) {
+		AudioPulse *self = reinterpret_cast<AudioPulse *>(arg);
 		pa_threaded_mainloop_signal(self->mainloop, 0);
-	}, this);
+	},
+								  this);
 	pa_threaded_mainloop_lock(mainloop);
-	isLocked=true;
-	int err=pa_threaded_mainloop_start(mainloop);
+	isLocked = true;
+	int err = pa_threaded_mainloop_start(mainloop);
 	CHECK_ERROR(err, "pa_threaded_mainloop_start");
-	didStart=true;
+	didStart = true;
 
-	err=pa_context_connect(context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL);
+	err = pa_context_connect(context, NULL, PA_CONTEXT_NOAUTOSPAWN, NULL);
 	CHECK_ERROR(err, "pa_context_connect");
 
-	while(true){
-		pa_context_state_t contextState=pa_context_get_state(context);
-		if(!PA_CONTEXT_IS_GOOD(contextState)){
+	while (true)
+	{
+		pa_context_state_t contextState = pa_context_get_state(context);
+		if (!PA_CONTEXT_IS_GOOD(contextState))
+		{
 			LOGE("Error initializing PulseAudio (PA_CONTEXT_IS_GOOD)");
-			failed=true;
+			failed = true;
 			return;
 		}
-		if(contextState==PA_CONTEXT_READY)
+		if (contextState == PA_CONTEXT_READY)
 			break;
 		pa_threaded_mainloop_wait(mainloop);
 	}
 	pa_threaded_mainloop_unlock(mainloop);
-	isLocked=false;
+	isLocked = false;
 
-	output=new AudioOutputPulse(context, mainloop, outputDevice);
-	input=new AudioInputPulse(context, mainloop, inputDevice);
+	output = std::make_shared<AudioOutputPulse>(context, mainloop, outputDevice);
+	input = std::make_shared<AudioInputPulse>(context, mainloop, inputDevice);
 }
 
-AudioPulse::~AudioPulse(){
-	if(mainloop && didStart){
-		if(isLocked)
+AudioPulse::~AudioPulse()
+{
+	if (mainloop && didStart)
+	{
+		if (isLocked)
 			pa_threaded_mainloop_unlock(mainloop);
 		pa_threaded_mainloop_stop(mainloop);
 	}
-	
-	if(input)
-		delete input;
-	if(output)
-		delete output;
 
-	if(context){
+	if (context)
+	{
 		pa_context_disconnect(context);
 		pa_context_unref(context);
 	}
-	if(mainloop)
+	if (mainloop)
 		pa_threaded_mainloop_free(mainloop);
 }
 
-AudioOutput* AudioPulse::GetOutput(){
+std::shared_ptr<AudioInput> AudioPulse::GetOutput()
+{
 	return output;
 }
 
-AudioInput* AudioPulse::GetInput(){
+std::shared_ptr<AudioInput> AudioPulse::GetInput()
+{
 	return input;
 }
 
-bool AudioPulse::DoOneOperation(std::function<pa_operation*(pa_context*)> f){
-	if(!Load())
+bool AudioPulse::DoOneOperation(std::function<pa_operation *(pa_context *)> f)
+{
+	if (!Load())
 		return false;
 
-	pa_mainloop* ml;
-	pa_mainloop_api* mlAPI;
-	pa_context* ctx;
-	pa_operation* op=NULL;
-	int paReady=0;
+	pa_mainloop *ml;
+	pa_mainloop_api *mlAPI;
+	pa_context *ctx;
+	pa_operation *op = NULL;
+	int paReady = 0;
 
-	ml=pa_mainloop_new();
-	mlAPI=pa_mainloop_get_api(ml);
-	ctx=pa_context_new(mlAPI, "libtgvoip");
+	ml = pa_mainloop_new();
+	mlAPI = pa_mainloop_get_api(ml);
+	ctx = pa_context_new(mlAPI, "libtgvoip");
 
 	pa_context_connect(ctx, NULL, PA_CONTEXT_NOFLAGS, NULL);
-	pa_context_set_state_callback(ctx, [](pa_context* context, void* arg){
+	pa_context_set_state_callback(ctx, [](pa_context *context, void *arg) {
 		pa_context_state_t state;
-		int* pa_ready=(int*)arg;
+		int *pa_ready = (int *)arg;
 
-		state=pa_context_get_state(context);
-		switch(state){
-			case PA_CONTEXT_UNCONNECTED:
-			case PA_CONTEXT_CONNECTING:
-			case PA_CONTEXT_AUTHORIZING:
-			case PA_CONTEXT_SETTING_NAME:
-			default:
-				break;
-			case PA_CONTEXT_FAILED:
-			case PA_CONTEXT_TERMINATED:
-				*pa_ready=2;
-				break;
-			case PA_CONTEXT_READY:
-				*pa_ready=1;
-				break;
+		state = pa_context_get_state(context);
+		switch (state)
+		{
+		case PA_CONTEXT_UNCONNECTED:
+		case PA_CONTEXT_CONNECTING:
+		case PA_CONTEXT_AUTHORIZING:
+		case PA_CONTEXT_SETTING_NAME:
+		default:
+			break;
+		case PA_CONTEXT_FAILED:
+		case PA_CONTEXT_TERMINATED:
+			*pa_ready = 2;
+			break;
+		case PA_CONTEXT_READY:
+			*pa_ready = 1;
+			break;
 		}
-	}, &paReady);
+	},
+								  &paReady);
 
-	while(true){
-		if(paReady==0){
+	while (true)
+	{
+		if (paReady == 0)
+		{
 			pa_mainloop_iterate(ml, 1, NULL);
 			continue;
 		}
-		if(paReady==2){
+		if (paReady == 2)
+		{
 			pa_context_disconnect(ctx);
 			pa_context_unref(ctx);
 			pa_mainloop_free(ml);
 			return false;
 		}
-		if(!op){
-			op=f(ctx);
+		if (!op)
+		{
+			op = f(ctx);
 			continue;
 		}
-		if(pa_operation_get_state(op)==PA_OPERATION_DONE){
+		if (pa_operation_get_state(op) == PA_OPERATION_DONE)
+		{
 			pa_operation_unref(op);
 			pa_context_disconnect(ctx);
 			pa_context_unref(ctx);
