@@ -142,7 +142,7 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 	if (expectNextAtTime != 0)
 	{
 		double dev = expectNextAtTime - time;
-		LOGV("packet dev %f", dev);
+		//LOGV("packet dev %f", dev);
 		deviationHistory.Add(dev);
 		expectNextAtTime += step / 1000.0;
 	}
@@ -154,13 +154,13 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 	// Late packet check
 	if (pkt->timestamp < nextFetchTimestamp)
 	{
-		LOGW("jitter: would drop packet with timestamp %d because it is late but not hopelessly", pkt->timestamp);
+		//LOGW("jitter: would drop packet with timestamp %d because it is late but not hopelessly", pkt->timestamp);
 		latePacketCount++;
 		lostPackets--;
 	}
 	else if (pkt->timestamp < nextFetchTimestamp - 1)
 	{
-		LOGW("jitter: dropping packet with timestamp %d because it is too late", pkt->timestamp);
+		//LOGW("jitter: dropping packet with timestamp %d because it is too late", pkt->timestamp);
 		latePacketCount++;
 		return;
 	}

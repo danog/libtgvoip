@@ -232,8 +232,8 @@ int tgvoip::OpusDecoder::DecodeNextFrame()
 	{
 		fec = true;
 		len = jitterBuffer->HandleOutput(buffer, 8192, 0, false, playbackDuration, isEC);
-		//if(len)
-		//	LOGV("Trying FEC...");
+		/*if (len)
+			LOGV("Trying FEC...");*/
 	}
 	int size;
 	if (len)
@@ -280,11 +280,13 @@ int tgvoip::OpusDecoder::DecodeNextFrame()
 	remainingDataLen = size;
 	if (playbackDuration == 80)
 	{
+		//LOGW("Rescaling to 80");
 		processedBuffer = buffer;
 		audio::Resampler::Rescale60To80((int16_t *)decodeBuffer, (int16_t *)processedBuffer);
 	}
 	else if (playbackDuration == 40)
 	{
+		//LOGW("Rescaling to 40");
 		processedBuffer = buffer;
 		audio::Resampler::Rescale60To40((int16_t *)decodeBuffer, (int16_t *)processedBuffer);
 	}

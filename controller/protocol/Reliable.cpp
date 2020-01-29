@@ -37,17 +37,17 @@ void VoIPController::UpdateReliablePackets()
     {
         if (qp->timeout > 0 && qp->firstSentTime > 0 && GetCurrentTime() - qp->firstSentTime >= qp->timeout)
         {
-//#ifdef LOG_PACKETS
+#ifdef LOG_PACKETS
             LOGD("Removing queued packet because of timeout");
-//#endif
+#endif
             qp = reliablePackets.erase(qp);
             continue;
         }
         if (!qp->tries--)
         {
-//#ifdef LOG_PACKETS
+#ifdef LOG_PACKETS
             LOGD("Removing queued packet because of no more tries");
-//#endif
+#endif
             qp = reliablePackets.erase(qp);
             continue;
         }
@@ -57,9 +57,9 @@ void VoIPController::UpdateReliablePackets()
             uint32_t seq = packetManager.nextLocalSeq();
             qp->seqs.Add(seq);
             qp->lastSentTime = GetCurrentTime();
-//#ifdef LOG_PACKETS
+#ifdef LOG_PACKETS
             LOGD("Sending reliable queued packet, seq=%u, type=%u, len=%lu", seq, qp->type, qp->data.Length());
-//#endif
+#endif
             Buffer buf(qp->data.Length());
             if (qp->firstSentTime == 0)
                 qp->firstSentTime = qp->lastSentTime;

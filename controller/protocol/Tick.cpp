@@ -187,11 +187,13 @@ void VoIPController::UpdateCongestion()
         uint32_t sendLossCount = conctl.GetSendLossCount();
         sendLossCountHistory.Add(sendLossCount - prevSendLossCount);
         prevSendLossCount = sendLossCount;
+        
         uint32_t lastSentSeq = getBestPacketManager().getLastSentSeq();
-        double packetsPerSec = 1000 / (lastSentSeq - prevSeq);
+        packetCountHistory.Add(lastSentSeq - prevSeq);
         prevSeq = lastSentSeq;
+
         //double packetsPerSec = 1000 / (double)outgoingStreams[0]->frameDuration;
-        double avgSendLossCount = sendLossCountHistory.Average() / packetsPerSec;
+        double avgSendLossCount = sendLossCountHistory.Average() / packetCountHistory.Average();
         LOGE("avg send loss: %.3f%%", avgSendLossCount*100);
 
         AudioPacketSender *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get());

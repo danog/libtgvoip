@@ -585,6 +585,7 @@ private:
     // Acks now handled in Ack
 
     HistoricBuffer<uint32_t, 10, double> sendLossCountHistory;
+    HistoricBuffer<uint32_t, 10, double> packetCountHistory;
     uint32_t audioTimestampIn = 0;
 
     std::shared_ptr<OpusEncoder> encoder;
