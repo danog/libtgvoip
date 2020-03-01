@@ -40,11 +40,11 @@ tgvoip::OpusEncoder::OpusEncoder(const std::shared_ptr<MediaStreamItf> &source, 
 {
 	this->source = source;
 	source->SetCallback(tgvoip::OpusEncoder::Callback, this);
-	enc = opus_encoder_create(48000, 1, OPUS_APPLICATION_VOIP, NULL);
+	enc = opus_encoder_create(48000, 1, OPUS_APPLICATION_AUDIO, NULL);
 	opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(10));
 	opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC(1));
 	opus_encoder_ctl(enc, OPUS_SET_INBAND_FEC(1));
-	opus_encoder_ctl(enc, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
+	opus_encoder_ctl(enc, OPUS_SET_SIGNAL(OPUS_SIGNAL_MUSIC));
 	opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_AUTO));
 	requestedBitrate = 20000;
 	currentBitrate = 0;
@@ -61,9 +61,9 @@ tgvoip::OpusEncoder::OpusEncoder(const std::shared_ptr<MediaStreamItf> &source, 
 
 	if (needSecondary)
 	{
-		secondaryEncoder = opus_encoder_create(48000, 1, OPUS_APPLICATION_VOIP, NULL);
+		secondaryEncoder = opus_encoder_create(48000, 1, OPUS_APPLICATION_AUDIO, NULL);
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_COMPLEXITY(10));
-		opus_encoder_ctl(secondaryEncoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
+		opus_encoder_ctl(secondaryEncoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_MUSIC));
 		opus_encoder_ctl(secondaryEncoder, OPUS_SET_BITRATE(8000));
 	}
 	else
