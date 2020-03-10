@@ -211,7 +211,7 @@ public:
 	{
 		return data;
 	}
-	void CopyFrom(const Buffer &other, size_t count, size_t srcOffset = 0, size_t dstOffset = 0)
+	void CopyFromOtherBuffer(const Buffer &other, size_t count, size_t srcOffset = 0, size_t dstOffset = 0)
 	{
 		if (!other.data)
 			throw std::invalid_argument("CopyFrom can't copy from NULL");
@@ -248,7 +248,7 @@ public:
 		if (other.IsEmpty())
 			return Buffer();
 		Buffer buf(other.length);
-		buf.CopyFrom(other, other.length);
+		buf.CopyFromOtherBuffer(other, other.length);
 		return buf;
 	}
 	static Buffer CopyOf(const Buffer &other, size_t offset, size_t length)
@@ -256,7 +256,7 @@ public:
 		if (offset + length > other.Length())
 			throw std::out_of_range("offset+length out of bounds");
 		Buffer buf(length);
-		buf.CopyFrom(other, length, offset);
+		buf.CopyFromOtherBuffer(other, length, offset);
 		return buf;
 	}
 	static Buffer Wrap(unsigned char *data, size_t size, const std::function<void(void *)> &freeFn, const std::function<void *(void *, size_t)> &reallocFn)

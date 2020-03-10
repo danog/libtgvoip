@@ -22,7 +22,7 @@ enum class TgVoipEndpointType
     TcpRelay
 };
 
-struct TgVoipEndpointHost
+struct TgVoipEdpointHost
 {
     std::string ipv4;
     std::string ipv6;
@@ -31,7 +31,7 @@ struct TgVoipEndpointHost
 struct TgVoipEndpoint
 {
     int64_t endpointId;
-    TgVoipEndpointHost host;
+    TgVoipEdpointHost host;
     uint16_t port;
     TgVoipEndpointType type;
     unsigned char peerTag[16];
@@ -89,7 +89,11 @@ struct TgVoipConfig
     bool enableNS;
     bool enableAGC;
     bool enableCallUpgrade;
+#ifndef _WIN32
     std::string logPath;
+#else
+    std::wstring logPath;
+#endif
     int maxApiLayer;
 };
 

@@ -33,6 +33,7 @@ public:
 private:
 	size_t (*callback)(unsigned char *, size_t, void *) = NULL;
 	void *callbackParam;
+	Mutex callbackMutex;
 };
 
 class AudioMixer : public MediaStreamItf

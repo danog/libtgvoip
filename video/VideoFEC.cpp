@@ -27,7 +27,7 @@ Buffer ParityFEC::Encode(std::vector<Buffer>& packets){
 		_result[maxSize+1] ^= (uint8_t)(len >> 8);
 	}
 
-	return std::move(result);
+	return result;
 }
 
 Buffer ParityFEC::Decode(std::vector<Buffer>& dataPackets, Buffer &fecPacket){
@@ -68,5 +68,5 @@ Buffer ParityFEC::Decode(std::vector<Buffer>& dataPackets, Buffer &fecPacket){
 	LOGV("ParityFEC decoded packet size %u", len);
 
 	result.Resize(len);
-	return std::move(result);
+	return result;
 }

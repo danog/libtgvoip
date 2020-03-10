@@ -64,7 +64,7 @@ void VoIPController::UpdateReliablePackets()
             if (qp->firstSentTime == 0)
                 qp->firstSentTime = qp->lastSentTime;
             if (qp->data.Length())
-                buf.CopyFrom(qp->data, qp->data.Length());
+                buf.CopyFromOtherBuffer(qp->data, qp->data.Length());
             packetsToSend.push_back(PendingOutgoingPacket{
                 /*.seq=*/seq,
                 /*.type=*/qp->type,

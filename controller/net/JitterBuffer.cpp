@@ -99,7 +99,7 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 			//LOGV("Found existing packet for timestamp %u, overwrite %d", pkt->timestamp, overwriteExisting);
 			if (overwriteExisting)
 			{
-				slots[i].buffer.CopyFrom(pkt->buffer, pkt->size);
+				slots[i].buffer.CopyFromOtherBuffer(pkt->buffer, pkt->size);
 				slots[i].size = pkt->size;
 				slots[i].isEC = pkt->isEC;
 			}
@@ -113,7 +113,7 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 		outstandingDelayChange = 0;
 		nextFetchTimestamp = static_cast<int64_t>(static_cast<int64_t>(pkt->timestamp) - step * minDelay);
 		first = true;
-		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%f)", (long long int)nextFetchTimestamp, step, minDelay);
+		LOGI("jitter: resyncing, next timestamp = %lld (step=%d, minDelay=%f)", (long long int)nextFetchTimestamp, step, (double)minDelay);
 	}
 
 	for (i = 0; i < JITTER_SLOT_COUNT; i++)
@@ -194,7 +194,7 @@ void JitterBuffer::PutInternal(jitter_packet_t *pkt, bool overwriteExisting)
 	slots[i].buffer = bufferPool.Get();
 	slots[i].recvTimeDiff = time - prevRecvTime;
 	slots[i].isEC = pkt->isEC;
-	slots[i].buffer.CopyFrom(pkt->buffer, pkt->size);
+	slots[i].buffer.CopyFromOtherBuffer(pkt->buffer, pkt->size);
 #ifdef TGVOIP_DUMP_JITTER_STATS
 	fprintf(dump, "%u\t%.03f\t%d\t%.03f\t%.03f\t%.03f\n", pkt->timestamp, time, GetCurrentDelay(), lastMeasuredJitter, lastMeasuredDelay, minDelay);
 #endif
@@ -322,7 +322,7 @@ int JitterBuffer::GetInternal(jitter_packet_t *pkt, int offset, bool advance)
 			{
 				pkt->size = slots[i].size;
 				pkt->timestamp = slots[i].timestamp;
-				pkt->buffer.CopyFrom(slots[i].buffer, slots[i].size);
+				pkt->buffer.CopyFromOtherBuffer(slots[i].buffer, slots[i].size);
 				pkt->isEC = slots[i].isEC;
 			}
 		}
@@ -428,7 +428,7 @@ void JitterBuffer::Tick()
 		if ((diff > 0 && dontIncMinDelay == 0) || (diff < 0 && dontDecMinDelay == 0))
 		{
 			//nextFetchTimestamp+=diff*(int32_t)step;
-			minDelay += diff;
+			minDelay.store(minDelay + diff);
 			outstandingDelayChange += diff * 60;
 			dontChangeDelay += 32;
 			//LOGD("new delay from stddev %f", minDelay);

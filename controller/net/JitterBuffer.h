@@ -73,8 +73,8 @@ private:
 	Mutex mutex;
 	uint32_t step;
 	std::array<jitter_packet_t, JITTER_SLOT_COUNT> slots{0};
-	std::atomic<int64_t> nextFetchTimestamp = ATOMIC_VAR_INIT(0); // What frame to read next
-	double minDelay = 6;
+	std::atomic<int64_t> nextFetchTimestamp{0}; // What frame to read next (protected for GetSeqTooLate)
+	std::atomic<double> minDelay{6};
 	uint32_t minMinDelay;
 	uint32_t maxMinDelay;
 	uint32_t maxUsedSlots;

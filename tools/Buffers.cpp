@@ -9,7 +9,7 @@
 #include <string.h>
 #include <exception>
 #include <stdexcept>
-#include <stdlib.h>
+#include <cstdlib>
 #include "tools/logging.h"
 
 using namespace tgvoip;
@@ -145,7 +145,7 @@ BufferOutputStream::BufferOutputStream(size_t size_)
 	  bufferProvided(false)
 
 {
-	buffer = (unsigned char *)malloc(size_);
+	buffer = reinterpret_cast<unsigned char *>(std::malloc(size_));
 	if (!buffer)
 		throw std::bad_alloc();
 	bufferProvided = false;
@@ -239,18 +239,16 @@ void BufferOutputStream::ExpandBufferIfNeeded(size_t need)
 		{
 			throw std::out_of_range("buffer overflow");
 		}
-		if (need < 1024)
+		size += std::max(need, size_t{1024});
+		unsigned char *newBuffer = reinterpret_cast<unsigned char*>(std::realloc(buffer, size));
+		if (!newBuffer)
 		{
-			buffer = (unsigned char *)realloc(buffer, size + 1024);
-			size += 1024;
-		}
-		else
-		{
-			buffer = (unsigned char *)realloc(buffer, size + need);
-			size += need;
-		}
-		if (!buffer)
+			std::free(buffer);
+			buffer = nullptr;
+			size = 0;
 			throw std::bad_alloc();
+		}
+		buffer = newBuffer;
 	}
 }
 

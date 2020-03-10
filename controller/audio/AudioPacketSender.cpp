@@ -79,7 +79,7 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         if (hasExtraFEC)
         {
             Buffer ecBuf(secondaryLen);
-            ecBuf.CopyFrom(*secondaryDataBufPtr, 0, secondaryLen);
+            ecBuf.CopyFromOtherBuffer(*secondaryDataBufPtr, secondaryLen);
             if (ecAudioPackets.size() == 4)
             {
                 ecAudioPackets.pop_front();
@@ -135,7 +135,7 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         if (PeerVersion() < 7 && secondaryLen && shittyInternetMode)
         {
             Buffer ecBuf(secondaryLen);
-            ecBuf.CopyFrom(*secondaryDataBufPtr, 0, secondaryLen);
+            ecBuf.CopyFromOtherBuffer(*secondaryDataBufPtr, secondaryLen);
             if (ecAudioPackets.size() == 4)
             {
                 ecAudioPackets.pop_front();
