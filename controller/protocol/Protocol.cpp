@@ -684,7 +684,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                             unsigned char dlen = in.ReadByte();
                             unsigned char data[256];
                             in.ReadBytes(data, dlen);
-                            stm->jitterBuffer->HandleInput(data, dlen, pts - (fecCount - j - 1) * stm->frameDuration, true);
+                            stm->jitterBuffer->HandleInput(data, dlen, pts - (fecCount - j) * stm->frameDuration, true);
                         }
                     }
                 }
@@ -833,7 +833,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                         in.ReadBytes(data, dlen);
                         if (stm->jitterBuffer)
                         {
-                            stm->jitterBuffer->HandleInput(data, dlen, lastTimestamp - (count - i - 1) * stm->frameDuration, true);
+                            stm->jitterBuffer->HandleInput(data, dlen, lastTimestamp - (count - i) * stm->frameDuration, true);
                         }
                     }
                     break;

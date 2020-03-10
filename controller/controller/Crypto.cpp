@@ -26,7 +26,7 @@ size_t VoIPController::decryptPacket(unsigned char *buffer, BufferInputStream &i
         uint32_t _len = _in.ReadUInt32();
         if (_len > _in.Remaining())
             _len = (uint32_t)_in.Remaining();
-        crypto.sha1((uint8_t *)(aesOut), (size_t)(_len + 4), sha);
+        crypto.sha1((uint8_t *)(aesOut), static_cast<size_t>(_len) + 4, sha);
         if (memcmp(msgHash, sha + (SHA1_LENGTH - 16), 16) != 0)
         {
             LOGW("Received packet has wrong hash after decryption");

@@ -78,19 +78,19 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
 
         if (hasExtraFEC)
         {
-            Buffer ecBuf(secondaryLen);
-            ecBuf.CopyFromOtherBuffer(*secondaryDataBufPtr, secondaryLen);
-            if (ecAudioPackets.size() == 4)
-            {
-                ecAudioPackets.pop_front();
-            }
-            ecAudioPackets.push_back(move(ecBuf));
             uint8_t fecCount = std::min(static_cast<uint8_t>(ecAudioPackets.size()), extraEcLevel);
             pkt.WriteByte(fecCount);
             for (auto ecData = ecAudioPackets.end() - fecCount; ecData != ecAudioPackets.end(); ++ecData)
             {
-                pkt.WriteByte((unsigned char)ecData->Length());
+                pkt.WriteByte(static_cast<uint8_t>(ecData->Length()));
                 pkt.WriteBytes(*ecData);
+            }
+            Buffer ecBuf(secondaryLen);
+            ecBuf.CopyFromOtherBuffer(*secondaryDataBufPtr, secondaryLen);
+            ecAudioPackets.push_back(move(ecBuf));
+            while (ecAudioPackets.size() > 4)
+            {
+                ecAudioPackets.pop_front();
             }
         }
 
@@ -117,7 +117,7 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
             {
                 double retry = stream->frameDuration / (resendCount * 4.0);
 
-                SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), retry / 1000.0, (stream->frameDuration * 4) / 1000.0 , resendCount); // Todo Optimize RTT
+                SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), retry / 1000.0, (stream->frameDuration * 4) / 1000.0, resendCount); // Todo Optimize RTT
             }
         }
         else

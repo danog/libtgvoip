@@ -157,10 +157,12 @@ void NetworkSocketPosix::Send(NetworkPacket packet)
 			addr.sin6_family = AF_INET6;
 		}
 		addr.sin6_port = htons(packet.port);
+		std::lock_guard<std::mutex> lock(m_fd);
 		res = (int)sendto(fd, *packet.data, packet.data.Length(), 0, (const sockaddr *)&addr, sizeof(addr));
 	}
 	else
 	{
+		std::lock_guard<std::mutex> lock(m_fd);
 		res = (int)send(fd, *packet.data, packet.data.Length(), 0);
 	}
 	if (res <= 0)
@@ -210,7 +212,7 @@ bool NetworkSocketPosix::OnReadyToSend()
 	if (!pendingOutgoingPacket.IsEmpty())
 	{
 		Send(std::move(pendingOutgoingPacket));
-		pendingOutgoingPacket = std::move(NetworkPacket::Empty());
+		pendingOutgoingPacket = NetworkPacket::Empty();
 		return false;
 	}
 	readyToSend = true;

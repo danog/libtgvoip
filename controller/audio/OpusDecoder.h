@@ -68,9 +68,10 @@ private:
 	bool enableDTX;
 	size_t silentPacketCount;
 	std::vector<std::shared_ptr<effects::AudioEffect>> postProcEffects;
-	bool async;
-	unsigned char nextBuffer[8192];
-	unsigned char decodeBuffer[8192];
+	//bool async;
+	std::atomic<bool> async;
+	alignas(2) unsigned char nextBuffer[8192];
+	alignas(2) unsigned char decodeBuffer[8192];
 	size_t nextLen;
 	unsigned int packetsPerFrame;
 	ptrdiff_t remainingDataLen;

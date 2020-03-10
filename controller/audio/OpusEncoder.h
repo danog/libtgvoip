@@ -67,7 +67,7 @@ private:
 	uint32_t frameDuration;
 	int packetLossPercent;
 	std::shared_ptr<AudioLevelMeter> levelMeter;
-	bool secondaryEncoderEnabled;
+	std::atomic<bool> secondaryEncoderEnabled;
 	bool vadMode = false;
 	uint32_t vadNoVoiceBitrate;
 	std::vector<std::shared_ptr<effects::AudioEffect>> postProcEffects;

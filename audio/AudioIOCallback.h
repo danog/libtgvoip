@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <memory>
+#include <atomic>
 
 #include "AudioIO.h"
 #include "../tools/threading.h"
@@ -28,7 +29,7 @@ public:
 
 private:
 	void RunThread();
-	bool running = false;
+	std::atomic<bool> running{false};
 	bool recording = false;
 	Thread *thread;
 	std::function<void(int16_t *, size_t)> dataCallback;
@@ -46,7 +47,7 @@ public:
 
 private:
 	void RunThread();
-	bool running = false;
+	std::atomic<bool> running{false};
 	bool playing = false;
 	Thread *thread;
 	std::function<void(int16_t *, size_t)> dataCallback;
