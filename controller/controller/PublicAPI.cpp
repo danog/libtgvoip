@@ -16,9 +16,8 @@ VoIPController::~VoIPController()
         abort();
     }
 
-    for (auto _stm = incomingStreams.begin(); _stm != incomingStreams.end(); ++_stm)
+    for (auto &stm : incomingStreams)
     {
-        shared_ptr<Stream> stm = *_stm;
         LOGD("before stop decoder");
         if (stm->decoder)
         {
@@ -153,7 +152,7 @@ void VoIPController::SetMicMute(bool mute)
         messageThread.Post([this] {
             for (shared_ptr<Stream> &s : outgoingStreams)
             {
-                if (s->type == STREAM_TYPE_AUDIO)
+                if (s->type == StreamInfo::Type::Audio)
                 {
                     s->enabled = !micMuted;
                     if (peerVersion < 6)
@@ -203,7 +202,7 @@ string VoIPController::GetDebugString()
         snprintf(buffer, sizeof(buffer), "%s:%u %dms %d 0x%" PRIx64 " [%s%s]\n", endpoint.address.IsEmpty() ? ("[" + endpoint.v6address.ToString() + "]").c_str() : endpoint.address.ToString().c_str(), endpoint.port, (int)(endpoint.averageRTT * 1000), endpoint.udpPongCount, (uint64_t)endpoint.id, type, currentEndpoint == endpoint.id ? ", IN_USE" : "");
         r += buffer;
     }
-    AudioPacketSender *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get());
+    AudioPacketSender *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType(StreamInfo::Type::Audio, true)->packetSender.get());
     if (sender->getShittyInternetMode())
     {
         snprintf(buffer, sizeof(buffer), "ShittyInternetMode: level %u\n", sender->getExtraEcLevel());

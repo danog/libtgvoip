@@ -399,7 +399,7 @@ public:
     {
         int32_t userID;
         uint8_t id;
-        StreamInfo::StreamType type;
+        StreamInfo::Type type;
         uint32_t codec;
         bool enabled;
         bool extraECEnabled;
@@ -443,7 +443,7 @@ protected:
     void InitializeTimers();
     void ResetEndpointPingStats();
     void ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe, uint16_t rotation);
-    std::shared_ptr<Stream> GetStreamByType(StreamInfo::StreamType type, bool outgoing);
+    std::shared_ptr<Stream> GetStreamByType(StreamInfo::Type type, bool outgoing);
     std::shared_ptr<Stream> GetStreamByID(unsigned char id, bool outgoing);
     Endpoint *GetEndpointForPacket(const PendingOutgoingPacket &pkt);
     Endpoint *GetEndpointById(const int64_t id);

@@ -34,14 +34,14 @@ public:
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
-    enum StreamType : uint8_t
+    enum Type : uint8_t
     {
         Audio = 1,
         Video
     };
 
     uint8_t streamId = 0;
-    StreamType type = StreamType::Audio;
+    Type type = Type::Audio;
     Codec codec;
     uint16_t frameDuration = 0;
     bool enabled = false;

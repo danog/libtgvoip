@@ -133,3 +133,6 @@ enum ProtocolVersions
 #define LEGACY_PFLAG_HAS_SEQ 16
 #define LEGACY_PFLAG_HAS_RECENT_RECV 32
 #define LEGACY_PFLAG_HAS_SENDER_TAG_HASH 64
+
+
+#include "protocol/protocol/Extra.h"

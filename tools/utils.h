@@ -5,6 +5,8 @@
 //
 
 #pragma once
+#include <numeric>
+#include <algorithm>
 
 #define TGVOIP_DISALLOW_COPY_AND_ASSIGN(TypeName) \
 TypeName(const TypeName&) = delete;   \
