@@ -315,7 +315,7 @@ void VideoPacketSender::SendFrame(const Buffer &_frame, uint32_t flags, uint32_t
 				out.GetLength(),
 				Buffer(std::move(out)),
 				0};
-			uint32_t seq = SendPacket(std::move(p));
+			SendPacket(std::move(p));
 		}
 		sentVideoFrames.push_back(sentFrame);
 	});

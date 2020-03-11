@@ -107,7 +107,7 @@ void VoIPController::UpdateAudioOutputState()
     }
     if (audioOutput)
     {
-        LOGV("New audio output state: %d", areAnyAudioStreamsEnabled);
+        LOGV("New audio output state: %d (prev %d)", areAnyAudioStreamsEnabled, audioOutput->IsPlaying());
         if (audioOutput->IsPlaying() != areAnyAudioStreamsEnabled)
         {
             if (areAnyAudioStreamsEnabled)

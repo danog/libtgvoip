@@ -47,7 +47,7 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
             unsentStreamPackets = 0;
         }
         //if (waitingForAcks || dontSendPackets > 0 || ((unsigned int)unsentStreamPackets >= maxUnsentStreamPackets))
-        /*{
+        {
             LOGV("waiting for queue, dropping outgoing audio packet, %d %d %d [%d]", (unsigned int)unsentStreamPackets, waitingForAcks, dontSendPackets, maxUnsentStreamPackets);
             return;
         }*/
@@ -111,7 +111,7 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
                     0,
                 };
 
-                uint32_t seq = SendPacket(std::move(p));
+                SendPacket(std::move(p));
             }
             else
             {

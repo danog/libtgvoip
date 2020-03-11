@@ -59,16 +59,21 @@ void MessageThread::Stop()
 
 void MessageThread::Run()
 {
-	queueMutex.Lock();
+	loopMutex.Lock();
 	while (running)
 	{
 		double currentTime = VoIPController::GetCurrentTime();
-		double waitTimeout = queue.empty() ? DBL_MAX : (queue[0].deliverAt - currentTime);
+		double waitTimeout;
+		{
+			MutexGuard _m(queueAccessMutex);
+			waitTimeout = queue.empty() ? DBL_MAX : (queue[0].deliverAt - currentTime);
+		};
+
 		//LOGW("MessageThread wait timeout %f", waitTimeout);
 		if (waitTimeout > 0.0)
 		{
 #ifdef _WIN32
-			queueMutex.Unlock();
+			loopMutex.Unlock();
 			DWORD actualWaitTimeout = waitTimeout == DBL_MAX ? INFINITE : ((DWORD)round(waitTimeout * 1000.0));
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY != WINAPI_FAMILY_PHONE_APP
 			WaitForSingleObject(event, actualWaitTimeout);
@@ -77,7 +82,7 @@ void MessageThread::Run()
 #endif
 			// we don't really care if a context switch happens here and anything gets added to the queue by another thread
 			// since any new no-delay messages will get delivered on this iteration anyway
-			queueMutex.Lock();
+			loopMutex.Lock();
 #else
 			if (waitTimeout != DBL_MAX)
 			{
@@ -88,32 +93,35 @@ void MessageThread::Run()
 				waitTimeout += (now.tv_usec / 1000000.0);
 				timeout.tv_sec = (time_t)(floor(waitTimeout));
 				timeout.tv_nsec = (long)((waitTimeout - floor(waitTimeout)) * 1000000000.0);
-				pthread_cond_timedwait(&cond, queueMutex.NativeHandle(), &timeout);
+				pthread_cond_timedwait(&cond, loopMutex.NativeHandle(), &timeout);
 			}
 			else
 			{
-				pthread_cond_wait(&cond, queueMutex.NativeHandle());
+				pthread_cond_wait(&cond, loopMutex.NativeHandle());
 			}
 #endif
 		}
 		if (!running)
 		{
-			queueMutex.Unlock();
+			loopMutex.Unlock();
 			return;
 		}
+
 		currentTime = VoIPController::GetCurrentTime();
 		std::vector<Message> msgsToDeliverNow;
-		std::vector<Message> newQueue;
-		std::partition_copy(
-			std::make_move_iterator(queue.begin()),
-			std::make_move_iterator(queue.end()),
-			std::back_inserter(msgsToDeliverNow),
-			std::back_inserter(newQueue),
-			[&currentTime](const Message &message) { // Deliver now if
-				return message.deliverAt == 0.0 || currentTime >= message.deliverAt;
-			}
-		);
-		queue = std::move(newQueue);
+		{
+			MutexGuard _m(queueAccessMutex);
+			std::vector<Message> newQueue;
+			std::partition_copy(
+				std::make_move_iterator(queue.begin()),
+				std::make_move_iterator(queue.end()),
+				std::back_inserter(msgsToDeliverNow),
+				std::back_inserter(newQueue),
+				[&currentTime](const Message &message) { // Deliver now if
+					return message.deliverAt == 0.0 || currentTime >= message.deliverAt;
+				});
+			queue = std::move(newQueue);
+		}
 
 		for (Message &m : msgsToDeliverNow)
 		{
@@ -132,17 +140,13 @@ void MessageThread::Run()
 			}
 		}
 	}
-	queueMutex.Unlock();
+	loopMutex.Unlock();
 }
 
 uint32_t MessageThread::Post(std::function<void()> func, double delay, double interval)
 {
 	assert(delay >= 0);
 	//LOGI("MessageThread post [function] delay %f", delay);
-	if (!IsCurrent())
-	{
-		queueMutex.Lock();
-	}
 	double currentTime = VoIPController::GetCurrentTime();
 	Message m{lastMessageID++, delay == 0.0 ? 0.0 : (currentTime + delay), interval, func};
 	InsertMessageInternal(m);
@@ -153,13 +157,13 @@ uint32_t MessageThread::Post(std::function<void()> func, double delay, double in
 #else
 		pthread_cond_signal(&cond);
 #endif
-		queueMutex.Unlock();
 	}
 	return m.id;
 }
 
 void MessageThread::InsertMessageInternal(MessageThread::Message &m)
 {
+	MutexGuard _m(queueAccessMutex);
 	if (queue.empty())
 	{
 		queue.push_back(m);
@@ -187,26 +191,16 @@ void MessageThread::InsertMessageInternal(MessageThread::Message &m)
 
 void MessageThread::Cancel(uint32_t id)
 {
-	if (!IsCurrent())
-	{
-		queueMutex.Lock();
-	}
+	MutexGuard _m(queueAccessMutex);
 
 	queue.erase(
 		std::remove_if(
-			queue.begin(), 
+			queue.begin(),
 			queue.end(),
 			[&id](const Message &message) {
 				return message.id == id;
-			}
-		),
-		queue.end()
-	);
-
-	if (!IsCurrent())
-	{
-		queueMutex.Unlock();
-	}
+			}),
+		queue.end());
 }
 
 void MessageThread::CancelSelf()

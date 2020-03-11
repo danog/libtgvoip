@@ -39,12 +39,14 @@ private:
 		std::function<void()> func;
 	};
 
+
 	void Run();
 	void InsertMessageInternal(Message &m);
 
 	std::atomic<bool> running;
 	std::vector<Message> queue;
-	Mutex queueMutex;
+	Mutex loopMutex;
+	Mutex queueAccessMutex;
 	uint32_t lastMessageID = 1;
 	bool cancelCurrent = false;
 
