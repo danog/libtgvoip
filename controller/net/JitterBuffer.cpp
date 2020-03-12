@@ -91,18 +91,18 @@ void JitterBuffer::PutInternal(jitter_packet_t &pkt, bool overwriteExisting)
 		return;
 	}
 
-	if (overwriteExisting)
+	auto existing = std::find_if(slots.begin(), slots.end(), [timestamp = pkt.timestamp](const jitter_packet_t &slot) -> bool {
+		return slot.timestamp == timestamp && !slot.buffer.IsEmpty();
+	});
+	if (existing != slots.end())
 	{
-		for (auto &slot : slots)
+		if (overwriteExisting)
 		{
-			if (slot.timestamp == pkt.timestamp && !slot.buffer.IsEmpty())
-			{
-				slot.buffer.CopyFromOtherBuffer(pkt.buffer, pkt.size);
-				slot.size = pkt.size;
-				slot.isEC = pkt.isEC;
-				return;
-			}
+			existing->buffer.CopyFromOtherBuffer(pkt.buffer, pkt.size);
+			existing->size = pkt.size;
+			existing->isEC = pkt.isEC;
 		}
+		return;
 	}
 
 	gotSinceReset++;
