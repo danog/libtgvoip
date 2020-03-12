@@ -187,7 +187,7 @@ void tgvoip::OpusEncoder::RunThread()
 	LOGV("starting encoder, packets per frame=%d", packetsPerFrame);
 	int16_t *frame;
 	if (packetsPerFrame > 1)
-		frame = reinterpret_cast<uint16_t *>(std::malloc(960 * 2 * packetsPerFrame));
+		frame = reinterpret_cast<int16_t *>(std::malloc(960 * 2 * packetsPerFrame));
 	else
 		frame = NULL;
 	bool frameHasVoice = false;
