@@ -58,6 +58,9 @@ private:
 	unsigned char buffer[4096];
 	std::atomic<uint32_t> requestedBitrate;
 	uint32_t currentBitrate;
+	
+	uint32_t currentSecondaryBitrate;
+	
 	Thread *thread;
 	BlockingQueue<Buffer> queue;
 	BufferPool<960 * 2, 10> bufferPool;

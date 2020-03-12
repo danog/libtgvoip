@@ -129,7 +129,14 @@ void AudioOutputCallback::RunThread()
 	while (running)
 	{
 		double t = VoIPController::GetCurrentTime();
-		InvokeCallback(reinterpret_cast<unsigned char *>(buf), 960 * 2);
+		if (playing)
+		{
+			InvokeCallback(reinterpret_cast<unsigned char *>(buf), 960 * 2);
+		}
+		else
+		{
+			memset(buf, 0, sizeof(buf));
+		}
 		dataCallback(buf, 960);
 		double sl = 0.02 - (VoIPController::GetCurrentTime() - t);
 		if (sl > 0)

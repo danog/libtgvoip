@@ -43,6 +43,8 @@ void VoIPController::InitializeAudio()
         encoder->AddAudioEffect(inputVolume);
     }
 
+    dynamic_cast<AudioPacketSender *>(outgoingAudioStream->packetSender.get())->SetSource(encoder);
+
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
     dynamic_cast<audio::AudioInputCallback *>(audioInput.get())->SetDataCallback(audioInputDataCallback);
     dynamic_cast<audio::AudioOutputCallback *>(audioOutput.get())->SetDataCallback(audioOutputDataCallback);
@@ -56,8 +58,6 @@ void VoIPController::InitializeAudio()
         SetState(STATE_FAILED);
         return;
     }
-
-    dynamic_cast<AudioPacketSender *>(outgoingAudioStream->packetSender.get())->SetSource(encoder);
 
     UpdateAudioBitrateLimit();
     LOGI("Audio initialization took %f seconds", GetCurrentTime() - t);

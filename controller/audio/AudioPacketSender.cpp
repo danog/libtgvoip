@@ -58,9 +58,10 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         BufferOutputStream pkt(1500);
 
         bool hasExtraFEC = PeerVersion() >= 7 && secondaryLen && shittyInternetMode;
-        unsigned char flags = (unsigned char)(len > 255 || hasExtraFEC ? STREAM_DATA_FLAG_LEN16 : 0);
-        pkt.WriteByte((unsigned char)(1 | flags)); // streamID + flags
-        if (len > 255 || hasExtraFEC)
+        uint8_t flags = static_cast<uint8_t>(len > 255 || hasExtraFEC ? STREAM_DATA_FLAG_LEN16 : 0);
+        pkt.WriteByte(flags | 1); // flags + streamID
+
+        if (flags & STREAM_DATA_FLAG_LEN16)
         {
             int16_t lenAndFlags = static_cast<int16_t>(len);
             if (hasExtraFEC)
@@ -69,8 +70,9 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         }
         else
         {
-            pkt.WriteByte((unsigned char)len);
+            pkt.WriteByte(static_cast<uint8_t>(len));
         }
+
         pkt.WriteInt32(audioTimestampOut);
         pkt.WriteBytes(*dataBufPtr, 0, len);
 
@@ -78,19 +80,20 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
 
         if (hasExtraFEC)
         {
+            Buffer ecBuf(secondaryLen);
+            ecBuf.CopyFromOtherBuffer(*secondaryDataBufPtr, secondaryLen);
+            ecAudioPackets.push_back(move(ecBuf));
+            if (ecAudioPackets.size() > 4)
+            {
+                ecAudioPackets.pop_front();
+            }
+
             uint8_t fecCount = std::min(static_cast<uint8_t>(ecAudioPackets.size()), extraEcLevel);
             pkt.WriteByte(fecCount);
             for (auto ecData = ecAudioPackets.end() - fecCount; ecData != ecAudioPackets.end(); ++ecData)
             {
                 pkt.WriteByte(static_cast<uint8_t>(ecData->Length()));
                 pkt.WriteBytes(*ecData);
-            }
-            Buffer ecBuf(secondaryLen);
-            ecBuf.CopyFromOtherBuffer(*secondaryDataBufPtr, secondaryLen);
-            ecAudioPackets.push_back(move(ecBuf));
-            while (ecAudioPackets.size() > 4)
-            {
-                ecAudioPackets.pop_front();
             }
         }
 
