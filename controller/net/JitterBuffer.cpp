@@ -79,11 +79,16 @@ void JitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timesta
 	pkt.buffer = Buffer::Wrap(data, len, [](void *) {}, [](void *a, size_t) -> void * { return a; });
 	pkt.timestamp = timestamp;
 	pkt.isEC = isEC;
+	if (!isEC)
+	{
+		LOGV("in, ts=%d, ec=%d", timestamp, isEC);
+	}
+	else
+		LOGW("in, ts=%d, ec=%d", timestamp, isEC);
 	PutInternal(pkt, !isEC);
-	//LOGV("in, ts=%d, ec=%d", timestamp, isEC);
 }
 
-void JitterBuffer::PutInternal(jitter_packet_t &pkt, bool overwriteExisting)
+void JitterBuffer::PutInternal(const jitter_packet_t &pkt, bool overwriteExisting)
 {
 	if (pkt.size > JITTER_SLOT_SIZE)
 	{
@@ -91,18 +96,20 @@ void JitterBuffer::PutInternal(jitter_packet_t &pkt, bool overwriteExisting)
 		return;
 	}
 
-	auto existing = std::find_if(slots.begin(), slots.end(), [timestamp = pkt.timestamp](const jitter_packet_t &slot) -> bool {
-		return slot.timestamp == timestamp && !slot.buffer.IsEmpty();
-	});
-	if (existing != slots.end())
+	for (auto &slot : slots)
 	{
-		if (overwriteExisting)
+		if (slot.timestamp == pkt.timestamp && !slot.buffer.IsEmpty())
 		{
-			existing->buffer.CopyFromOtherBuffer(pkt.buffer, pkt.size);
-			existing->size = pkt.size;
-			existing->isEC = pkt.isEC;
+			if (overwriteExisting)
+			{
+				LOGE("Overwriting");
+				slot.buffer.CopyFromOtherBuffer(pkt.buffer, pkt.size);
+				slot.size = pkt.size;
+				slot.isEC = pkt.isEC;
+			}
+			LOGE("Not storing");
+			return;
 		}
-		return;
 	}
 
 	gotSinceReset++;
@@ -149,13 +156,19 @@ void JitterBuffer::PutInternal(jitter_packet_t &pkt, bool overwriteExisting)
 	if (pkt.timestamp < nextFetchTimestamp)
 	{
 		//LOGW("jitter: would drop packet with timestamp %d because it is late but not hopelessly", pkt.timestamp);
-		latePacketCount++;
-		lostPackets--;
+		if (overwriteExisting) // If EC, do not count as late packet
+		{
+			latePacketCount++;
+			lostPackets--;
+		}
 	}
 	else if (pkt.timestamp < nextFetchTimestamp - 1)
 	{
 		//LOGW("jitter: dropping packet with timestamp %d because it is too late", pkt.timestamp);
-		latePacketCount++;
+		if (overwriteExisting) // If EC, do not count as late packet
+		{
+			latePacketCount++;
+		}
 		return;
 	}
 
@@ -169,6 +182,7 @@ void JitterBuffer::PutInternal(jitter_packet_t &pkt, bool overwriteExisting)
 
 	if (slot == slots.end())
 	{
+		LOGW("No free slots!");
 		slot = std::min_element(slots.begin(), slots.end(), [](const jitter_packet_t &a, const jitter_packet_t &b) -> bool {
 			return !a.buffer.IsEmpty() && a.timestamp < b.timestamp;
 		});
@@ -302,6 +316,7 @@ int JitterBuffer::GetInternal(jitter_packet_t &pkt, int offset, bool advance)
 			pkt.isEC = slot->isEC;
 		}
 		slot->buffer = Buffer();
+		LOGV("out ts=%d, ec=%d", pkt.timestamp, pkt.isEC);
 		if (offset == 0)
 			Advance();
 		lostCount = 0;

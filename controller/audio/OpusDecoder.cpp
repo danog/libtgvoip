@@ -251,6 +251,7 @@ int tgvoip::OpusDecoder::DecodeNextFrame()
                 int16_t* samples = reinterpret_cast<int16_t*>(decodeBuffer);
                 constexpr float coeffs[] = {0.999802f, 0.995062f, 0.984031f, 0.966778f, 0.943413f, 0.914084f, 0.878975f, 0.838309f, 0.792344f, 0.741368f,
                                             0.685706f, 0.625708f, 0.561754f, 0.494249f, 0.423619f, 0.350311f, 0.274788f, 0.197527f, 0.119018f, 0.039757f};
+				// But why 20 samples? Typically the sample size is 60....
                 for (int i = 0; i < 20; i++) {
                     samples[i] = static_cast<int16_t>(round(plcSamples[i] * coeffs[i] + samples[i] * (1.f - coeffs[i])));
 				}
@@ -261,8 +262,7 @@ int tgvoip::OpusDecoder::DecodeNextFrame()
 	}
 	else
 	{ // do packet loss concealment
-		consecutiveLostPackets++;
-		if (consecutiveLostPackets > 2 && enableDTX)
+		if (++consecutiveLostPackets > 2 && enableDTX)
 		{
 			silentPacketCount += packetsPerFrame;
 			size = packetsPerFrame * 960;
