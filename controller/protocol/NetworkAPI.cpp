@@ -1,7 +1,12 @@
 #include "../PrivateDefines.cpp"
+//#include <random>
 
 using namespace tgvoip;
 using namespace std;
+
+//std::random_device dev;
+//std::mt19937 rng(dev());
+//std::uniform_int_distribution<std::mt19937::result_type> dist6(0, 9); // distribution in range [1, 6]
 
 bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue, PacketSender *source)
 {
@@ -55,6 +60,11 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
     {
         BufferOutputStream out(1500);
         uint8_t transportId = WritePacketHeader(pkt, out, source);
+        /*if (!dist6(rng))
+        {
+            LOGW("DROPPING");
+        }
+        else*/
         SendPacket(out.GetBuffer(), out.GetLength(), *endpoint, pkt.seq, pkt.type, transportId);
         /*if (pkt.type == PKT_STREAM_DATA)
         {
@@ -81,10 +91,10 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, u
         encryptPacket(data, len, out);
     }
 
-    //LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
-    #ifdef LOG_PACKETS
+//LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
+#ifdef LOG_PACKETS
     LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, transportId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), transportId);
-    #endif
+#endif
 
     rawSendQueue.Put(
         RawPendingOutgoingPacket{
@@ -263,8 +273,6 @@ void VoIPController::TrySendOutgoingPackets()
     }
 }
 
-
-
 void VoIPController::SendRelayPings()
 {
     ENFORCE_MSG_THREAD;
@@ -356,11 +364,12 @@ void VoIPController::SendNopPacket(PacketManager &pm)
         return;
     PacketSender *source = pm.getTransportId() == 0xFF ? nullptr : outgoingStreams[pm.getTransportId()]->packetSender.get();
     SendOrEnqueuePacket(PendingOutgoingPacket{
-        /*.seq=*/(firstSentPing = pm.nextLocalSeq()),
-        /*.type=*/PKT_NOP,
-        /*.len=*/0,
-        /*.data=*/Buffer(),
-        /*.endpoint=*/0}, source);
+                            /*.seq=*/(firstSentPing = pm.nextLocalSeq()),
+                            /*.type=*/PKT_NOP,
+                            /*.len=*/0,
+                            /*.data=*/Buffer(),
+                            /*.endpoint=*/0},
+                        source);
 }
 
 void VoIPController::SendPublicEndpointsRequest()

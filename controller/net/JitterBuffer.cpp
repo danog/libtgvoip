@@ -79,12 +79,15 @@ void JitterBuffer::HandleInput(unsigned char *data, size_t len, uint32_t timesta
 	pkt.buffer = Buffer::Wrap(data, len, [](void *) {}, [](void *a, size_t) -> void * { return a; });
 	pkt.timestamp = timestamp;
 	pkt.isEC = isEC;
+	/*
 	if (!isEC)
 	{
 		LOGV("in, ts=%d, ec=%d", timestamp, isEC);
 	}
 	else
-		LOGW("in, ts=%d, ec=%d", timestamp, isEC);
+	{
+		//LOGW("in, ts=%d, ec=%d", timestamp, isEC);
+	}*/
 	PutInternal(pkt, !isEC);
 }
 
@@ -102,12 +105,10 @@ void JitterBuffer::PutInternal(const jitter_packet_t &pkt, bool overwriteExistin
 		{
 			if (overwriteExisting)
 			{
-				LOGE("Overwriting");
 				slot.buffer.CopyFromOtherBuffer(pkt.buffer, pkt.size);
 				slot.size = pkt.size;
 				slot.isEC = pkt.isEC;
 			}
-			LOGE("Not storing");
 			return;
 		}
 	}
@@ -155,18 +156,18 @@ void JitterBuffer::PutInternal(const jitter_packet_t &pkt, bool overwriteExistin
 	// Late packet check
 	if (pkt.timestamp < nextFetchTimestamp)
 	{
-		//LOGW("jitter: would drop packet with timestamp %d because it is late but not hopelessly", pkt.timestamp);
 		if (overwriteExisting) // If EC, do not count as late packet
 		{
+			LOGW("jitter: would drop packet with timestamp %d because it is late but not hopelessly", pkt.timestamp);
 			latePacketCount++;
 			lostPackets--;
 		}
 	}
 	else if (pkt.timestamp < nextFetchTimestamp - 1)
 	{
-		//LOGW("jitter: dropping packet with timestamp %d because it is too late", pkt.timestamp);
 		if (overwriteExisting) // If EC, do not count as late packet
 		{
+			LOGW("jitter: dropping packet with timestamp %d because it is too late", pkt.timestamp);
 			latePacketCount++;
 		}
 		return;
@@ -221,7 +222,7 @@ void JitterBuffer::Reset()
 	dontChangeDelay = 0;
 }
 
-size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetInSteps, bool advance, int &playbackScaledDuration, bool &isEC)
+size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, bool advance, int &playbackScaledDuration, bool &isEC)
 {
 	jitter_packet_t pkt;
 	pkt.buffer = Buffer::Wrap(buffer, len, [](void *) {}, [](void *a, size_t) -> void * { return a; });
@@ -251,7 +252,7 @@ size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetI
 		}
 	}
 
-	int result = GetInternal(pkt, offsetInSteps, advance);
+	int result = GetInternal(pkt, advance);
 	if (outstandingDelayChange != 0)
 	{
 		if (outstandingDelayChange < 0)
@@ -286,17 +287,9 @@ size_t JitterBuffer::HandleOutput(unsigned char *buffer, size_t len, int offsetI
 	}
 }
 
-int JitterBuffer::GetInternal(jitter_packet_t &pkt, int offset, bool advance)
+int JitterBuffer::GetInternal(jitter_packet_t &pkt, bool advance)
 {
-	/*if(needBuffering && lastPutTimestamp<nextFetchTimestamp){
-		LOGV("jitter: don't have timestamp %lld, buffering", (long long int)nextFetchTimestamp);
-		Advance();
-		return JR_BUFFERING;
-	}*/
-
-	//needBuffering=false;
-
-	int64_t timestampToGet = nextFetchTimestamp + offset * (int32_t)step;
+	int64_t timestampToGet = nextFetchTimestamp;
 
 	auto slot = std::find_if(slots.begin(), slots.end(), [timestampToGet](const jitter_packet_t &a) -> bool {
 		return a.timestamp == timestampToGet && !a.buffer.IsEmpty();
@@ -316,9 +309,8 @@ int JitterBuffer::GetInternal(jitter_packet_t &pkt, int offset, bool advance)
 			pkt.isEC = slot->isEC;
 		}
 		slot->buffer = Buffer();
-		LOGV("out ts=%d, ec=%d", pkt.timestamp, pkt.isEC);
-		if (offset == 0)
-			Advance();
+		//LOGV("out ts=%d, ec=%d", pkt.timestamp, pkt.isEC);
+		Advance();
 		lostCount = 0;
 		needBuffering = false;
 		return JR_OK;
@@ -332,11 +324,8 @@ int JitterBuffer::GetInternal(jitter_packet_t &pkt, int offset, bool advance)
 	if (!needBuffering)
 	{
 		lostCount++;
-		if (offset == 0)
-		{
-			lostPackets++;
-			lostSinceReset++;
-		}
+		lostPackets++;
+		lostSinceReset++;
 		if (lostCount >= lossesToReset || (gotSinceReset > minDelay * 25 && lostSinceReset > gotSinceReset / 2))
 		{
 			LOGW("jitter: lost %d packets in a row, resetting", lostCount);

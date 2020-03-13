@@ -14,7 +14,9 @@
 
 using namespace tgvoip;
 
-CongestionControl::CongestionControl() : cwnd(static_cast<size_t>(ServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024)))
+CongestionControl::CongestionControl() : cwnd(static_cast<size_t>(ServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024))),
+										 max(cwnd * 1.1),
+										 min(cwnd * 0.9)
 {
 }
 
@@ -47,21 +49,6 @@ double CongestionControl::GetMinimumRTT()
 	return rttHistory.Min();
 }
 
-void CongestionControl::PacketAcknowledged(uint32_t seq)
-{
-	for (auto &packet : inflightPackets)
-	{
-		if (packet.seq == seq && packet.sendTime > 0)
-		{
-			tmpRtt += (VoIPController::GetCurrentTime() - packet.sendTime);
-			tmpRttCount++;
-			packet.sendTime = 0;
-			inflightDataSize -= packet.size;
-			break;
-		}
-	}
-}
-
 void CongestionControl::PacketSent(uint32_t seq, size_t size)
 {
 	if (!seqgt(seq, lastSentSeq) || seq == lastSentSeq)
@@ -72,16 +59,16 @@ void CongestionControl::PacketSent(uint32_t seq, size_t size)
 	lastSentSeq = seq;
 	double smallestSendTime = INFINITY;
 	tgvoip_congestionctl_packet_t *slot = NULL;
-	for (size_t i = 0; i < inflightPackets.size(); i++)
+	for (auto &packet : inflightPackets)
 	{
-		if (inflightPackets[i].sendTime == 0)
+		if (packet.sendTime == 0)
 		{
-			slot = &inflightPackets[i];
+			slot = &packet;
 			break;
 		}
-		if (smallestSendTime > inflightPackets[i].sendTime)
+		if (smallestSendTime > packet.sendTime)
 		{
-			slot = &inflightPackets[i];
+			slot = &packet;
 			smallestSendTime = slot->sendTime;
 		}
 	}
@@ -96,6 +83,21 @@ void CongestionControl::PacketSent(uint32_t seq, size_t size)
 	slot->size = size;
 	slot->sendTime = VoIPController::GetCurrentTime();
 	inflightDataSize += size;
+}
+
+void CongestionControl::PacketAcknowledged(uint32_t seq)
+{
+	for (auto &packet : inflightPackets)
+	{
+		if (packet.seq == seq && packet.sendTime > 0)
+		{
+			tmpRtt += (VoIPController::GetCurrentTime() - packet.sendTime);
+			tmpRttCount++;
+			packet.sendTime = 0;
+			inflightDataSize -= packet.size;
+			break;
+		}
+	}
 }
 
 void CongestionControl::PacketLost(uint32_t seq)
@@ -140,8 +142,6 @@ int CongestionControl::GetBandwidthControlAction()
 		return TGVOIP_CONCTL_ACT_NONE;
 
 	size_t inflightAvg = GetInflightDataSize();
-	size_t max = cwnd + cwnd / 10;
-	size_t min = cwnd - cwnd / 10;
 	if (inflightAvg < min)
 	{
 		lastActionTime = VoIPController::GetCurrentTime();

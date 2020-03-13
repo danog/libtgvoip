@@ -182,7 +182,7 @@ double AudioPacketSender::setPacketLoss(double percent)
 
     if (percent > 2)
     {
-        resendCount = std::clamp(percent / 2, 0.0, 10.0);
+        resendCount = std::clamp(percent / 2, 0.0, 4.0);
     }
     /*else if (percent > 5)
     {

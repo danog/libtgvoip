@@ -37,7 +37,7 @@ public:
 	double GetAverageDelay();
 	void Reset();
 	void HandleInput(unsigned char *data, size_t len, uint32_t timestamp, bool isEC);
-	size_t HandleOutput(unsigned char *buffer, size_t len, int offsetInSteps, bool advance, int &playbackScaledDuration, bool &isEC);
+	size_t HandleOutput(unsigned char *buffer, size_t len, bool advance, int &playbackScaledDuration, bool &isEC);
 	void Tick();
 	void GetAverageLateCount(double *out);
 	int GetAndResetLostPacketCount();
@@ -60,13 +60,13 @@ private:
 	struct jitter_packet_t
 	{
 		Buffer buffer = Buffer();
-		size_t size = 0;
 		uint32_t timestamp = 0;
+		size_t size = 0;
 		bool isEC = 0;
 		double recvTimeDiff = 0.0;
 	};
 	void PutInternal(const jitter_packet_t &pkt, bool overwriteExisting);
-	int GetInternal(jitter_packet_t &pkt, int offset, bool advance);
+	int GetInternal(jitter_packet_t &pkt, bool advance);
 	void Advance();
 
 	BufferPool<JITTER_SLOT_SIZE, JITTER_SLOT_COUNT> bufferPool;

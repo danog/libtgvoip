@@ -226,12 +226,12 @@ int tgvoip::OpusDecoder::DecodeNextFrame()
 {
 	int playbackDuration = 0;
 	bool isEC = false;
-	size_t len = jitterBuffer->HandleOutput(buffer, 8192, 0, true, playbackDuration, isEC);
+	size_t len = jitterBuffer->HandleOutput(buffer, 8192, true, playbackDuration, isEC);
 	bool fec = false;
 	if (!len)
 	{
 		fec = true;
-		len = jitterBuffer->HandleOutput(buffer, 8192, 0, false, playbackDuration, isEC);
+		len = jitterBuffer->HandleOutput(buffer, 8192, false, playbackDuration, isEC);
 		/*if (len)
 			LOGV("Trying FEC...");*/
 	}

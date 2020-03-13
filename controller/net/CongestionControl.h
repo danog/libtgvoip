@@ -25,6 +25,7 @@ struct tgvoip_congestionctl_packet_t
 {
 	uint32_t seq;
 	double sendTime;
+	bool ack = false;
 	size_t size;
 };
 typedef struct tgvoip_congestionctl_packet_t tgvoip_congestionctl_packet_t;
@@ -61,7 +62,10 @@ private:
 	uint32_t lastSentSeq = 0;
 	uint32_t tickCount = 0;
 	size_t inflightDataSize = 0;
+
 	size_t cwnd;
+	size_t max;
+	size_t min;
 };
 } // namespace tgvoip
 

@@ -17,7 +17,7 @@ double VoIPController::GetAverageRTT()
         if (diff < 32)
         {
             double res = 0;
-            int count = 0;
+            size_t count = 0;
             for (const auto &packet : pm.getRecentOutgoingPackets())
             {
                 if (packet.rttTime)
@@ -26,7 +26,7 @@ double VoIPController::GetAverageRTT()
                     count++;
                 }
             }
-            if (count > 0)
+            if (count)
                 res /= count;
             return res;
         }
