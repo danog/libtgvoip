@@ -1,0 +1,49 @@
+// Extras
+
+extras$_ {t:Type} (## 8) [ length:(## 8) extra:t ] = Extras t;
+
+extraStreamFlags#01 streamId:(## 8) flags:# enabled:flags.0?true dtx:flags.1?true extraEC:flags.2?true paused:flags.3?true = ExtraSignaling;
+extraStreamCsd#02 streamId:(## 8) width:(## 16) height:(## 16) count:(## 8) [ length:(## 8) codecSpecificData:bytes ]= ExtraSignaling;
+
+extraLanEndpoint#03 address:# port:(## 16) = ExtraSignaling;
+extraIpv6Endpoint#07 address:(## 128) port:(## 16) = ExtraSignaling;
+
+extraNetworkChanged#04 flags:# dataSavingEnabled:flags.0?true = ExtraSignaling;
+
+extraGroupCallKey#05 key:(## 256) = ExtraSignaling;
+extraGroupCallUpgrade#06 = ExtraSignaling;
+
+// Stream info
+streamInfo$_ streamId:(## 8) type:(## 8) codec:# frameDurationIgnored:(## 16) enabled:(## 8)= StreamInfo;
+
+// Packet
+packet$_ type:(## 8) ackSeq:# seq:# ackMask:# flags:(## 8) extras:flags.0?Extras<ExtraSignaling> data:payload = Packet;
+
+payloadInit#0 peerVersion:# minVersion:# flags:# streams:Extras<StreamInfo> dataSavingEnabled:flags.0?true groupCallSupported:flags.1?true videoSendSupported:flags.2?true videoRecvSupported:flags.3?true = Payload;
+payloadInitAck#1 peerVersion:# minVersion:# streams:Extras<StreamInfo> = Payload;
+
+payloadStreamData#4
+    streamId:(## 6) 
+    flags:(## 2)
+
+    length:(## flags.0 ? 11 : 8)
+    eFlags:(## flags.0 ? 5 : 0)
+    
+    fragmented:eFlags.4?true
+    keyframe:eFlags.5?true
+
+    pts:#
+    data:bytes
+    
+    extraFEC:eFlags.3?Extras<Bytes>
+
+    = Payload;
+
+payloadPing#6 = Payload;
+payloadPong#7 seq:# = Payload;
+
+payloadNop#E = Payload;
+
+// Deprecated
+payloadStreamDataX2#8 a:payloadStreamData b:payloadStreamData = Payload;
+payloadStreamDataX3#9 a:payloadStreamData b:payloadStreamData c:payloadStreamData = Payload;
