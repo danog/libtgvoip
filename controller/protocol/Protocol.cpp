@@ -443,16 +443,16 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         out.WriteInt32(MIN_PROTOCOL_VERSION);
 
         out.WriteByte((unsigned char)outgoingStreams.size());
-        for (vector<shared_ptr<Stream>>::iterator s = outgoingStreams.begin(); s != outgoingStreams.end(); ++s)
+        for (const auto &stream : outgoingStreams)
         {
-            out.WriteByte((*s)->id);
-            out.WriteByte((*s)->type);
+            out.WriteByte(stream->id);
+            out.WriteByte(stream->type);
             if (peerVersion < 5)
-                out.WriteByte((unsigned char)((*s)->codec == CODEC_OPUS ? CODEC_OPUS_OLD : 0));
+                out.WriteByte((unsigned char)(stream->codec == CODEC_OPUS ? CODEC_OPUS_OLD : 0));
             else
-                out.WriteInt32((*s)->codec);
-            out.WriteInt16((*s)->frameDuration);
-            out.WriteByte((unsigned char)((*s)->enabled ? 1 : 0));
+                out.WriteInt32(stream->codec);
+            out.WriteInt16(stream->frameDuration);
+            out.WriteByte((unsigned char)(stream->enabled ? 1 : 0));
         }
         LOGI("Sending init ack");
         size_t outLength = out.GetLength();

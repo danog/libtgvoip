@@ -347,9 +347,9 @@ void VoIPGroupController::WritePacketHeader(uint32_t seq, BufferOutputStream *s,
 	crypto.rand_bytes(randBytes, 7);
 	s->WriteByte(7);
 	s->WriteBytes(randBytes, 7);
-	uint32_t pflags = PFLAG_HAS_SEQ | PFLAG_HAS_SENDER_TAG_HASH;
+	uint32_t pflags = LEGACY_PFLAG_HAS_SEQ | LEGACY_PFLAG_HAS_SENDER_TAG_HASH;
 	if (length > 0)
-		pflags |= PFLAG_HAS_DATA;
+		pflags |= LEGACY_PFLAG_HAS_DATA;
 	pflags |= ((uint32_t)type) << 24;
 	s->WriteInt32(pflags);
 
@@ -358,7 +358,7 @@ void VoIPGroupController::WritePacketHeader(uint32_t seq, BufferOutputStream *s,
 		conctl.PacketSent(seq, length);
 	}
 
-	/*if(pflags & PFLAG_HAS_CALL_ID){
+	/*if(pflags & LEGACY_PFLAG_HAS_CALL_ID){
 		s->WriteBytes(callID, 16);
 	}*/
 	//s->WriteInt32(lastRemoteSeq);

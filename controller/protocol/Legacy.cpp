@@ -13,13 +13,13 @@ bool VoIPController::legacyParsePacket(BufferInputStream &in, unsigned char &typ
         in.Seek(in.GetOffset() + randLen + pad4(randLen));
         uint32_t flags = in.ReadUInt32();
         type = (unsigned char)((flags >> 24) & 0xFF);
-        if (!(flags & PFLAG_HAS_SEQ && flags & PFLAG_HAS_RECENT_RECV))
+        if (!(flags & LEGACY_PFLAG_HAS_SEQ && flags & LEGACY_PFLAG_HAS_RECENT_RECV))
         {
-            LOGW("Received packet doesn't have PFLAG_HAS_SEQ, PFLAG_HAS_RECENT_RECV, or both");
+            LOGW("Received packet doesn't have LEGACY_PFLAG_HAS_SEQ, LEGACY_PFLAG_HAS_RECENT_RECV, or both");
 
             return false;
         }
-        if (flags & PFLAG_HAS_CALL_ID)
+        if (flags & LEGACY_PFLAG_HAS_CALL_ID)
         {
             unsigned char pktCallID[16];
             in.ReadBytes(pktCallID, 16);
@@ -35,7 +35,7 @@ bool VoIPController::legacyParsePacket(BufferInputStream &in, unsigned char &typ
         ackId = in.ReadUInt32();
         pseq = in.ReadUInt32();
         acks = in.ReadUInt32();
-        if (flags & PFLAG_HAS_PROTO)
+        if (flags & LEGACY_PFLAG_HAS_PROTO)
         {
             uint32_t proto = in.ReadUInt32();
             if (proto != PROTOCOL_NAME)
@@ -47,12 +47,12 @@ bool VoIPController::legacyParsePacket(BufferInputStream &in, unsigned char &typ
                 return false;
             }
         }
-        if (flags & PFLAG_HAS_EXTRA)
+        if (flags & LEGACY_PFLAG_HAS_EXTRA)
         {
             uint32_t extraLen = in.ReadTlLength();
             in.Seek(in.GetOffset() + extraLen + pad4(extraLen));
         }
-        if (flags & PFLAG_HAS_DATA)
+        if (flags & LEGACY_PFLAG_HAS_DATA)
         {
             packetInnerLen = in.ReadTlLength();
         }
@@ -95,24 +95,24 @@ void VoIPController::legacyWritePacketHeader(uint32_t pseq, uint32_t acks, Buffe
         crypto.rand_bytes(randBytes, 7);
         s->WriteByte(7);
         s->WriteBytes(randBytes, 7);
-        uint32_t pflags = PFLAG_HAS_RECENT_RECV | PFLAG_HAS_SEQ;
+        uint32_t pflags = LEGACY_PFLAG_HAS_RECENT_RECV | LEGACY_PFLAG_HAS_SEQ;
         if (length > 0)
-            pflags |= PFLAG_HAS_DATA;
+            pflags |= LEGACY_PFLAG_HAS_DATA;
         if (state == STATE_WAIT_INIT || state == STATE_WAIT_INIT_ACK)
         {
-            pflags |= PFLAG_HAS_CALL_ID | PFLAG_HAS_PROTO;
+            pflags |= LEGACY_PFLAG_HAS_CALL_ID | LEGACY_PFLAG_HAS_PROTO;
         }
         pflags |= ((uint32_t)type) << 24;
         s->WriteInt32(pflags);
 
-        if (pflags & PFLAG_HAS_CALL_ID)
+        if (pflags & LEGACY_PFLAG_HAS_CALL_ID)
         {
             s->WriteBytes(callID, 16);
         }
         s->WriteInt32(packetManager.getLastRemoteSeq());
         s->WriteInt32(pseq);
         s->WriteInt32(acks);
-        if (pflags & PFLAG_HAS_PROTO)
+        if (pflags & LEGACY_PFLAG_HAS_PROTO)
         {
             s->WriteInt32(PROTOCOL_NAME);
         }
