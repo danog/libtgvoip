@@ -3,7 +3,7 @@
 using namespace tgvoip;
 using namespace std;
 
-bool VoIPController::legacyParsePacket(BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen)
+bool VoIPController::legacyParsePacket(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen)
 {
     uint32_t tlid = in.ReadUInt32();
     if (tlid == TLID_DECRYPTED_AUDIO_BLOCK)
@@ -84,7 +84,6 @@ bool VoIPController::legacyParsePacket(BufferInputStream &in, unsigned char &typ
 
 void VoIPController::legacyWritePacketHeader(uint32_t pseq, uint32_t acks, BufferOutputStream *s, unsigned char type, uint32_t length)
 {
-
     if (state == STATE_WAIT_INIT || state == STATE_WAIT_INIT_ACK)
     {
         s->WriteInt32(TLID_DECRYPTED_AUDIO_BLOCK);

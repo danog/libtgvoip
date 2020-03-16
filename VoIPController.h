@@ -353,7 +353,7 @@ public:
       */
     static const int32_t GetConnectionMaxLayer()
     {
-        return 92;
+        return 110;
     };
     /**
       * Get the persistable state of the library, like proxy capabilities, to save somewhere on the disk. Call this at the end of the call.
@@ -566,8 +566,10 @@ private:
     }
 
     // More legacy
-    bool legacyParsePacket(BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen);
+    bool legacyParsePacket(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen);
     void legacyWritePacketHeader(uint32_t pseq, uint32_t acks, BufferOutputStream *s, unsigned char type, uint32_t length);
+
+    bool parseRelayPacket(const BufferInputStream &in, Endpoint &srcEndpoint);
 
     void handleReliablePackets();
 

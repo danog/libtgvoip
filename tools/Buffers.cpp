@@ -20,18 +20,11 @@ BufferInputStream::BufferInputStream(const unsigned char *data, const size_t _le
 {
 }
 
-BufferInputStream::BufferInputStream(const Buffer &buffer)
-{
-	this->buffer = *buffer;
-	this->length = buffer.Length();
-	offset = 0;
-}
-
-BufferInputStream::~BufferInputStream()
+BufferInputStream::BufferInputStream(const Buffer &buffer) : buffer(*buffer), length(buffer.Length())
 {
 }
 
-void BufferInputStream::Seek(size_t offset)
+void BufferInputStream::Seek(size_t offset) const
 {
 	if (offset > length)
 	{
@@ -55,13 +48,13 @@ size_t BufferInputStream::Remaining() const
 	return length - offset;
 }
 
-unsigned char BufferInputStream::ReadByte()
+unsigned char BufferInputStream::ReadByte() const
 {
 	EnsureEnoughRemaining(1);
 	return (unsigned char)buffer[offset++];
 }
 
-int32_t BufferInputStream::ReadInt32()
+int32_t BufferInputStream::ReadInt32() const
 {
 	EnsureEnoughRemaining(4);
 	int32_t res = ((int32_t)buffer[offset] & 0xFF) |
@@ -72,7 +65,7 @@ int32_t BufferInputStream::ReadInt32()
 	return res;
 }
 
-int64_t BufferInputStream::ReadInt64()
+int64_t BufferInputStream::ReadInt64() const
 {
 	EnsureEnoughRemaining(8);
 	int64_t res = ((int64_t)buffer[offset] & 0xFF) |
@@ -87,7 +80,7 @@ int64_t BufferInputStream::ReadInt64()
 	return res;
 }
 
-int16_t BufferInputStream::ReadInt16()
+int16_t BufferInputStream::ReadInt16() const
 {
 	EnsureEnoughRemaining(2);
 	int16_t res = (uint16_t)buffer[offset] | ((uint16_t)buffer[offset + 1] << 8);
@@ -95,7 +88,7 @@ int16_t BufferInputStream::ReadInt16()
 	return res;
 }
 
-uint32_t BufferInputStream::ReadTlLength()
+uint32_t BufferInputStream::ReadTlLength() const
 {
 	unsigned char l = ReadByte();
 	if (l < 254)
@@ -109,19 +102,19 @@ uint32_t BufferInputStream::ReadTlLength()
 	return res;
 }
 
-void BufferInputStream::ReadBytes(unsigned char *to, size_t count)
+void BufferInputStream::ReadBytes(unsigned char *to, size_t count) const
 {
 	EnsureEnoughRemaining(count);
 	memcpy(to, buffer + offset, count);
 	offset += count;
 }
 
-void BufferInputStream::ReadBytes(Buffer &to)
+void BufferInputStream::ReadBytes(Buffer &to) const
 {
 	ReadBytes(*to, to.Length());
 }
 
-BufferInputStream BufferInputStream::GetPartBuffer(size_t length, bool advance)
+BufferInputStream BufferInputStream::GetPartBuffer(size_t length, bool advance) const
 {
 	EnsureEnoughRemaining(length);
 	BufferInputStream s = BufferInputStream(buffer + offset, length);
@@ -129,8 +122,12 @@ BufferInputStream BufferInputStream::GetPartBuffer(size_t length, bool advance)
 		offset += length;
 	return s;
 }
+const unsigned char *BufferInputStream::GetRawBuffer() const
+{
+	return buffer + offset;
+}
 
-void BufferInputStream::EnsureEnoughRemaining(size_t need)
+void BufferInputStream::EnsureEnoughRemaining(size_t need) const
 {
 	if (length - offset < need)
 	{
@@ -240,7 +237,7 @@ void BufferOutputStream::ExpandBufferIfNeeded(size_t need)
 			throw std::out_of_range("buffer overflow");
 		}
 		size += std::max(need, size_t{1024});
-		unsigned char *newBuffer = reinterpret_cast<unsigned char*>(std::realloc(buffer, size));
+		unsigned char *newBuffer = reinterpret_cast<unsigned char *>(std::realloc(buffer, size));
 		if (!newBuffer)
 		{
 			std::free(buffer);

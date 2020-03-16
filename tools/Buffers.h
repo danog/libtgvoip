@@ -31,38 +31,40 @@ class BufferInputStream
 public:
 	BufferInputStream(const unsigned char *data, size_t length);
 	BufferInputStream(const Buffer &buffer);
-	~BufferInputStream();
-	void Seek(size_t offset);
+ 	BufferInputStream() = default;
+	~BufferInputStream() = default;
+	void Seek(size_t offset) const;
 	size_t GetLength() const;
 	size_t GetOffset() const;
 	size_t Remaining() const;
-	unsigned char ReadByte();
-	int64_t ReadInt64();
-	int32_t ReadInt32();
-	int16_t ReadInt16();
-	uint32_t ReadTlLength();
-	void ReadBytes(unsigned char *to, size_t count);
-	void ReadBytes(Buffer &to);
-	BufferInputStream GetPartBuffer(size_t length, bool advance);
+	unsigned char ReadByte() const;
+	int64_t ReadInt64() const;
+	int32_t ReadInt32() const;
+	int16_t ReadInt16() const;
+	uint32_t ReadTlLength() const;
+	void ReadBytes(unsigned char *to, size_t count) const;
+	void ReadBytes(Buffer &to) const;
+	BufferInputStream GetPartBuffer(size_t length, bool advance) const;
+	const unsigned char *GetRawBuffer() const;
 
-	inline uint64_t ReadUInt64()
+	inline uint64_t ReadUInt64() const
 	{
 		return static_cast<uint64_t>(ReadInt64());
 	}
-	inline uint32_t ReadUInt32()
+	inline uint32_t ReadUInt32() const
 	{
 		return static_cast<uint32_t>(ReadInt32());
 	}
-	inline uint16_t ReadUInt16()
+	inline uint16_t ReadUInt16() const
 	{
 		return static_cast<uint16_t>(ReadInt16());
 	}
 
 private:
-	void EnsureEnoughRemaining(size_t need);
-	const unsigned char *buffer;
-	size_t length;
-	size_t offset = 0;
+	void EnsureEnoughRemaining(size_t need) const;
+	const unsigned char *buffer = nullptr;
+	size_t length = 0;
+	mutable size_t offset = 0;
 };
 
 class BufferOutputStream

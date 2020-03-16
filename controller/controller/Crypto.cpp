@@ -20,7 +20,7 @@ size_t VoIPController::decryptPacket(unsigned char *buffer, BufferInputStream &i
         unsigned char aesOut[MSC_STACK_FALLBACK(in.Remaining(), 1500)];
         if (in.Remaining() > sizeof(aesOut))
             return 0;
-        crypto.aes_ige_decrypt((unsigned char *)buffer + in.GetOffset(), aesOut, in.Remaining(), key, iv);
+        crypto.aes_ige_decrypt(const_cast<uint8_t *>(in.GetRawBuffer()), aesOut, in.Remaining(), key, iv);
         BufferInputStream _in(aesOut, in.Remaining());
         unsigned char sha[SHA1_LENGTH];
         uint32_t _len = _in.ReadUInt32();

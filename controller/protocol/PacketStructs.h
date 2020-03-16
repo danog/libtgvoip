@@ -6,6 +6,18 @@
 namespace tgvoip
 {
 class PacketSender;
+struct Packet
+{
+    uint32_t seq;
+    uint32_t ackSeq;
+    uint32_t ackMask;
+
+    uint8_t streamId;
+    uint8_t flags;
+
+    Buffer data;
+    uint8_t eFlags = 0;
+};
 struct RecentOutgoingPacket
 {
     // For simple NACK reliable resending

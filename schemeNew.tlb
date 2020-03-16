@@ -2,7 +2,7 @@
 // Try unifying all flags, lengths and so on
 
 packet$_
-    seq:# ackSeq:# ackMask:# 
+    seq:# ackSeq:# ackMask:# // Different sequence for each streamId
 
     streamId:(## 2) // Max 2 streams, we don't need much anyway (0 and 3 are reserved values)
                     // If 0, is a pure-service message 
@@ -19,7 +19,7 @@ packet$_
     fragmented:eFlags.0?true // Logically, this flag can only appear on *big* fragmented messages
     keyframe:eFlags.1?true   // This flag can only appear for video streams (typically *big* messages, see ^)
 
-    data:bytes
+    data:bytes // No PTS, simply use the seq
     
     extraFEC:flags.1?ExtraFEC
     extraSignaling:flags.2?Extras<ExtraSignaling>
