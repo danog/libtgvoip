@@ -204,6 +204,13 @@ NetworkAddress NetworkAddress::IPv4(uint32_t addr)
 	a.addr.ipv4 = addr;
 	return a;
 }
+NetworkAddress NetworkAddress::IPv4(const BufferInputStream &in)
+{
+	NetworkAddress a;
+	a.isIPv6 = false;
+	a.addr.ipv4 = in.ReadUInt32();
+	return a;
+}
 
 NetworkAddress NetworkAddress::IPv6(std::string str)
 {
@@ -222,6 +229,13 @@ NetworkAddress NetworkAddress::IPv6(const uint8_t addr[16])
 	NetworkAddress a;
 	a.isIPv6 = true;
 	memcpy(a.addr.ipv6, addr, 16);
+	return a;
+}
+NetworkAddress NetworkAddress::IPv6(const BufferInputStream &in)
+{
+	NetworkAddress a;
+	a.isIPv6 = true;
+	in.ReadBytes(a.addr.ipv6, 16);
 	return a;
 }
 

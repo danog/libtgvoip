@@ -20,6 +20,7 @@ controller/audio/OpusEncoder.cpp \
 controller/audio/AudioPacketSender.cpp \
 controller/net/PacketReassembler.cpp \
 controller/protocol/PacketManager.cpp \
+controller/protocol/PacketStructs.cpp \
 VoIPGroupController.cpp \
 VoIPServerConfig.cpp \
 audio/AudioIO.cpp \

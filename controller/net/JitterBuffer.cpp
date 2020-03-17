@@ -196,7 +196,7 @@ void JitterBuffer::PutInternal(const jitter_packet_t &pkt, bool overwriteExistin
 	slot->buffer = bufferPool.Get();
 	slot->recvTimeDiff = time - prevRecvTime;
 	slot->isEC = pkt.isEC;
-	slot->buffer.CopyFromOtherBuffer(pkt.buffer, pkt.size);
+	slot->buffer.CopyFromOtherBuffer(pkt.buffer, pkt.size); // This prevents undefined behaviour
 #ifdef TGVOIP_DUMP_JITTER_STATS
 	fprintf(dump, "%u\t%.03f\t%d\t%.03f\t%.03f\t%.03f\n", pkt.timestamp, time, GetCurrentDelay(), lastMeasuredJitter, lastMeasuredDelay, minDelay);
 #endif

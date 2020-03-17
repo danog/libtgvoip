@@ -62,7 +62,6 @@ enum ProtocolVersions
 // Extra packet flags
 #define XPFLAG_HAS_EXTRA 1   // Signaling
 #define XPFLAG_HAS_RECV_TS 2 // Video calls
-#define XPFLAG_HAS_TRANSPORT_ID 4 // TODO: remove, not used
 
 
 // Extra signaling packet types
@@ -73,6 +72,9 @@ enum ProtocolVersions
 #define EXTRA_TYPE_GROUP_CALL_KEY 5
 #define EXTRA_TYPE_REQUEST_GROUP 6
 #define EXTRA_TYPE_IPV6_ENDPOINT 7
+
+#define EXTRA_TYPE_INIT 8
+#define EXTRA_TYPE_INIT_ACK 9
 
 // Stream signaling flags
 #define STREAM_FLAG_ENABLED 1

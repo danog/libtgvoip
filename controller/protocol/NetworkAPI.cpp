@@ -438,17 +438,16 @@ void VoIPController::SendExtra(Buffer &data, unsigned char type)
     ENFORCE_MSG_THREAD;
 
     LOGV("Sending extra type %u length %u", type, (unsigned int)data.Length());
-    for (vector<UnacknowledgedExtraData>::iterator x = currentExtras.begin(); x != currentExtras.end(); ++x)
+    for (auto &extra : currentExtras)
     {
-        if (x->type == type)
+        if (extra.type == type)
         {
-            x->firstContainingSeq = 0;
-            x->data = move(data);
+            extra.firstContainingSeq = 0;
+            extra.data = move(data);
             return;
         }
     }
-    UnacknowledgedExtraData xd = {type, move(data), 0};
-    currentExtras.push_back(move(xd));
+    currentExtras.push_back(UnacknowledgedExtraData{type, move(data), 0});
 }
 
 void VoIPController::SendUdpPing(Endpoint &endpoint)

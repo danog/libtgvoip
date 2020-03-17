@@ -57,8 +57,10 @@ public:
 	static NetworkAddress Empty();
 	static NetworkAddress IPv4(std::string str);
 	static NetworkAddress IPv4(uint32_t addr);
+	static NetworkAddress IPv4(const BufferInputStream &in);
 	static NetworkAddress IPv6(std::string str);
 	static NetworkAddress IPv6(const uint8_t addr[16]);
+	static NetworkAddress IPv6(const BufferInputStream &in);
 
 	bool isIPv6 = false;
 	union {

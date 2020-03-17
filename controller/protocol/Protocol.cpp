@@ -906,10 +906,8 @@ void VoIPController::ProcessExtraData(Buffer &data)
     {
         if (!allowP2p)
             return;
-        unsigned char _addr[16];
-        in.ReadBytes(_addr, 16);
-        NetworkAddress addr = NetworkAddress::IPv6(_addr);
-        uint16_t port = static_cast<uint16_t>(in.ReadInt16());
+        NetworkAddress addr = NetworkAddress::IPv6(in);
+        uint16_t port = in.ReadUInt16();
         peerIPv6Available = true;
         LOGV("Received peer IPv6 endpoint [%s]:%u", addr.ToString().c_str(), port);
 
@@ -963,11 +961,6 @@ uint8_t VoIPController::WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutp
             flags |= XPFLAG_HAS_TRANSPORT_ID;
 
         s.WriteByte(flags);
-
-        if (flags & XPFLAG_HAS_TRANSPORT_ID)
-        {
-            s.WriteByte(manager.getTransportId());
-        }
 
         if (!currentExtras.empty())
         {

@@ -38,7 +38,7 @@ size_t VoIPController::decryptPacket(unsigned char *buffer, BufferInputStream &i
         else
         {
             memcpy(buffer + in.GetOffset(), aesOut, in.Remaining());
-            in.ReadInt32();
+            return in.ReadInt32();
         }
     }
 

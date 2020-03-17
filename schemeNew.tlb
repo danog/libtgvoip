@@ -23,6 +23,7 @@ packet$_
     
     extraFEC:flags.1?ExtraFEC
     extraSignaling:flags.2?Extras<ExtraSignaling>
+    recvTS:flags.3?int
     
     = Packet;
 
@@ -32,13 +33,13 @@ extraFEC$_ mask:(## 8) [ length:(## 8) _:bytes ] = ExtraFEC;
 // Extras
 extras$_ {t:Type} (## 8) [ length:(## 8) extra:t ] = Extras t;
 
-extraStreamFlags#01 streamId:(## 8) flags:# enabled:flags.0?true dtx:flags.1?true extraEC:flags.2?true paused:flags.3?true = ExtraSignaling;
-extraStreamCsd#02 streamId:(## 8) width:(## 16) height:(## 16) count:(## 8) [ length:(## 8) codecSpecificData:bytes ]= ExtraSignaling;
+extraStreamFlags#01 flags:(## 8) enabled:flags.0?true dtx:flags.1?true extraEC:flags.2?true paused:flags.3?true = ExtraSignaling;
+extraStreamCsd#02 width:(## 16) height:(## 16) count:(## 8) [ length:(## 8) codecSpecificData:bytes ] = ExtraSignaling;
 
 extraLanEndpoint#03 address:# port:(## 16) = ExtraSignaling;
 extraIpv6Endpoint#07 address:(## 128) port:(## 16) = ExtraSignaling;
 
-extraNetworkChanged#04 flags:# dataSavingEnabled:flags.0?true = ExtraSignaling;
+extraNetworkChanged#04 flags:(## 8) dataSavingEnabled:flags.0?true = ExtraSignaling;
 
 extraGroupCallKey#05 key:(## 256) = ExtraSignaling;
 extraGroupCallUpgrade#06 = ExtraSignaling;

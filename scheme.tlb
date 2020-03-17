@@ -17,7 +17,7 @@ extraGroupCallUpgrade#06 = ExtraSignaling;
 streamInfo$_ streamId:(## 8) type:(## 8) codec:# frameDurationIgnored:(## 16) enabled:(## 8)= StreamInfo;
 
 // Packet
-packet$_ type:(## 8) ackSeq:# seq:# ackMask:# flags:(## 8) extras:flags.0?Extras<ExtraSignaling> data:payload = Packet;
+packet$_ type:(## 8) ackSeq:# seq:# ackMask:# flags:(## 8) extras:flags.0?Extras<ExtraSignaling> recvTS:flags.1?int data:payload = Packet;
 
 payloadInit#0 peerVersion:# minVersion:# flags:# streams:Extras<StreamInfo> dataSavingEnabled:flags.0?true groupCallSupported:flags.1?true videoSendSupported:flags.2?true videoRecvSupported:flags.3?true = Payload;
 payloadInitAck#1 peerVersion:# minVersion:# streams:Extras<StreamInfo> = Payload;

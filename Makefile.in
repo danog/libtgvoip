@@ -818,7 +818,8 @@ am__libtgvoip_la_SOURCES_DIST = TgVoip.cpp VoIPController.cpp \
 	controller/audio/OpusEncoder.cpp \
 	controller/audio/AudioPacketSender.cpp \
 	controller/net/PacketReassembler.cpp \
-	controller/protocol/PacketManager.cpp VoIPGroupController.cpp \
+	controller/protocol/PacketManager.cpp \
+	controller/protocol/PacketStructs.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
 	audio/AudioInputTester.cpp os/posix/NetworkSocketPosix.cpp \
@@ -1759,7 +1760,8 @@ am__objects_12 = TgVoip.lo VoIPController.lo tools/Buffers.lo \
 	controller/audio/OpusEncoder.lo \
 	controller/audio/AudioPacketSender.lo \
 	controller/net/PacketReassembler.lo \
-	controller/protocol/PacketManager.lo VoIPGroupController.lo \
+	controller/protocol/PacketManager.lo \
+	controller/protocol/PacketStructs.lo VoIPGroupController.lo \
 	VoIPServerConfig.lo audio/AudioIO.lo audio/AudioInput.lo \
 	audio/AudioOutput.lo audio/Resampler.lo \
 	audio/AudioInputTester.lo os/posix/NetworkSocketPosix.lo \
@@ -2076,6 +2078,7 @@ am__depfiles_remade = ./$(DEPDIR)/TgVoip.Plo \
 	controller/net/$(DEPDIR)/NetworkSocket.Plo \
 	controller/net/$(DEPDIR)/PacketReassembler.Plo \
 	controller/protocol/$(DEPDIR)/PacketManager.Plo \
+	controller/protocol/$(DEPDIR)/PacketStructs.Plo \
 	os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo \
 	os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo \
 	os/darwin/$(DEPDIR)/AudioOutputAudioUnit.Plo \
@@ -2393,7 +2396,8 @@ SRC = TgVoip.cpp VoIPController.cpp tools/Buffers.cpp \
 	controller/audio/OpusEncoder.cpp \
 	controller/audio/AudioPacketSender.cpp \
 	controller/net/PacketReassembler.cpp \
-	controller/protocol/PacketManager.cpp VoIPGroupController.cpp \
+	controller/protocol/PacketManager.cpp \
+	controller/protocol/PacketStructs.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
 	audio/AudioInputTester.cpp os/posix/NetworkSocketPosix.cpp \
@@ -2569,6 +2573,9 @@ controller/protocol/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) controller/protocol/$(DEPDIR)
 	@: > controller/protocol/$(DEPDIR)/$(am__dirstamp)
 controller/protocol/PacketManager.lo:  \
+	controller/protocol/$(am__dirstamp) \
+	controller/protocol/$(DEPDIR)/$(am__dirstamp)
+controller/protocol/PacketStructs.lo:  \
 	controller/protocol/$(am__dirstamp) \
 	controller/protocol/$(DEPDIR)/$(am__dirstamp)
 audio/$(am__dirstamp):
@@ -4039,6 +4046,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/NetworkSocket.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/PacketReassembler.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/$(DEPDIR)/PacketManager.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/$(DEPDIR)/PacketStructs.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioOutputAudioUnit.Plo@am__quote@ # am--include-marker
@@ -4929,6 +4937,7 @@ distclean: distclean-am
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f controller/net/$(DEPDIR)/PacketReassembler.Plo
 	-rm -f controller/protocol/$(DEPDIR)/PacketManager.Plo
+	-rm -f controller/protocol/$(DEPDIR)/PacketStructs.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioOutputAudioUnit.Plo
@@ -5299,6 +5308,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f controller/net/$(DEPDIR)/PacketReassembler.Plo
 	-rm -f controller/protocol/$(DEPDIR)/PacketManager.Plo
+	-rm -f controller/protocol/$(DEPDIR)/PacketStructs.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioOutputAudioUnit.Plo
