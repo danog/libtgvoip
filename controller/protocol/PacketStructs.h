@@ -1,39 +1,19 @@
 #pragma once
 #include "../PrivateDefines.h"
 #include "../../tools/Buffers.h"
+#include "protocol/Interface.h"
+#include "protocol/Extra.h"
 //#include "../net/PacketSender.h"
 
 namespace tgvoip
 {
 class PacketSender;
-struct Serializable
-{
-    virtual bool parse(const BufferInputStream &in, int peerVersion) = 0;
-    virtual bool serialize(BufferOutputStream &out, int peerVersion) = 0;
-};
-template <typename T>
-struct Array
-{
-public:
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
 
-    std::vector<std::shared_ptr<T>> contents;
-};
-
-struct Extra : public Serializable
-{
-    static std::shared_ptr<Extra> choose(const BufferInputStream &in, int peerVersion);
-};
 struct Packet : public Serializable
 {
 public:
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
-
-private:
-    bool parseLegacyPacket(const BufferInputStream &in, int peerVersion);
-    bool parseLegacyLegacyPacket(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion);
+    virtual bool parse(const BufferInputStream &in, int peerVersion) override;
+    virtual bool serialize(BufferOutputStream &out, int peerVersion) override;
 
 public:
     enum Flags : uint8_t
@@ -61,149 +41,17 @@ public:
 
     Buffer data;
 
-    std::vector<std::shared_ptr<Extra>> extras;
+    Array<Extra> extras;
 };
 
-struct StreamInfo : public Serializable
-{
-public:
-    static std::shared_ptr<StreamInfo> choose(const BufferInputStream &in, int peerVersion)
-    {
-        return std::make_shared<StreamInfo>();
-    };
-
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
-
-    uint8_t streamId = 0;
-    uint8_t type = 0;
-    uint32_t codec = 0;
-    uint16_t frameDuration = 0;
-    uint8_t enabled = 0;
-};
-
-struct ExtraStreamFlags : public Extra
+struct PacketLegacy : public Packet
 {
 public:
     bool parse(const BufferInputStream &in, int peerVersion) override;
     bool serialize(BufferOutputStream &out, int peerVersion) override;
 
-    enum Flags : uint8_t
-    {
-        Enabled = 1,
-        Dtx = 2,
-        ExtraEC = 3,
-        Paused = 4
-    };
-
-    uint8_t flags = 0;
-
-    static const uint8_t ID = 1;
-};
-
-struct ExtraStreamCsd : public Extra
-{
-public:
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
-
-    uint16_t width = 0;
-    uint16_t height = 0;
-
-    std::vector<BufferInputStream> data;
-
-    static const uint8_t ID = 2;
-};
-
-struct ExtraLanEndpoint : public Extra
-{
-public:
-    virtual bool parse(const BufferInputStream &in, int peerVersion);
-    virtual bool serialize(BufferOutputStream &out, int peerVersion);
-
-    NetworkAddress address;
-    uint16_t port = 0;
-
-    static const uint8_t ID = 3;
-};
-
-struct ExtraIpv6Endpoint : public Extra
-{
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
-
-    NetworkAddress address;
-    uint16_t port = 0;
-
-    static const uint8_t ID = 7;
-};
-
-struct ExtraNetworkChanged : public Extra
-{
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
-
-    enum Flags : uint8_t
-    {
-        DataSavingEnabled = 1
-    };
-
-    uint8_t flags = 0;
-
-    static const uint8_t ID = 4;
-};
-
-struct ExtraGroupCallKey : public Extra
-{
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
-
-    std::array<uint8_t, 256> key;
-
-    static const uint8_t ID = 5;
-};
-
-struct ExtraGroupCallUpgrade : public Extra
-{
-    bool parse(const BufferInputStream &in, int peerVersion) override{};
-    bool serialize(BufferOutputStream &out, int peerVersion) override{};
-
-    static const uint8_t ID = 6;
-};
-
-struct ExtraInit : public Extra
-{
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
-
-    enum Flags : uint8_t
-    {
-        DataSavingEnabled = 1,
-        GroupCallSupported = 2,
-        VideoSendSupported = 4,
-        VideoRecvSupported = 8
-    };
-
-    uint32_t peerVersion = 0;
-    uint32_t minVersion = 0;
-    uint8_t flags = 0;
-
-    std::vector<std::shared_ptr<StreamInfo>> streams;
-
-    static const uint8_t ID = 8;
-};
-
-struct ExtraInitAck : public Extra
-{
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
-
-    uint32_t peerVersion = 0;
-    uint32_t minVersion = 0;
-
-    std::vector<std::shared_ptr<StreamInfo>> streams;
-
-    static const uint8_t ID = 8;
+private:
+    bool parseLegacyLegacyPacket(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion);
 };
 
 // Legacy stuff

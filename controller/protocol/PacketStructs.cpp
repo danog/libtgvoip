@@ -3,27 +3,6 @@
 
 using namespace tgvoip;
 
-std::shared_ptr<Extra> choose(const BufferInputStream &in, int peerVersion)
-{
-    switch (in.ReadByte())
-    {
-    case ExtraStreamFlags::ID:
-        return std::make_shared<ExtraStreamFlags>();
-    case ExtraStreamCsd::ID:
-        return std::make_shared<ExtraStreamCsd>();
-    case ExtraLanEndpoint::ID:
-        return std::make_shared<ExtraLanEndpoint>();
-    case ExtraIpv6Endpoint::ID:
-        return std::make_shared<ExtraIpv6Endpoint>();
-    case ExtraNetworkChanged::ID:
-        return std::make_shared<ExtraNetworkChanged>();
-    case ExtraGroupCallKey::ID:
-        return std::make_shared<ExtraGroupCallKey>();
-    case ExtraGroupCallUpgrade::ID:
-        return std::make_shared<ExtraGroupCallUpgrade>();
-    }
-}
-
 bool Packet::parse(const BufferInputStream &in, int peerVersion)
 {
     if (peerVersion < PROTOCOL_RELIABLE)
@@ -60,19 +39,7 @@ bool Packet::parseLegacyPacket(const BufferInputStream &in, int peerVersion)
     // Extra data
     if (pflags & XPFLAG_HAS_EXTRA)
     {
-        uint8_t extraCount = in.ReadByte();
-        extras.reserve(extraCount);
-        for (auto i = 0; i < extraCount; i++)
-        {
-            BufferInputStream inExtra = in.GetPartBuffer(in.ReadByte());
-
-            auto ptr = Extra::choose(inExtra, peerVersion);
-
-            if (ptr->parse(inExtra, peerVersion))
-            {
-                extras.push_back(std::move(ptr));
-            }
-        }
+        extras.parse(in, peerVersion);
     }
     if (pflags & XPFLAG_HAS_RECV_TS)
     {

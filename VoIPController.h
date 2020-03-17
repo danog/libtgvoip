@@ -394,12 +394,6 @@ public:
     void SetAudioOutputDuckingEnabled(bool enabled);
 #endif
 
-    enum StreamType
-    {
-        STREAM_TYPE_AUDIO = 1,
-        STREAM_TYPE_VIDEO
-    };
-
     struct Stream
     {
         int32_t userID;

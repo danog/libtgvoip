@@ -95,11 +95,6 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         acks = in.ReadUInt32();
         pflags = in.ReadByte();
         packetInnerLen = innerLen - 14;
-
-        if (pflags & XPFLAG_HAS_TRANSPORT_ID)
-        {
-            transportId = in.ReadByte();
-        }
     }
     else if (!legacyParsePacket(in, type, ackId, pseq, acks, pflags, packetInnerLen))
     {
