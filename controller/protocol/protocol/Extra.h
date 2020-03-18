@@ -6,12 +6,12 @@
 
 namespace tgvoip
 {
-struct Extra : public Serializable
+struct Extra : public Serializable, MultiChoice<Extra>
 {
-    static std::shared_ptr<Extra> choose(const BufferInputStream &in, const VersionInfo &ver);
+    static std::shared_ptr<T> chooseFromType(uint8_t type);
 };
 
-struct Codec : public Serializable, SingleChoice<StreamInfo>
+struct Codec : public Serializable, SingleChoice<Codec>
 {
 public:
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
@@ -115,6 +115,7 @@ struct ExtraNetworkChanged : public Extra
         DataSavingEnabled = 1
     };
 
+    uint8_t streamId = 0;
     uint8_t flags = 0;
 
     static const uint8_t ID = 4;
@@ -176,4 +177,20 @@ struct ExtraInitAck : public Extra
     static const uint8_t ID = 8;
 };
 
+struct ExtraPing : public Extra
+{
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override { return true; };
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override{};
+
+    static const uint8_t ID = 9;
+};
+struct ExtraPong : public Extra
+{
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
+
+    uint32_t seq = 0;
+
+    static const uint8_t ID = 9;
+};
 } // namespace tgvoip

@@ -21,9 +21,9 @@ packet$_
 
     data:bytes // No PTS, simply use the seq
     
-    extraFEC:flags.1?ExtraFEC
-    extraSignaling:flags.2?Extras<ExtraSignaling>
-    recvTS:flags.3?int
+    recvTS:flags.1?int
+    extraFEC:flags.2?ExtraFEC
+    extraSignaling:flags.3?Extras<ExtraSignaling>
     
     = Packet;
 
@@ -39,7 +39,7 @@ extraStreamCsd#02 streamId:(## 8) width:(## 16) height:(## 16) count:(## 8) [ le
 extraLanEndpoint#03 address:# port:(## 16) = ExtraSignaling;
 extraIpv6Endpoint#07 address:(## 128) port:(## 16) = ExtraSignaling;
 
-extraNetworkChanged#04 flags:(## 8) dataSavingEnabled:flags.0?true = ExtraSignaling;
+extraNetworkChanged#04 streamId:(## 8) flags:(## 8) dataSavingEnabled:flags.0?true = ExtraSignaling;
 
 extraGroupCallKey#05 key:(## 256) = ExtraSignaling;
 extraGroupCallUpgrade#06 = ExtraSignaling;
@@ -54,8 +54,6 @@ extraInitAck#09 peerVersion:# minVersion:# streams:Extras<StreamInfo> = ExtraSig
 // Misc signaling
 extraPing#A = ExtraSignaling;
 extraPong#B seq:# = ExtraSignaling;
-
-extraNop#C = ExtraSignaling;
 
 // Stream info
 streamInfo$_ streamId:(## 8) type:(## 8) codec:# frameDurationIgnored:(## 16) enabled:(## 8)= StreamInfo;

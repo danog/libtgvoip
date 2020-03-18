@@ -105,10 +105,7 @@ public:
 	void WriteBytes(const unsigned char *bytes, size_t count);
 	void WriteBytes(const Buffer &buffer);
 	void WriteBytes(const Buffer &buffer, size_t offset, size_t count);
-	inline void Write(const Serializable &data, const VersionInfo &ver)
-	{
-		data.serialize(*this, ver);
-	}
+	void Write(const Serializable &data, const VersionInfo &ver);
 	unsigned char *GetBuffer();
 	size_t GetOffset();
 	size_t GetLength();

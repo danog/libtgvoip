@@ -46,7 +46,37 @@ std::shared_ptr<Extra> Extra::choose(const BufferInputStream &in, const VersionI
         return std::make_shared<ExtraGroupCallKey>();
     case ExtraGroupCallUpgrade::ID:
         return std::make_shared<ExtraGroupCallUpgrade>();
+    case ExtraInit::ID:
+        return std::make_shared<ExtraInit>();
+    case ExtraInitAck::ID:
+        return std::make_shared<ExtraInitAck>();
+    case ExtraPing::ID:
+        return std::make_shared<ExtraPing>();
+    case ExtraPong::ID:
+        return std::make_shared<ExtraPong>();
     }
+    return nullptr;
+}
+std::shared_ptr<Extra> Extra::chooseFromType(int type)
+{
+    switch (type)
+    {
+    case PKT_INIT:
+        return std::make_shared<ExtraInit>();
+    case PKT_INIT_ACK:
+        return std::make_shared<ExtraInitAck>();
+    case PKT_LAN_ENDPOINT:
+        return std::make_shared<ExtraLanEndpoint>();
+    case PKT_NETWORK_CHANGED:
+        return std::make_shared<ExtraNetworkChanged>();
+    case PKT_PING:
+        return std::make_shared<ExtraPing>();
+    case PKT_PONG:
+        return std::make_shared<ExtraPong>();
+    case PKT_STREAM_STATE:
+        return std::make_shared<ExtraStreamFlags>();
+    }
+    return nullptr;
 }
 
 bool StreamInfo::parse(const BufferInputStream &in, const VersionInfo &ver)
@@ -69,6 +99,15 @@ void StreamInfo::serialize(BufferOutputStream &out, const VersionInfo &ver) cons
 
 bool ExtraStreamFlags::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
+    if (ver.peerVersion < 6)
+    {
+        if (!in.TryRead(streamId))
+            return false;
+        if (!in.TryRead(flags))
+            return false;
+        flags = flags ? Flags::Enabled : 0;
+        return true;
+    }
     return in.TryRead(streamId) &&
                    ver.isNew()
                ? in.TryRead(flags)
@@ -80,8 +119,10 @@ void ExtraStreamFlags::serialize(BufferOutputStream &out, const VersionInfo &ver
 
     if (ver.isNew())
         out.WriteByte(flags);
-    else
+    else if (ver.peerVersion >= 6)
         out.WriteUInt32(flags);
+    else
+        out.WriteByte(flags & Flags::Enabled);
 }
 
 bool ExtraStreamCsd::parse(const BufferInputStream &in, const VersionInfo &ver)
@@ -151,12 +192,12 @@ void ExtraInit::serialize(BufferOutputStream &out, const VersionInfo &ver) const
     {
         out.WriteByte(2); // audio codecs count, for some reason two codecs required
         out.WriteByte(CODEC_OPUS_OLD);
-        out.WriteByte(0); // second useless codec
-        out.WriteByte(0); // what is this
-        out.WriteByte(0); // what is this
+        out.WriteByte(0);           // second useless codec
+        out.WriteByte(0);           // what is this
+        out.WriteByte(0);           // what is this
         out.WriteInt32(CODEC_OPUS); // WHAT IS THIS
-        out.WriteByte(0); // video codecs count (decode)
-        out.WriteByte(0); // video codecs count (encode)
+        out.WriteByte(0);           // video codecs count (decode)
+        out.WriteByte(0);           // video codecs count (encode)
     }
     else
     {
@@ -177,4 +218,27 @@ void ExtraInitAck::serialize(BufferOutputStream &out, const VersionInfo &ver) co
     out.WriteUInt32(peerVersion);
     out.WriteUInt32(minVersion);
     out.Write(streams, ver);
+}
+
+bool ExtraPong::parse(const BufferInputStream &in, const VersionInfo &ver)
+{
+    return in.TryRead(seq);
+}
+
+void ExtraPong::serialize(BufferOutputStream &out, const VersionInfo &ver) const
+{
+    out.WriteUInt32(seq);
+}
+
+bool ExtraNetworkChanged::parse(const BufferInputStream &in, const VersionInfo &ver)
+{
+    return in.TryRead(streamId) &&
+                   ver.isNew()
+               ? in.TryRead(flags)
+               : in.TryReadCompat<uint32_t>(flags);
+}
+void ExtraNetworkChanged::serialize(BufferOutputStream &out, const VersionInfo &ver) const
+{
+    out.WriteByte(streamId);
+    ver.isNew() ? out.WriteByte(flags) : out.WriteUInt32(flags);
 }

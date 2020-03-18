@@ -21,7 +21,7 @@ controller/audio/AudioPacketSender.cpp \
 controller/net/PacketReassembler.cpp \
 controller/protocol/PacketManager.cpp \
 controller/protocol/PacketStructs.cpp \
-controller/protocol/packets/Interface.cpp \
+controller/protocol/packets/Extra.cpp \
 VoIPGroupController.cpp \
 VoIPServerConfig.cpp \
 audio/AudioIO.cpp \

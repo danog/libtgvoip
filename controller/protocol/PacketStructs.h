@@ -9,19 +9,23 @@ namespace tgvoip
 {
 class PacketSender;
 
-struct Packet : public Serializable
+struct Packet : public Serializable, SingleChoice<Packet>
 {
 public:
-    virtual bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
-    virtual void serialize(BufferOutputStream &out, const VersionInfo &ver) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
+
+private:
+    bool parseLegacy(const BufferInputStream &in, const VersionInfo &ver);
+    bool parseLegacyLegacy(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion);
 
 public:
     enum Flags : uint8_t
     {
         Len16 = 1,
-        ExtraFEC = 2,
-        ExtraSignaling = 4,
-        RecvTS = 8
+        RecvTS = 2,
+        ExtraFEC = 4,
+        ExtraSignaling = 8
     };
     enum EFlags : uint8_t
     {
@@ -41,17 +45,8 @@ public:
 
     Buffer data;
 
-    Array<Extra> extras;
-};
-
-struct PacketLegacy : public Packet
-{
-public:
-    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
-    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
-
-private:
-    bool parseLegacyLegacyPacket(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion);
+    Array<Bytes> extraEC;
+    Array<Wrapped<Extra>> extraSignaling;
 };
 
 // Legacy stuff

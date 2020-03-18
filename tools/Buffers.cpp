@@ -357,6 +357,10 @@ void BufferOutputStream::WriteBytes(const Buffer &buffer, size_t offset, size_t 
 	WriteBytes(*buffer + offset, count);
 }
 
+void BufferOutputStream::Write(const Serializable &data, const VersionInfo &ver)
+{
+	data.serialize(*this, ver);
+}
 
 unsigned char *BufferOutputStream::GetBuffer()
 {

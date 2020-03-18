@@ -26,6 +26,13 @@ struct SingleChoice
     }
 };
 
+
+template <typename T>
+struct MultiChoice
+{
+    static std::shared_ptr<T> choose(const BufferInputStream &in, const VersionInfo &ver);
+};
+
 struct Serializable
 {
 public:
@@ -46,48 +53,52 @@ struct Array : public Serializable, SingleChoice<Array<T>>
         v.reserve(extraCount);
         for (auto i = 0; i < extraCount; i++)
         {
-            auto ptr = T::choose(in, ver);
-            if (!ptr || !ptr->parse(in, ver))
+            T data;
+            if (!data.parse(in, ver))
             {
                 return false;
             }
-            v.push_back(std::move(ptr));
+            v.push_back(std::move(data));
         }
         return true;
     }
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
     {
         out.WriteByte(v.size());
-        for (auto &ptr : v)
+        for (auto &data : v)
         {
-            ptr->serialize(out, ver);
+            data.serialize(out, ver);
         }
     }
 
-    std::vector<std::shared_ptr<T>> v;
+    std::vector<T> v;
 };
 
 template <class T>
-struct Wrapped : public Serializable, SingleChoice<Wrapped>
+struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
 {
+    Wrapped(std::shared_ptr &&_d) : d(_d);
+    Wrapped(std::shared_ptr &_d) : d(_d);
+    
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override
     {
         uint8_t len;
         if (!in.TryRead(len))
             return false;
-        return d.parse(in.GetPartBuffer(len));
+        d = T::choose(in, ver);
+        return d->parse(in.GetPartBuffer(len));
     }
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
     {
         out.Advance(1);
         size_t len = out.GetOffset();
-        d.serialize(out, ver);
+        d->serialize(out, ver);
         len = out.GetOffset() - len;
         out.Rewind(len + 1);
         out.WriteByte(len);
         out.Advance(len);
     }
-    T d;
+    std::shared_ptr<T> d;
 };
 
 struct Bytes : public Serializable,

@@ -7,11 +7,11 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
     if (!ver.isNew())
     {
-        return parseLegacyPacket(in, ver);
+        return parseLegacy(in, ver);
     }
 }
 
-bool Packet::parseLegacyPacket(const BufferInputStream &in, const VersionInfo &ver)
+bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
 {
     // Version-specific extraction of legacy packet fields ackId (last received packet seq on remote), (incoming packet seq) pseq, (ack mask) acks, (packet type) type, (flags) pflags, packet length
     uint32_t ackId;             // Last received packet seqno on remote
@@ -19,16 +19,18 @@ bool Packet::parseLegacyPacket(const BufferInputStream &in, const VersionInfo &v
     uint32_t acks;              // Ack mask
     unsigned char type, pflags; // Packet type, flags
     size_t packetInnerLen = 0;
-    if (peerVersion >= 8)
+    if (ver.peerVersion >= 8)
     {
-        type = in.ReadByte();
-        ackId = in.ReadUInt32();
-        pseq = in.ReadUInt32();
-        acks = in.ReadUInt32();
-        pflags = in.ReadByte();
+        if (!(
+                in.TryRead(type) &&
+                in.TryRead(ackId) &&
+                in.TryRead(pseq) &&
+                in.TryRead(acks) &&
+                in.TryRead(pflags)))
+            return false;
         packetInnerLen = in.Remaining();
     }
-    else if (!legacyParsePacket(in, type, ackId, pseq, acks, pflags, packetInnerLen, peerVersion))
+    else if (!parseLegacyLegacy(in, type, ackId, pseq, acks, pflags, packetInnerLen, ver.peerVersion))
     {
         return false;
     }
@@ -39,31 +41,31 @@ bool Packet::parseLegacyPacket(const BufferInputStream &in, const VersionInfo &v
     // Extra data
     if (pflags & XPFLAG_HAS_EXTRA)
     {
-        extras.parse(in, peerVersion);
+        if (!in.TryRead(extraSignaling, ver))
+            return false;
     }
     if (pflags & XPFLAG_HAS_RECV_TS)
     {
-        recvTS = in.ReadUInt32();
+        if (!in.TryRead(recvTS))
+            return false;
     }
 
-    if (type == PKT_INIT)
+    if (auto extra = Extra::chooseFromType(type))
     {
-        Buffer
+        if (!extra->parse(in, ver))
+            return false;
+
+        extraSignaling.v.push_back(Wrapped<Extra>(std::move(extra)));
+        streamId = 0;
     }
-    else if (type == PKT_INIT_ACK)
-    {
-    }
-    else if (type == PKT_PING)
-    {
-    }
-    else if (type == PKT_PONG)
+    else if (type == PKT_STREAM_EC)
     {
     }
-    else if (type == PKT_NOP)
+    else if (type == PKT_STREAM_DATA || type == PKT_STREAM_DATA_X2 || type == PKT_STREAM_DATA_X3)
     {
     }
 }
-bool legacyParsePacket(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion)
+bool Packet::parseLegacyLegacy(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion)
 {
     size_t packetInnerLen = 0;
     uint32_t tlid = in.ReadUInt32();
