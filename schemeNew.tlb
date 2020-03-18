@@ -33,8 +33,8 @@ extraFEC$_ mask:(## 8) [ length:(## 8) _:bytes ] = ExtraFEC;
 // Extras
 extras$_ {t:Type} (## 8) [ length:(## 8) extra:t ] = Extras t;
 
-extraStreamFlags#01 flags:(## 8) enabled:flags.0?true dtx:flags.1?true extraEC:flags.2?true paused:flags.3?true = ExtraSignaling;
-extraStreamCsd#02 width:(## 16) height:(## 16) count:(## 8) [ length:(## 8) codecSpecificData:bytes ] = ExtraSignaling;
+extraStreamFlags#01 streamId:(## 8) flags:(## 8) enabled:flags.0?true dtx:flags.1?true extraEC:flags.2?true paused:flags.3?true = ExtraSignaling;
+extraStreamCsd#02 streamId:(## 8) width:(## 16) height:(## 16) count:(## 8) [ length:(## 8) codecSpecificData:bytes ] = ExtraSignaling;
 
 extraLanEndpoint#03 address:# port:(## 16) = ExtraSignaling;
 extraIpv6Endpoint#07 address:(## 128) port:(## 16) = ExtraSignaling;
@@ -48,7 +48,7 @@ extraGroupCallUpgrade#06 = ExtraSignaling;
 
 // All signaling starting from here can only be done on packets with streamID 0 (only signaling, no data).
 // New init/initACK
-extraInit#08 peerVersion:# minVersion:# flags:(## 8) streams:Extras<StreamInfo> dataSavingEnabled:flags.0?true groupCallSupported:flags.1?true videoSendSupported:flags.2?true videoRecvSupported:flags.3?true = ExtraSignaling;
+extraInit#08 peerVersion:# minVersion:# flags:(## 8) audioCodecs:Extras<int> decoders:Extras<int> maxResolution:(## 8) dataSavingEnabled:flags.0?true groupCallSupported:flags.1?true videoSendSupported:flags.2?true videoRecvSupported:flags.3?true = ExtraSignaling;
 extraInitAck#09 peerVersion:# minVersion:# streams:Extras<StreamInfo> = ExtraSignaling;
 
 // Misc signaling

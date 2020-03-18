@@ -1,5 +1,4 @@
 // Extras
-
 extras$_ {t:Type} (## 8) [ length:(## 8) extra:t ] = Extras t;
 
 extraStreamFlags#01 streamId:(## 8) flags:# enabled:flags.0?true dtx:flags.1?true extraEC:flags.2?true paused:flags.3?true = ExtraSignaling;
@@ -19,7 +18,7 @@ streamInfo$_ streamId:(## 8) type:(## 8) codec:# frameDurationIgnored:(## 16) en
 // Packet
 packet$_ type:(## 8) ackSeq:# seq:# ackMask:# flags:(## 8) extras:flags.0?Extras<ExtraSignaling> recvTS:flags.1?int data:payload = Packet;
 
-payloadInit#0 peerVersion:# minVersion:# flags:# streams:Extras<StreamInfo> dataSavingEnabled:flags.0?true groupCallSupported:flags.1?true videoSendSupported:flags.2?true videoRecvSupported:flags.3?true = Payload;
+payloadInit#0 peerVersion:# minVersion:# flags:# audioCodecs:Extras<int> decoders:Extras<int> maxResolution:(## 8) dataSavingEnabled:flags.0?true groupCallSupported:flags.1?true videoSendSupported:flags.2?true videoRecvSupported:flags.3?true = Payload;
 payloadInitAck#1 peerVersion:# minVersion:# streams:Extras<StreamInfo> = Payload;
 
 payloadStreamData#4

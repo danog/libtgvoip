@@ -24,6 +24,9 @@
 namespace tgvoip
 {
 class Buffer;
+class NetworkAddress;
+class Serializable;
+class VersionInfo;
 
 class BufferInputStream
 {
@@ -31,7 +34,7 @@ class BufferInputStream
 public:
 	BufferInputStream(const unsigned char *data, size_t length);
 	BufferInputStream(const Buffer &buffer);
- 	BufferInputStream() = default;
+	BufferInputStream() = default;
 	~BufferInputStream() = default;
 	void Seek(size_t offset) const;
 	size_t GetLength() const;
@@ -60,6 +63,25 @@ public:
 		return static_cast<uint16_t>(ReadInt16());
 	}
 
+	bool TryRead(uint8_t &data) const;
+	bool TryRead(uint16_t &data) const;
+	bool TryRead(uint32_t &data) const;
+	bool TryRead(uint64_t &data) const;
+	bool TryRead(int16_t &data) const;
+	bool TryRead(int32_t &data) const;
+	bool TryRead(int64_t &data) const;
+	bool TryRead(uint8_t *to, size_t count) const;
+	bool TryRead(Buffer &to) const;
+	bool TryRead(NetworkAddress &to, bool ipv6) const;
+	bool TryRead(Serializable &to, const VersionInfo &ver) const;
+
+	template <typename X, typename Y>
+	bool TryReadCompat(Y &data) const; // For compatibility, actually read type X, then cast to Y
+
+	bool Has(size_t length) const;
+
+	bool TryReadTlLength(uint32_t &data) const;
+
 private:
 	void EnsureEnoughRemaining(size_t need) const;
 	const unsigned char *buffer = nullptr;
@@ -83,10 +105,16 @@ public:
 	void WriteBytes(const unsigned char *bytes, size_t count);
 	void WriteBytes(const Buffer &buffer);
 	void WriteBytes(const Buffer &buffer, size_t offset, size_t count);
+	inline void Write(const Serializable &data, const VersionInfo &ver)
+	{
+		data.serialize(*this, ver);
+	}
 	unsigned char *GetBuffer();
+	size_t GetOffset();
 	size_t GetLength();
 	void Reset();
 	void Rewind(size_t numBytes);
+	void Advance(size_t numBytes);
 
 	inline void WriteUInt64(uint64_t i)
 	{

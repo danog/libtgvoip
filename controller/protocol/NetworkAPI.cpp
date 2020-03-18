@@ -134,7 +134,7 @@ void VoIPController::SendInit()
             out.WriteByte(2); // audio codecs count
             out.WriteByte(CODEC_OPUS_OLD);
             out.WriteByte(0);
-            out.WriteByte(0);
+            out.WriteByte(0); // idk, stuff I guess
             out.WriteByte(0);
             out.WriteInt32(CODEC_OPUS);
             out.WriteByte(0); // video codecs count (decode)

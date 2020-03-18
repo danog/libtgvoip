@@ -306,9 +306,8 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             }
         }
 
-        unsigned int i;
         unsigned char numSupportedAudioCodecs = in.ReadByte();
-        for (i = 0; i < numSupportedAudioCodecs; i++)
+        for (auto i = 0; i < numSupportedAudioCodecs; i++)
         {
             if (peerVersion < 5)
                 in.ReadByte(); // ignore for now
@@ -319,7 +318,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         {
             LOGD("Peer video decoders:");
             unsigned int numSupportedVideoDecoders = in.ReadByte();
-            for (i = 0; i < numSupportedVideoDecoders; i++)
+            for (auto i = 0; i < numSupportedVideoDecoders; i++)
             {
                 uint32_t id = in.ReadUInt32();
                 peerVideoDecoders.push_back(id);
@@ -349,7 +348,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             out.WriteByte((unsigned char)(stream->enabled ? 1 : 0));
         }
         LOGI("Sending init ack");
-        size_t outLength = out.GetLength();
+        size_t outLength = out.GetOffset();
         SendOrEnqueuePacket(PendingOutgoingPacket{
             /*.seq=*/packetManager.nextLocalSeq(),
             /*.type=*/PKT_INIT_ACK,

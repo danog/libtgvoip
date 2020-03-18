@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include <cstdlib>
 #include "tools/logging.h"
+#include "controller/net/NetworkSocket.h"
+#include "controller/protocol/protocol/Interface.h"
 
 using namespace tgvoip;
 
@@ -135,6 +137,143 @@ void BufferInputStream::EnsureEnoughRemaining(size_t need) const
 	}
 }
 
+bool BufferInputStream::TryRead(uint8_t &data) const
+{
+	if (offset + 1 > length)
+		return false;
+	data = buffer[offset++];
+	return true;
+}
+bool BufferInputStream::TryRead(uint16_t &data) const
+{
+	if (offset + 2 > length)
+		return false;
+	data = (uint16_t)buffer[offset] | ((uint16_t)buffer[offset + 1] << 8);
+	offset += 2;
+	return true;
+}
+bool BufferInputStream::TryRead(uint32_t &data) const
+{
+	if (offset + 4 > length)
+		return false;
+	data = ((uint32_t)buffer[offset] & 0xFF) |
+		   (((uint32_t)buffer[offset + 1] & 0xFF) << 8) |
+		   (((uint32_t)buffer[offset + 2] & 0xFF) << 16) |
+		   (((uint32_t)buffer[offset + 3] & 0xFF) << 24);
+	offset += 4;
+	return true;
+}
+bool BufferInputStream::TryRead(uint64_t &data) const
+{
+	if (offset + 8 > length)
+		return false;
+	data = ((uint64_t)buffer[offset] & 0xFF) |
+		   (((uint64_t)buffer[offset + 1] & 0xFF) << 8) |
+		   (((uint64_t)buffer[offset + 2] & 0xFF) << 16) |
+		   (((uint64_t)buffer[offset + 3] & 0xFF) << 24) |
+		   (((uint64_t)buffer[offset + 4] & 0xFF) << 32) |
+		   (((uint64_t)buffer[offset + 5] & 0xFF) << 40) |
+		   (((uint64_t)buffer[offset + 6] & 0xFF) << 48) |
+		   (((uint64_t)buffer[offset + 7] & 0xFF) << 56);
+	offset += 8;
+	return true;
+}
+bool BufferInputStream::TryRead(int16_t &data) const
+{
+	if (offset + 2 > length)
+		return false;
+	data = (int16_t)buffer[offset] | ((int16_t)buffer[offset + 1] << 8);
+	offset += 2;
+	return true;
+}
+bool BufferInputStream::TryRead(int32_t &data) const
+{
+	if (offset + 4 > length)
+		return false;
+	data = ((int32_t)buffer[offset] & 0xFF) |
+		   (((int32_t)buffer[offset + 1] & 0xFF) << 8) |
+		   (((int32_t)buffer[offset + 2] & 0xFF) << 16) |
+		   (((int32_t)buffer[offset + 3] & 0xFF) << 24);
+	offset += 4;
+	return true;
+}
+bool BufferInputStream::TryRead(int64_t &data) const
+{
+	if (offset + 8 > length)
+		return false;
+	data = ((int64_t)buffer[offset] & 0xFF) |
+		   (((int64_t)buffer[offset + 1] & 0xFF) << 8) |
+		   (((int64_t)buffer[offset + 2] & 0xFF) << 16) |
+		   (((int64_t)buffer[offset + 3] & 0xFF) << 24) |
+		   (((int64_t)buffer[offset + 4] & 0xFF) << 32) |
+		   (((int64_t)buffer[offset + 5] & 0xFF) << 40) |
+		   (((int64_t)buffer[offset + 6] & 0xFF) << 48) |
+		   (((int64_t)buffer[offset + 7] & 0xFF) << 56);
+	offset += 8;
+	return true;
+}
+bool BufferInputStream::TryRead(uint8_t *to, size_t len) const
+{
+	if (offset + len > length)
+		return false;
+	memcpy(to, buffer + offset, len);
+	offset += len;
+	return true;
+}
+bool BufferInputStream::TryRead(Buffer &to) const
+{
+	return TryRead(*to, to.Length());
+}
+
+bool BufferInputStream::TryRead(NetworkAddress &to, bool ipv6) const
+{
+	to.isIPv6 = ipv6;
+	return ipv6 ? TryRead(to.addr.ipv6, 16) : TryRead(to.addr.ipv4);
+}
+bool BufferInputStream::TryRead(Serializable &to, const VersionInfo &ver) const
+{
+	return to.parse(*this, ver);
+}
+
+template <typename X, typename Y>
+bool BufferInputStream::TryReadCompat(Y &data) const
+{
+	X temp;
+	if (!TryRead(temp))
+		return false;
+	data = static_cast<Y>(temp);
+	return true;
+}
+
+bool BufferInputStream::Has(size_t len) const
+{
+	return offset + len > length;
+}
+
+bool BufferInputStream::TryReadTlLength(uint32_t &data) const
+{
+	uint8_t byte;
+	if (!TryRead(byte))
+	{
+		return false;
+	}
+	if (byte < 254)
+	{
+		data = byte;
+		return true;
+	}
+	if (length - offset < 3)
+	{
+		return false;
+	}
+
+	data = ((uint32_t)buffer[offset] & 0xFF) |
+		   (((uint32_t)buffer[offset + 1] & 0xFF) << 8) |
+		   (((uint32_t)buffer[offset + 2] & 0xFF) << 16);
+	offset += 3;
+
+	return true;
+}
 #pragma mark - BufferOutputStream
 
 BufferOutputStream::BufferOutputStream(size_t size_)
@@ -218,9 +357,15 @@ void BufferOutputStream::WriteBytes(const Buffer &buffer, size_t offset, size_t 
 	WriteBytes(*buffer + offset, count);
 }
 
+
 unsigned char *BufferOutputStream::GetBuffer()
 {
 	return buffer;
+}
+
+size_t BufferOutputStream::GetOffset()
+{
+	return offset;
 }
 
 size_t BufferOutputStream::GetLength()
@@ -259,4 +404,9 @@ void BufferOutputStream::Rewind(size_t numBytes)
 	if (numBytes > offset)
 		throw std::out_of_range("buffer underflow");
 	offset -= numBytes;
+}
+void BufferOutputStream::Advance(size_t numBytes)
+{
+	ExpandBufferIfNeeded(numBytes);
+	offset += numBytes;
 }

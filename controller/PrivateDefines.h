@@ -83,11 +83,12 @@ enum ProtocolVersions
 #define STREAM_FLAG_PAUSED 8
 
 
-// Codec identifiers
+// For codec identifiers
 #define FOURCC(a, b, c, d) ((uint32_t)d | ((uint32_t)c << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24))
 #define PRINT_FOURCC(x) (char)(x >> 24), (char)(x >> 16), (char)(x >> 8), (char)x
 
 #define CODEC_OPUS_OLD 1
+
 #define CODEC_OPUS FOURCC('O', 'P', 'U', 'S')
 
 #define CODEC_AVC FOURCC('A', 'V', 'C', ' ')

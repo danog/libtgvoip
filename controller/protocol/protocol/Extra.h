@@ -2,19 +2,37 @@
 #include "Interface.h"
 #include "../../../tools/Buffers.h"
 #include "../../PrivateDefines.h"
+#include "../../net/NetworkSocket.h"
 
 namespace tgvoip
 {
 struct Extra : public Serializable
 {
-    static std::shared_ptr<Extra> choose(const BufferInputStream &in, VersionInfo &ver);
+    static std::shared_ptr<Extra> choose(const BufferInputStream &in, const VersionInfo &ver);
+};
+
+struct Codec : public Serializable, SingleChoice<StreamInfo>
+{
+public:
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
+
+    static const uint32_t Opus = FOURCC('O', 'P', 'U', 'S');
+
+    static const uint32_t Avc = FOURCC('A', 'V', 'C', ' ');
+    static const uint32_t Hevc = FOURCC('H', 'E', 'V', 'C');
+    static const uint32_t Vp8 = FOURCC('V', 'P', '8', '0');
+    static const uint32_t Vp9 = FOURCC('V', 'P', '9', '0');
+    static const uint32_t Av1 = FOURCC('A', 'V', '0', '1');
+
+    uint32_t codec = 0;
 };
 
 struct StreamInfo : public Serializable, SingleChoice<StreamInfo>
 {
 public:
-    bool parse(const BufferInputStream &in, VersionInfo &ver) override;
-    bool serialize(BufferOutputStream &out, VersionInfo &ver) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
     enum StreamType : uint8_t
     {
@@ -24,7 +42,7 @@ public:
 
     uint8_t streamId = 0;
     StreamType type = STREAM_TYPE_AUDIO;
-    uint32_t codec = 0;
+    Codec codec;
     uint16_t frameDuration = 0;
     bool enabled = false;
 };
@@ -32,8 +50,8 @@ public:
 struct ExtraStreamFlags : public Extra
 {
 public:
-    bool parse(const BufferInputStream &in, VersionInfo &ver) override;
-    bool serialize(BufferOutputStream &out, VersionInfo &ver) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
     enum Flags : uint8_t
     {
@@ -43,6 +61,7 @@ public:
         Paused = 4
     };
 
+    uint8_t streamId;
     uint8_t flags = 0;
 
     static const uint8_t ID = 1;
@@ -51,13 +70,14 @@ public:
 struct ExtraStreamCsd : public Extra
 {
 public:
-    bool parse(const BufferInputStream &in, VersionInfo &ver) override;
-    bool serialize(BufferOutputStream &out, VersionInfo &ver) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
+    uint8_t streamId;
     uint16_t width = 0;
     uint16_t height = 0;
 
-    std::vector<BufferInputStream> data;
+    Array<Bytes> data;
 
     static const uint8_t ID = 2;
 };
@@ -65,8 +85,8 @@ public:
 struct ExtraLanEndpoint : public Extra
 {
 public:
-    virtual bool parse(const BufferInputStream &in, VersionInfo &ver);
-    virtual bool serialize(BufferOutputStream &out, VersionInfo &ver);
+    virtual bool parse(const BufferInputStream &in, const VersionInfo &ver);
+    virtual void serialize(BufferOutputStream &out, const VersionInfo &ver);
 
     NetworkAddress address;
     uint16_t port = 0;
@@ -76,8 +96,8 @@ public:
 
 struct ExtraIpv6Endpoint : public Extra
 {
-    bool parse(const BufferInputStream &in, VersionInfo &ver) override;
-    bool serialize(BufferOutputStream &out, VersionInfo &ver) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
     NetworkAddress address;
     uint16_t port = 0;
@@ -87,8 +107,8 @@ struct ExtraIpv6Endpoint : public Extra
 
 struct ExtraNetworkChanged : public Extra
 {
-    bool parse(const BufferInputStream &in, VersionInfo &ver) override;
-    bool serialize(BufferOutputStream &out, VersionInfo &ver) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
     enum Flags : uint8_t
     {
@@ -102,8 +122,8 @@ struct ExtraNetworkChanged : public Extra
 
 struct ExtraGroupCallKey : public Extra
 {
-    bool parse(const BufferInputStream &in, VersionInfo &ver) override;
-    bool serialize(BufferOutputStream &out, VersionInfo &ver) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
     std::array<uint8_t, 256> key;
 
@@ -112,16 +132,16 @@ struct ExtraGroupCallKey : public Extra
 
 struct ExtraGroupCallUpgrade : public Extra
 {
-    bool parse(const BufferInputStream &in, VersionInfo &ver) override { return true; };
-    bool serialize(BufferOutputStream &out, VersionInfo &ver) override { return true; };
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override { return true; };
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override{};
 
     static const uint8_t ID = 6;
 };
 
 struct ExtraInit : public Extra
 {
-    bool parse(const BufferInputStream &in, VersionInfo &ver) override;
-    bool serialize(BufferOutputStream &out, VersionInfo &ver) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
     enum Flags : uint8_t
     {
@@ -135,14 +155,18 @@ struct ExtraInit : public Extra
     uint32_t minVersion = 0;
     uint8_t flags = 0;
 
+    Array<Codec> audioCodecs;
+
+    Array<UInt32> decoders;
+    uint8_t maxResolution;
 
     static const uint8_t ID = 8;
 };
 
 struct ExtraInitAck : public Extra
 {
-    bool parse(const BufferInputStream &in, VersionInfo &ver) override;
-    bool serialize(BufferOutputStream &out, VersionInfo &ver) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
     uint32_t peerVersion = 0;
     uint32_t minVersion = 0;

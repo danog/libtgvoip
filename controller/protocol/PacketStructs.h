@@ -12,8 +12,8 @@ class PacketSender;
 struct Packet : public Serializable
 {
 public:
-    virtual bool parse(const BufferInputStream &in, int peerVersion) override;
-    virtual bool serialize(BufferOutputStream &out, int peerVersion) override;
+    virtual bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    virtual void serialize(BufferOutputStream &out, const VersionInfo &ver) override;
 
 public:
     enum Flags : uint8_t
@@ -47,8 +47,8 @@ public:
 struct PacketLegacy : public Packet
 {
 public:
-    bool parse(const BufferInputStream &in, int peerVersion) override;
-    bool serialize(BufferOutputStream &out, int peerVersion) override;
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
 private:
     bool parseLegacyLegacyPacket(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion);

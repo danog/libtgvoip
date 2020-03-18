@@ -3,15 +3,15 @@
 
 using namespace tgvoip;
 
-bool Packet::parse(const BufferInputStream &in, int peerVersion)
+bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
-    if (peerVersion < PROTOCOL_RELIABLE)
+    if (!ver.isNew())
     {
-        return parseLegacyPacket(in, peerVersion);
+        return parseLegacyPacket(in, ver);
     }
 }
 
-bool Packet::parseLegacyPacket(const BufferInputStream &in, int peerVersion)
+bool Packet::parseLegacyPacket(const BufferInputStream &in, const VersionInfo &ver)
 {
     // Version-specific extraction of legacy packet fields ackId (last received packet seq on remote), (incoming packet seq) pseq, (ack mask) acks, (packet type) type, (flags) pflags, packet length
     uint32_t ackId;             // Last received packet seqno on remote
