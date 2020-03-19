@@ -62,8 +62,6 @@ struct IncomingVideoStream : public VideoStreamInfo, public IncomingStream
     IncomingVideoStream(uint8_t _id = Packet::StreamId::Video) : IncomingStream(_id, TYPE){};
 
     std::shared_ptr<PacketReassembler> packetReassembler;
-    std::vector<Buffer> codecSpecificData;
-    bool csdIsValid = false;
 
     static const StreamType TYPE = StreamType::Video;
     static const bool OUTGOING = false;

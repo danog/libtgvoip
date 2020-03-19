@@ -409,7 +409,7 @@ protected:
 
     void SendPacket(OutgoingPacket &&pkt, double retryInterval = 0.5, double timeout = 5.0, uint8_t tries = 0);
 
-    bool SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueue = true);
+    void SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueue = true);
     void SendPacketReliably(PendingOutgoingPacket &pkt, double retryInterval, double timeout, uint8_t tries = 0xFF);
 
     void SendNopPacket(int64_t endpointId = 0, double retryInterval = 0.5, double timeout = 5.0, uint8_t tries = 0);

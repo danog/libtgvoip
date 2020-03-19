@@ -11,7 +11,7 @@
 using namespace tgvoip;
 using namespace tgvoip::video;
 
-VideoPacketSender::VideoPacketSender(VoIPController *controller, const std::shared_ptr<Stream> &stream, VideoSource *videoSource) : PacketSender(controller, stream)
+VideoPacketSender::VideoPacketSender(VoIPController *controller, const std::shared_ptr<OutgoingVideoStream> &stream, VideoSource *videoSource) : PacketSender(controller, stream)
 {
     SetSource(videoSource);
 }

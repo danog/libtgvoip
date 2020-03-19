@@ -30,6 +30,10 @@ struct VideoStreamInfo : public MediaStreamInfo
     unsigned int width = 0;
     unsigned int height = 0;
     uint16_t rotation = 0;
+
+    std::vector<Buffer> codecSpecificData;
+    bool csdIsValid = false;
+
     int resolution;
 };
 

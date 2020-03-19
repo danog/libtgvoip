@@ -18,7 +18,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
     // Initial packet decryption and recognition
 
     unsigned char *buffer = **npacket.data;
-    size_t len = npacket.data->Length();
+    //size_t len = npacket.data->Length();
     BufferInputStream in(*npacket.data);
     if (ver.peerVersion < 9 || srcEndpoint.IsReflector())
     {

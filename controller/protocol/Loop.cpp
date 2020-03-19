@@ -104,7 +104,7 @@ void VoIPController::RunRecvThread()
                 LOGE("Packet has null address. This shouldn't happen.");
                 continue;
             }
-            if (packet.data.IsEmpty())
+            if (packet.data->IsEmpty())
             {
                 LOGE("Packet has zero length.");
                 continue;

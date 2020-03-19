@@ -60,7 +60,6 @@ void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, doub
         packet.serializeLegacy(out, ver, state, callID);
         legacyPm.setLocalSeq(packet.legacySeq);
 
-        size_t length = 0;
         for (auto &t : out)
         {
             auto res = PreparePacket(std::get<0>(t), std::get<1>(t), endpoint, CongestionControlPacket(seq++, StreamId::Signaling));
@@ -76,7 +75,7 @@ void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, doub
     }
 }
 
-bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueue)
+void VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueue)
 {
     Endpoint &endpoint = *GetEndpointForPacket(pkt);
     bool canSend;
@@ -113,7 +112,7 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueu
             LOGW("Not ready to send - enqueueing");
             sendQueue.push_back(move(pkt));
         }
-        return false;
+        return;
     }
     if ((endpoint.type == Endpoint::Type::TCP_RELAY && useTCP) || (endpoint.type != Endpoint::Type::TCP_RELAY && useUDP))
     {
@@ -140,7 +139,7 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueu
         //LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, streamId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), streamId);
 #endif
     }
-    return true;
+    return;
 }
 
 void VoIPController::SendInit()

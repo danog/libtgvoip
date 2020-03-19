@@ -8,7 +8,7 @@ using namespace std;
 void VoIPController::InitializeAudio()
 {
     double t = GetCurrentTime();
-    auto &outgoingAudioStream = GetStreamByType<AudioStream>(StreamType::Audio, true);
+    auto &outgoingAudioStream = GetStreamByType<OutgoingAudioStream>();
     LOGI("before create audio io");
     audioIO = audio::AudioIO::Create(currentAudioInput, currentAudioOutput);
     audioInput = audioIO->GetInput();
@@ -43,7 +43,7 @@ void VoIPController::InitializeAudio()
         encoder->AddAudioEffect(inputVolume);
     }
 
-    dynamic_cast<AudioPacketSender *>(outgoingAudioStream->packetSender.get())->SetSource(encoder);
+    outgoingAudioStream->packetSender->SetSource(encoder);
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
     dynamic_cast<audio::AudioInputCallback *>(audioInput.get())->SetDataCallback(audioInputDataCallback);
@@ -85,7 +85,7 @@ void VoIPController::StartAudio()
 void VoIPController::OnAudioOutputReady()
 {
     LOGI("Audio I/O ready");
-    auto &stm = GetStreamByID<AudioStream>(StreamId::Audio, false);
+    auto &stm = GetStreamByID<IncomingAudioStream>(StreamId::Audio);
     stm->decoder = make_shared<OpusDecoder>(audioOutput, true, ver.peerVersion >= 6);
     stm->decoder->SetEchoCanceller(echoCanceller);
     if (config.enableVolumeControl)
