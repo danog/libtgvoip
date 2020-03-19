@@ -57,7 +57,7 @@ std::shared_ptr<Extra> Extra::choose(const BufferInputStream &in, const VersionI
     }
     return nullptr;
 }
-std::shared_ptr<Extra> Extra::chooseFromType(int type)
+std::shared_ptr<Extra> Extra::chooseFromType(uint8_t type)
 {
     switch (type)
     {

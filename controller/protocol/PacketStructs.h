@@ -19,19 +19,29 @@ private:
     bool parseLegacy(const BufferInputStream &in, const VersionInfo &ver);
     bool parseLegacyLegacy(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion);
 
+    void serializeLegacy(BufferOutputStream &out, const VersionInfo &ver) const;
+    void serializeLegacyLegacy(BufferOutputStream &out, uint32_t pseq, uint32_t acks, unsigned char type, uint32_t length) const;
+
 public:
     enum Flags : uint8_t
     {
         Len16 = 1,
         RecvTS = 2,
-        ExtraFEC = 4,
+        ExtraEC = 4,
         ExtraSignaling = 8
-
     };
     enum EFlags : uint8_t
     {
         Fragmented = 1,
         Keyframe = 2
+    };
+
+    enum StreamId : uint8_t
+    {
+        Signaling = 0,
+        Audio = 1,
+        Video = 2,
+        Extended = 3
     };
 
     bool legacy = false;
@@ -42,7 +52,6 @@ public:
     uint32_t ackMask = 0;
 
     uint8_t streamId = 0;
-    uint8_t flags = 0;
     uint8_t eFlags = 0;
 
     uint8_t fragmentIndex = 0;
@@ -55,8 +64,13 @@ public:
     Mask<Wrapped<Bytes>> extraEC;
     Array<Wrapped<Extra>> extraSignaling;
 
-    // Ugly backwards compatibility hacks
+    // Ugly backwards compatibility hack
     std::vector<Packet> otherPackets;
+
+public:
+    operator bool() {
+        return data || extraEC || extraSignaling || seq;
+    }
 };
 
 // Legacy stuff

@@ -64,16 +64,42 @@ struct Mask : public Serializable, SingleChoice<Mask<T>>
         uint8_t mask = 0;
         for (auto i = 0; i < sizeof(mask); i++)
         {
-            if (v[i]) {
+            if (v[i])
+            {
                 mask |= 1 << i;
             }
         }
         out.WriteByte(mask);
-        for (const auto &data : v) {
+        for (const auto &data : v)
+        {
             out.Write(v, data);
         }
     }
-
+    typename std::array<T, 8>::iterator begin()
+    {
+        return v.begin();
+    }
+    typename std::array<T, 8>::iterator end()
+    {
+        return v.end();
+    }
+    typename std::array<T, 8>::const_iterator cbegin()
+    {
+        return v.cbegin();
+    }
+    typename std::array<T, 8>::const_iterator cend()
+    {
+        return v.cend();
+    }
+    operator bool() const
+    {
+        for (const auto &data : v)
+        {
+            if (data)
+                return true;
+        }
+        return false;
+    }
     std::array<T, 8> v{};
 };
 
@@ -107,15 +133,34 @@ struct Array : public Serializable, SingleChoice<Array<T>>
             data.serialize(out, ver);
         }
     }
-
+    typename std::vector<T>::iterator begin()
+    {
+        return v.begin();
+    }
+    typename std::vector<T>::iterator end()
+    {
+        return v.end();
+    }
+    typename std::vector<T>::const_iterator cbegin()
+    {
+        return v.cbegin();
+    }
+    typename std::vector<T>::const_iterator cend()
+    {
+        return v.cend();
+    }
+    operator bool() const
+    {
+        return !v.empty();
+    }
     std::vector<T> v;
 };
 
 template <class T>
 struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
 {
-    Wrapped(std::shared_ptr<T> &&_d) : d(_d) {};
-    Wrapped(std::shared_ptr<T> &_d) : d(_d) {};
+    Wrapped(std::shared_ptr<T> &&_d) : d(_d){};
+    Wrapped(std::shared_ptr<T> &_d) : d(_d){};
     Wrapped() = default;
 
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override
@@ -135,6 +180,10 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
         out.Rewind(len + 1);
         out.WriteByte(len);
         out.Advance(len);
+    }
+    operator bool() const
+    {
+        return d && *d;
     }
     std::shared_ptr<T> d;
 };

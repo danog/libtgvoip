@@ -238,6 +238,10 @@ public:
 	{
 		return data;
 	}
+	operator bool() const
+	{
+		return length;
+	}
 	void CopyFromOtherBuffer(const Buffer &other, size_t count, size_t srcOffset = 0, size_t dstOffset = 0)
 	{
 		if (!other.data)
