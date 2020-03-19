@@ -7,8 +7,47 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
     if (!ver.isNew())
     {
+        legacy = true;
         return parseLegacy(in, ver);
     }
+
+    bool res = in.TryRead(seq) &&
+               in.TryRead(ackSeq) &&
+               in.TryRead(ackMask) &&
+               in.TryRead(flags);
+    if (!res)
+        return false;
+
+    streamId = flags & 3;
+    flags >>= 2;
+
+    uint16_t length;
+    if (!(flags & Flags::Len16 ? in.TryRead(length) : in.TryReadCompat<uint8_t>(length)))
+        return false;
+
+    eFlags = length >> 11;
+    length &= 0x7FF;
+
+    if (eFlags & EFlags::Fragmented)
+    {
+        if (!in.TryRead(fragmentCount))
+            return false;
+        if (!in.TryRead(fragmentIndex))
+            return false;
+    }
+
+    data = Buffer(length);
+    if (in.TryRead(data))
+        return false;
+
+    if ((flags & Flags::RecvTS) && !in.TryRead(recvTS))
+        return false;
+    if ((flags & Flags::ExtraFEC) && !in.TryRead(extraEC, ver))
+        return false;
+    if ((flags & Flags::ExtraSignaling) && !in.TryRead(extraSignaling, ver))
+        return false;
+    
+    return true;
 }
 
 bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
@@ -34,7 +73,7 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
     {
         return false;
     }
-    this->seq = pseq;
+    this->legacySeq = pseq;
     this->ackSeq = ackId;
     this->ackMask = acks;
 
@@ -60,9 +99,93 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
     }
     else if (type == PKT_STREAM_EC)
     {
+        if (ver.peerVersion < 7)
+        {
+            uint8_t count;
+            if (!(in.TryRead(streamId) && in.TryRead(seq) && in.TryRead(count)))
+                return false;
+
+            seq /= 60; // Constant frame duration
+
+            for (uint8_t i = 0; i < std::min(count, uint8_t{8}); i++)
+            {
+                if (!in.TryRead(extraEC.v[i], ver))
+                    return false;
+            }
+            for (uint8_t i = count > 8 ? 8 - count : 0; i > 0; i--)
+            {
+                Wrapped<Bytes> ignored;
+                if (!in.TryRead(ignored, ver))
+                    return false;
+            }
+        }
+        else
+        {
+            // Ignore video FEC for now
+        }
     }
     else if (type == PKT_STREAM_DATA || type == PKT_STREAM_DATA_X2 || type == PKT_STREAM_DATA_X3)
     {
+        for (uint8_t count = PKT_STREAM_DATA ? 1 : PKT_STREAM_DATA_X2 ? 2 : 3; count > 0; --count)
+        {
+            Packet *packet = this;
+            if (count > 1)
+            {
+                otherPackets.push_back(Packet());
+                packet = &otherPackets.back();
+                packet->legacy = true;
+            }
+
+            uint8_t flags;
+            uint16_t len;
+            if (!(in.TryRead(packet->streamId) &&
+                          in.TryRead(flags) &&
+                          flags & STREAM_DATA_FLAG_LEN16
+                      ? in.TryRead(len)
+                      : in.TryReadCompat<uint8_t>(len) &&
+                            in.TryRead(packet->seq))) // damn you autoindentation
+                return false;
+
+            packet->seq /= 60; // Constant frame duration
+
+            bool fragmented = static_cast<bool>(len & STREAM_DATA_XFLAG_FRAGMENTED);
+            bool extraFEC = static_cast<bool>(len & STREAM_DATA_XFLAG_EXTRA_FEC);
+            bool keyframe = static_cast<bool>(len & STREAM_DATA_XFLAG_KEYFRAME);
+            if (fragmented)
+            {
+                packet->eFlags |= EFlags::Fragmented;
+                if (!in.TryRead(packet->fragmentIndex))
+                    return false;
+                if (!in.TryRead(packet->fragmentCount))
+                    return false;
+            }
+            if (keyframe)
+            {
+                packet->eFlags |= EFlags::Keyframe;
+            }
+
+            packet->data = Buffer(len & 0x7FF);
+            if (!in.TryRead(packet->data))
+                return false;
+
+            if (extraFEC)
+            {
+                uint8_t count;
+                if (!in.TryRead(count))
+                    return false;
+                for (uint8_t i = 0; i < std::min(count, uint8_t{8}); i++)
+                {
+                    if (!in.TryRead(packet->extraEC.v[i], ver))
+                        return false;
+                }
+                for (uint8_t i = count > 8 ? 8 - count : 0; i > 0; i--)
+                {
+                    Wrapped<Bytes> ignored;
+                    if (!in.TryRead(ignored, ver))
+                        return false;
+                }
+            }
+        }
     }
 }
 bool Packet::parseLegacyLegacy(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion)

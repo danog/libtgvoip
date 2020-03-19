@@ -64,47 +64,14 @@ enum ProtocolVersions
 #define XPFLAG_HAS_RECV_TS 2 // Video calls
 
 
-// Extra signaling packet types
-#define EXTRA_TYPE_STREAM_FLAGS 1
-#define EXTRA_TYPE_STREAM_CSD 2
-#define EXTRA_TYPE_LAN_ENDPOINT 3
-#define EXTRA_TYPE_NETWORK_CHANGED 4
-#define EXTRA_TYPE_GROUP_CALL_KEY 5
-#define EXTRA_TYPE_REQUEST_GROUP 6
-#define EXTRA_TYPE_IPV6_ENDPOINT 7
-
-#define EXTRA_TYPE_INIT 8
-#define EXTRA_TYPE_INIT_ACK 9
-
-// Stream signaling flags
-#define STREAM_FLAG_ENABLED 1
-#define STREAM_FLAG_DTX 2
-#define STREAM_FLAG_EXTRA_EC 4
-#define STREAM_FLAG_PAUSED 8
-
-
 // For codec identifiers
 #define FOURCC(a, b, c, d) ((uint32_t)d | ((uint32_t)c << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24))
 #define PRINT_FOURCC(x) (char)(x >> 24), (char)(x >> 16), (char)(x >> 8), (char)x
 
 #define CODEC_OPUS_OLD 1
 
-#define CODEC_OPUS FOURCC('O', 'P', 'U', 'S')
-
-#define CODEC_AVC FOURCC('A', 'V', 'C', ' ')
-#define CODEC_HEVC FOURCC('H', 'E', 'V', 'C')
-#define CODEC_VP8 FOURCC('V', 'P', '8', '0')
-#define CODEC_VP9 FOURCC('V', 'P', '9', '0')
-#define CODEC_AV1 FOURCC('A', 'V', '0', '1')
-
 // MTU
 #define DEFAULT_MTU 1100
-
-// Init flags
-#define INIT_FLAG_DATA_SAVING_ENABLED 1
-#define INIT_FLAG_GROUP_CALLS_SUPPORTED 2
-#define INIT_FLAG_VIDEO_SEND_SUPPORTED 4
-#define INIT_FLAG_VIDEO_RECV_SUPPORTED 8
 
 // Video flags
 #define INIT_VIDEO_RES_NONE 0

@@ -8,7 +8,7 @@ namespace tgvoip
 {
 struct Extra : public Serializable, MultiChoice<Extra>
 {
-    static std::shared_ptr<T> chooseFromType(uint8_t type);
+    static std::shared_ptr<Extra> chooseFromType(uint8_t type);
 };
 
 struct Codec : public Serializable, SingleChoice<Codec>
@@ -36,12 +36,12 @@ public:
 
     enum StreamType : uint8_t
     {
-        STREAM_TYPE_AUDIO = 1,
-        STREAM_TYPE_VIDEO
+        Audio = 1,
+        Video
     };
 
     uint8_t streamId = 0;
-    StreamType type = STREAM_TYPE_AUDIO;
+    StreamType type = StreamType::Audio;
     Codec codec;
     uint16_t frameDuration = 0;
     bool enabled = false;

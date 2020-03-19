@@ -40,6 +40,7 @@
 #include "controller/net/CongestionControl.h"
 #include "controller/protocol/PacketManager.h"
 #include "controller/protocol/PacketStructs.h"
+#include "controller/protocol/protocol/Extra.h"
 #include "tools/Buffers.h"
 #include "controller/net/PacketReassembler.h"
 #include "tools/MessageThread.h"
@@ -398,7 +399,7 @@ public:
     {
         int32_t userID;
         uint8_t id;
-        StreamType type;
+        StreamInfo::StreamType type;
         uint32_t codec;
         bool enabled;
         bool extraECEnabled;
@@ -442,7 +443,7 @@ protected:
     void InitializeTimers();
     void ResetEndpointPingStats();
     void ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe, uint16_t rotation);
-    std::shared_ptr<Stream> GetStreamByType(StreamType type, bool outgoing);
+    std::shared_ptr<Stream> GetStreamByType(StreamInfo::StreamType type, bool outgoing);
     std::shared_ptr<Stream> GetStreamByID(unsigned char id, bool outgoing);
     Endpoint *GetEndpointForPacket(const PendingOutgoingPacket &pkt);
     Endpoint *GetEndpointById(const int64_t id);

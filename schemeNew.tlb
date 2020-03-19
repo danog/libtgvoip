@@ -16,8 +16,9 @@ packet$_
     length:(## flags.0 ? 11 : (streamId > 0 ? 8 : 0))
     eFlags:(## flags.0 ? 5 : 0) // We shouldn't typically need this, but since we have the space why not use it
     
-    fragmented:eFlags.0?true // Logically, this flag can only appear on *big* fragmented messages
-    keyframe:eFlags.1?true   // This flag can only appear for video streams (typically *big* messages, see ^)
+    fragmentIndex:eFlags.0?(## 8) // Logically, this flag can only appear on *big* fragmented messages
+    fragmentCount:eFlags.0?(## 8) // Logically, this flag can only appear on *big* fragmented messages
+    keyframe:eFlags.1?true        // This flag can only appear for video streams (typically *big* messages, see ^)
 
     data:bytes // No PTS, simply use the seq
     

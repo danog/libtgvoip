@@ -26,6 +26,7 @@ public:
         RecvTS = 2,
         ExtraFEC = 4,
         ExtraSignaling = 8
+
     };
     enum EFlags : uint8_t
     {
@@ -33,20 +34,29 @@ public:
         Keyframe = 2
     };
 
-    uint32_t seq;
-    uint32_t ackSeq;
-    uint32_t ackMask;
+    bool legacy = false;
+    uint32_t legacySeq = 0;
 
-    uint8_t streamId;
+    uint32_t seq = 0;
+    uint32_t ackSeq = 0;
+    uint32_t ackMask = 0;
+
+    uint8_t streamId = 0;
     uint8_t flags = 0;
     uint8_t eFlags = 0;
+
+    uint8_t fragmentIndex = 0;
+    uint8_t fragmentCount = 1;
 
     uint32_t recvTS = 0;
 
     Buffer data;
 
-    Array<Bytes> extraEC;
+    Mask<Wrapped<Bytes>> extraEC;
     Array<Wrapped<Extra>> extraSignaling;
+
+    // Ugly backwards compatibility hacks
+    std::vector<Packet> otherPackets;
 };
 
 // Legacy stuff

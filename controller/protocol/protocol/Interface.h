@@ -26,7 +26,6 @@ struct SingleChoice
     }
 };
 
-
 template <typename T>
 struct MultiChoice
 {
@@ -38,6 +37,44 @@ struct Serializable
 public:
     virtual bool parse(const BufferInputStream &in, const VersionInfo &ver) = 0;
     virtual void serialize(BufferOutputStream &out, const VersionInfo &ver) const = 0;
+};
+
+template <typename T>
+struct Mask : public Serializable, SingleChoice<Mask<T>>
+{
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override
+    {
+        uint8_t mask;
+        if (!in.TryRead(mask))
+        {
+            return false;
+        }
+        for (auto i = 0; i < sizeof(mask); i++)
+        {
+            if (!(i & (1 << i)))
+                continue;
+
+            if (!in.TryRead(v.at(i), ver))
+                return false;
+        }
+        return true;
+    }
+    void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
+    {
+        uint8_t mask = 0;
+        for (auto i = 0; i < sizeof(mask); i++)
+        {
+            if (v[i]) {
+                mask |= 1 << i;
+            }
+        }
+        out.WriteByte(mask);
+        for (const auto &data : v) {
+            out.Write(v, data);
+        }
+    }
+
+    std::array<T, 8> v{};
 };
 
 template <typename T>
@@ -77,9 +114,10 @@ struct Array : public Serializable, SingleChoice<Array<T>>
 template <class T>
 struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
 {
-    Wrapped(std::shared_ptr &&_d) : d(_d);
-    Wrapped(std::shared_ptr &_d) : d(_d);
-    
+    Wrapped(std::shared_ptr<T> &&_d) : d(_d) {};
+    Wrapped(std::shared_ptr<T> &_d) : d(_d) {};
+    Wrapped() = default;
+
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override
     {
         uint8_t len;
@@ -113,9 +151,13 @@ struct Bytes : public Serializable,
     {
         out.WriteBytes(data);
     }
+    operator bool()
+    {
+        return !data.IsEmpty();
+    }
     Buffer data;
 };
-struct UInt32 : public Serializable, SingleChoice<Bytes>
+struct UInt32 : public Serializable, SingleChoice<UInt32>
 {
     bool parse(const BufferInputStream &in, const VersionInfo &ver)
     {
