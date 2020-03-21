@@ -7,7 +7,7 @@ using namespace std;
 
 void VoIPController::SetVideoSource(video::VideoSource *source)
 {
-    shared_ptr<Stream> stm = GetStreamByType(STREAM_TYPE_VIDEO, true);
+    shared_ptr<Stream> stm = GetStreamByType(StreamInfo::Type::Video, true);
     if (!stm)
     {
         LOGE("Can't set video source when there is no outgoing video stream");
@@ -65,7 +65,7 @@ void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool 
     }
     if (videoRenderer)
     {
-        shared_ptr<Stream> stm = GetStreamByType(STREAM_TYPE_VIDEO, false);
+        shared_ptr<Stream> stm = GetStreamByType(StreamInfo::Type::Video, false);
         size_t offset = 0;
         if (keyframe)
         {
@@ -134,19 +134,19 @@ void VoIPController::SetupOutgoingVideoStream()
     vector<uint32_t> myEncoders = video::VideoSource::GetAvailableEncoders();
     shared_ptr<Stream> vstm = make_shared<Stream>();
     vstm->id = 2;
-    vstm->type = STREAM_TYPE_VIDEO;
+    vstm->type = StreamInfo::Type::Video;
 
-    if (find(myEncoders.begin(), myEncoders.end(), CODEC_HEVC) != myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), CODEC_HEVC) != peerVideoDecoders.end())
+    if (find(myEncoders.begin(), myEncoders.end(), Codec::Hevc) != myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), Codec::Hevc) != peerVideoDecoders.end())
     {
-        vstm->codec = CODEC_HEVC;
+        vstm->codec = Codec::Hevc;
     }
-    else if (find(myEncoders.begin(), myEncoders.end(), CODEC_AVC) != myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), CODEC_AVC) != peerVideoDecoders.end())
+    else if (find(myEncoders.begin(), myEncoders.end(), Codec::Avc) != myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), Codec::Avc) != peerVideoDecoders.end())
     {
-        vstm->codec = CODEC_AVC;
+        vstm->codec = Codec::Avc;
     }
-    else if (find(myEncoders.begin(), myEncoders.end(), CODEC_VP8) != myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), CODEC_VP8) != peerVideoDecoders.end())
+    else if (find(myEncoders.begin(), myEncoders.end(), Codec::Vp8) != myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), Codec::Vp8) != peerVideoDecoders.end())
     {
-        vstm->codec = CODEC_VP8;
+        vstm->codec = Codec::Vp8;
     }
     else
     {

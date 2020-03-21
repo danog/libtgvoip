@@ -121,13 +121,13 @@ void VoIPController::SendInit()
         out.WriteInt32(MIN_PROTOCOL_VERSION);
         uint32_t flags = 0;
         if (config.enableCallUpgrade)
-            flags |= INIT_FLAG_GROUP_CALLS_SUPPORTED;
+            flags |= ExtraInit::Flags::GroupCallSupported;
         if (config.enableVideoReceive)
-            flags |= INIT_FLAG_VIDEO_RECV_SUPPORTED;
+            flags |= ExtraInit::Flags::VideoRecvSupported;
         if (config.enableVideoSend)
-            flags |= INIT_FLAG_VIDEO_SEND_SUPPORTED;
+            flags |= ExtraInit::Flags::VideoSendSupported;
         if (dataSavingMode)
-            flags |= INIT_FLAG_DATA_SAVING_ENABLED;
+            flags |= ExtraInit::Flags::DataSavingEnabled;
         out.WriteInt32(flags);
         if (connectionMaxLayer < 74)
         {
@@ -136,14 +136,14 @@ void VoIPController::SendInit()
             out.WriteByte(0);
             out.WriteByte(0); // idk, stuff I guess
             out.WriteByte(0);
-            out.WriteInt32(CODEC_OPUS);
+            out.WriteInt32(Codec::Opus);
             out.WriteByte(0); // video codecs count (decode)
             out.WriteByte(0); // video codecs count (encode)
         }
         else
         {
             out.WriteByte(1);
-            out.WriteInt32(CODEC_OPUS);
+            out.WriteInt32(Codec::Opus);
             vector<uint32_t> decoders = config.enableVideoReceive ? video::VideoRenderer::GetAvailableDecoders() : vector<uint32_t>();
             vector<uint32_t> encoders = config.enableVideoSend ? video::VideoSource::GetAvailableEncoders() : vector<uint32_t>();
             out.WriteByte((unsigned char)decoders.size());
@@ -513,13 +513,13 @@ void VoIPController::SendStreamFlags(Stream &stream)
     s.WriteByte(stream.id);
     uint32_t flags = 0;
     if (stream.enabled)
-        flags |= STREAM_FLAG_ENABLED;
+        flags |= ExtraStreamFlags::Flags::Enabled;
     if (stream.extraECEnabled)
-        flags |= STREAM_FLAG_EXTRA_EC;
+        flags |= ExtraStreamFlags::Flags::ExtraEC;
     if (stream.paused)
-        flags |= STREAM_FLAG_PAUSED;
+        flags |= ExtraStreamFlags::Flags::Paused;
     s.WriteInt32(flags);
     LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags);
     Buffer buf(move(s));
-    SendExtra(buf, EXTRA_TYPE_STREAM_FLAGS);
+    SendExtra(buf, ExtraStreamFlags::ID);
 }

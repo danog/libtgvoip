@@ -68,7 +68,7 @@ public:
 		uint8_t ipv6[16];
 	} addr;
 
-private:
+public:
 	NetworkAddress(){};
 };
 

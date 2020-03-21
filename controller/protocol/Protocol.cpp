@@ -286,21 +286,21 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         uint32_t flags = in.ReadUInt32();
         if (!receivedInit)
         {
-            if (flags & INIT_FLAG_DATA_SAVING_ENABLED)
+            if (flags & ExtraInit::Flags::DataSavingEnabled)
             {
                 dataSavingRequestedByPeer = true;
                 UpdateDataSavingState();
                 UpdateAudioBitrateLimit();
             }
-            if (flags & INIT_FLAG_GROUP_CALLS_SUPPORTED)
+            if (flags & ExtraInit::Flags::GroupCallSupported)
             {
                 peerCapabilities |= TGVOIP_PEER_CAP_GROUP_CALLS;
             }
-            if (flags & INIT_FLAG_VIDEO_RECV_SUPPORTED)
+            if (flags & ExtraInit::Flags::VideoRecvSupported)
             {
                 peerCapabilities |= TGVOIP_PEER_CAP_VIDEO_DISPLAY;
             }
-            if (flags & INIT_FLAG_VIDEO_SEND_SUPPORTED)
+            if (flags & ExtraInit::Flags::VideoSendSupported)
             {
                 peerCapabilities |= TGVOIP_PEER_CAP_VIDEO_CAPTURE;
             }
@@ -314,10 +314,10 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             else
                 in.ReadInt32();
         }
-        if (!receivedInit && ((flags & INIT_FLAG_VIDEO_SEND_SUPPORTED && config.enableVideoReceive) || (flags & INIT_FLAG_VIDEO_RECV_SUPPORTED && config.enableVideoSend)))
+        if (!receivedInit && ((flags & ExtraInit::Flags::VideoSendSupported && config.enableVideoReceive) || (flags & ExtraInit::Flags::VideoRecvSupported && config.enableVideoSend)))
         {
             LOGD("Peer video decoders:");
-            unsigned int numSupportedVideoDecoders = in.ReadByte();
+            uint8_t numSupportedVideoDecoders = in.ReadByte();
             for (auto i = 0; i < numSupportedVideoDecoders; i++)
             {
                 uint32_t id = in.ReadUInt32();
@@ -341,7 +341,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             out.WriteByte(stream->id);
             out.WriteByte(stream->type);
             if (peerVersion < 5)
-                out.WriteByte((unsigned char)(stream->codec == CODEC_OPUS ? CODEC_OPUS_OLD : 0));
+                out.WriteByte((unsigned char)(stream->codec == Codec::Opus ? CODEC_OPUS_OLD : 0));
             else
                 out.WriteInt32(stream->codec);
             out.WriteInt16(stream->frameDuration);
@@ -411,12 +411,12 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             {
                 shared_ptr<Stream> stm = make_shared<Stream>();
                 stm->id = in.ReadByte();
-                stm->type = static_cast<StreamType>(in.ReadByte());
+                stm->type = static_cast<StreamInfo::Type>(in.ReadByte());
                 if (peerVersion < 5)
                 {
                     unsigned char codec = in.ReadByte();
                     if (codec == CODEC_OPUS_OLD)
-                        stm->codec = CODEC_OPUS;
+                        stm->codec = Codec::Opus;
                 }
                 else
                 {
@@ -425,12 +425,12 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                 in.ReadInt16();
                 stm->frameDuration = 60;
                 stm->enabled = in.ReadByte() == 1;
-                if (stm->type == STREAM_TYPE_VIDEO && peerVersion < 9)
+                if (stm->type == StreamInfo::Type::Video && peerVersion < 9)
                 {
                     LOGV("Skipping video stream for old protocol version");
                     continue;
                 }
-                if (stm->type == STREAM_TYPE_AUDIO)
+                if (stm->type == StreamInfo::Type::Audio)
                 {
                     stm->jitterBuffer = make_shared<JitterBuffer>(stm->frameDuration);
                     if (stm->frameDuration > 50)
@@ -441,7 +441,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                         stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_20", 6));
                     stm->decoder = nullptr;
                 }
-                else if (stm->type == STREAM_TYPE_VIDEO)
+                else if (stm->type == StreamInfo::Type::Video)
                 {
                     if (!stm->packetReassembler)
                     {
@@ -455,7 +455,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                     continue;
                 }
                 incomingStreams.push_back(stm);
-                if (stm->type == STREAM_TYPE_AUDIO && !incomingAudioStream)
+                if (stm->type == StreamInfo::Type::Audio && !incomingAudioStream)
                     incomingAudioStream = stm;
             }
             if (!incomingAudioStream)
@@ -556,7 +556,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                     break;
                 }
             }
-            if (stm && stm->type == STREAM_TYPE_AUDIO)
+            if (stm && stm->type == StreamInfo::Type::Audio)
             {
                 if (stm->jitterBuffer)
                 {
@@ -582,7 +582,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                     }
                 }
             }
-            else if (stm && stm->type == STREAM_TYPE_VIDEO)
+            else if (stm && stm->type == StreamInfo::Type::Video)
             {
                 if (stm->packetReassembler)
                 {
@@ -702,7 +702,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         if (peerVersion >= 2)
         {
             uint32_t flags = in.ReadUInt32();
-            dataSavingRequestedByPeer = (flags & INIT_FLAG_DATA_SAVING_ENABLED) == INIT_FLAG_DATA_SAVING_ENABLED;
+            dataSavingRequestedByPeer = flags & ExtraInit::Flags::DataSavingEnabled;
             UpdateDataSavingState();
             UpdateAudioBitrateLimit();
             ResetEndpointPingStats();
@@ -741,7 +741,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                 LOGW("Received FEC packet for unknown stream %u", streamID);
                 return;
             }
-            if (stm->type != STREAM_TYPE_VIDEO)
+            if (stm->type != StreamInfo::Type::Video)
             {
                 LOGW("Received FEC packet for non-video stream %u", streamID);
                 return;
@@ -777,7 +777,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
     }
     LOGE("ProcessExtraData");
     lastReceivedExtrasByType[type] = hash;
-    if (type == EXTRA_TYPE_STREAM_FLAGS)
+    if (type == ExtraStreamFlags::ID)
     {
         unsigned char id = in.ReadByte();
         uint32_t flags = in.ReadUInt32();
@@ -788,9 +788,9 @@ void VoIPController::ProcessExtraData(Buffer &data)
             {
                 bool prevEnabled = s->enabled;
                 bool prevPaused = s->paused;
-                s->enabled = (flags & STREAM_FLAG_ENABLED) == STREAM_FLAG_ENABLED;
-                s->paused = (flags & STREAM_FLAG_PAUSED) == STREAM_FLAG_PAUSED;
-                if (flags & STREAM_FLAG_EXTRA_EC)
+                s->enabled = flags & ExtraStreamFlags::Flags::Enabled;
+                s->paused = flags & ExtraStreamFlags::Flags::Paused;
+                if (flags & ExtraStreamFlags::Flags::ExtraEC)
                 {
                     if (!s->extraECEnabled)
                     {
@@ -808,16 +808,16 @@ void VoIPController::ProcessExtraData(Buffer &data)
                             s->jitterBuffer->SetMinPacketCount(2);
                     }
                 }
-                if (prevEnabled != s->enabled && s->type == STREAM_TYPE_VIDEO && videoRenderer)
+                if (prevEnabled != s->enabled && s->type == StreamInfo::Type::Video && videoRenderer)
                     videoRenderer->SetStreamEnabled(s->enabled);
-                if (prevPaused != s->paused && s->type == STREAM_TYPE_VIDEO && videoRenderer)
+                if (prevPaused != s->paused && s->type == StreamInfo::Type::Video && videoRenderer)
                     videoRenderer->SetStreamPaused(s->paused);
                 UpdateAudioOutputState();
                 break;
             }
         }
     }
-    else if (type == EXTRA_TYPE_STREAM_CSD)
+    else if (type == ExtraStreamCsd::ID)
     {
         LOGI("Received codec specific data");
         unsigned char streamID = in.ReadByte();
@@ -841,7 +841,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
             }
         }
     }
-    else if (type == EXTRA_TYPE_LAN_ENDPOINT)
+    else if (type == ExtraLanEndpoint::ID)
     {
         if (!allowP2p)
             return;
@@ -857,7 +857,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
         MutexGuard m(endpointsMutex);
         endpoints[lanID] = lan;
     }
-    else if (type == EXTRA_TYPE_NETWORK_CHANGED)
+    else if (type == ExtraNetworkChanged::ID)
     {
         LOGI("Peer network changed");
         wasNetworkHandover = true;
@@ -867,12 +867,12 @@ void VoIPController::ProcessExtraData(Buffer &data)
         if (allowP2p)
             SendPublicEndpointsRequest();
         uint32_t flags = in.ReadUInt32();
-        dataSavingRequestedByPeer = (flags & INIT_FLAG_DATA_SAVING_ENABLED) == INIT_FLAG_DATA_SAVING_ENABLED;
+        dataSavingRequestedByPeer = flags & ExtraInit::Flags::DataSavingEnabled;
         UpdateDataSavingState();
         UpdateAudioBitrateLimit();
         ResetEndpointPingStats();
     }
-    else if (type == EXTRA_TYPE_GROUP_CALL_KEY)
+    else if (type == ExtraGroupCallKey::ID)
     {
         if (!didReceiveGroupCallKey && !didSendGroupCallKey)
         {
@@ -885,7 +885,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
             didReceiveGroupCallKey = true;
         }
     }
-    else if (type == EXTRA_TYPE_REQUEST_GROUP)
+    else if (type == ExtraGroupCallUpgrade::ID)
     {
         if (!didInvokeUpgradeCallback)
         {
@@ -896,7 +896,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
             didInvokeUpgradeCallback = true;
         }
     }
-    else if (type == EXTRA_TYPE_IPV6_ENDPOINT)
+    else if (type == ExtraIpv6Endpoint::ID)
     {
         if (!allowP2p)
             return;
@@ -920,7 +920,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
 
 void VoIPController::ProcessAcknowledgedOutgoingExtra(UnacknowledgedExtraData &extra)
 {
-    if (extra.type == EXTRA_TYPE_GROUP_CALL_KEY)
+    if (extra.type == ExtraGroupCallKey::ID)
     {
         if (!didReceiveGroupCallKeyAck)
         {
@@ -947,12 +947,9 @@ uint8_t VoIPController::WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutp
 
         unsigned char flags = currentExtras.empty() ? 0 : XPFLAG_HAS_EXTRA;
 
-        shared_ptr<Stream> videoStream = GetStreamByType(STREAM_TYPE_VIDEO, false);
+        shared_ptr<Stream> videoStream = GetStreamByType(StreamInfo::Type::Video, false);
         if (peerVersion >= 9 && videoStream && videoStream->enabled)
             flags |= XPFLAG_HAS_RECV_TS;
-
-        if (peerVersion >= PROTOCOL_RELIABLE && manager.getTransportId() != 0xFF)
-            flags |= XPFLAG_HAS_TRANSPORT_ID;
 
         s.WriteByte(flags);
 

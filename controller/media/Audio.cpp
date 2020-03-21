@@ -8,7 +8,7 @@ using namespace std;
 void VoIPController::InitializeAudio()
 {
     double t = GetCurrentTime();
-    shared_ptr<Stream> outgoingAudioStream = GetStreamByType(STREAM_TYPE_AUDIO, true);
+    shared_ptr<Stream> outgoingAudioStream = GetStreamByType(StreamInfo::Type::Audio, true);
     LOGI("before create audio io");
     audioIO = audio::AudioIO::Create(currentAudioInput, currentAudioOutput);
     audioInput = audioIO->GetInput();
@@ -102,7 +102,7 @@ void VoIPController::UpdateAudioOutputState()
     bool areAnyAudioStreamsEnabled = false;
     for (auto s = incomingStreams.begin(); s != incomingStreams.end(); ++s)
     {
-        if ((*s)->type == STREAM_TYPE_AUDIO && (*s)->enabled)
+        if ((*s)->type == StreamInfo::Type::Audio && (*s)->enabled)
             areAnyAudioStreamsEnabled = true;
     }
     if (audioOutput)

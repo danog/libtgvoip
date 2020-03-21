@@ -55,11 +55,6 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
 
 void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
-    if (!ver.isNew() || legacy)
-    {
-        return serializeLegacy(out, ver);
-    }
-
     uint8_t shortStreamId = streamId > StreamId::Extended ? StreamId::Extended : streamId;
     uint8_t flags = 0;
     if (data.Length() > 0xFF || eFlags)

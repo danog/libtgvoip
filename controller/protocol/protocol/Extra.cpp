@@ -1,4 +1,5 @@
 #include "Extra.h"
+#include "../../PrivateDefines.h"
 
 using namespace tgvoip;
 
@@ -77,6 +78,33 @@ std::shared_ptr<Extra> Extra::chooseFromType(uint8_t type)
         return std::make_shared<ExtraStreamFlags>();
     }
     return nullptr;
+}
+uint8_t Extra::chooseType(int peerVersion) const
+{
+    switch (getID())
+    {
+    case ExtraInit::ID:
+        return PKT_INIT;
+    case ExtraInitAck::ID:
+        return PKT_INIT_ACK;
+    case ExtraPing::ID:
+        return PKT_PING;
+    case ExtraPong::ID:
+        return PKT_PONG;
+    }
+    if (peerVersion < 6)
+    {
+        switch (getID())
+        {
+        case ExtraLanEndpoint::ID:
+            return PKT_LAN_ENDPOINT;
+        case ExtraNetworkChanged::ID:
+            return PKT_NETWORK_CHANGED;
+        case ExtraStreamFlags::ID:
+            return PKT_STREAM_STATE;
+        }
+    }
+    return PKT_NOP;
 }
 
 bool StreamInfo::parse(const BufferInputStream &in, const VersionInfo &ver)
@@ -192,12 +220,12 @@ void ExtraInit::serialize(BufferOutputStream &out, const VersionInfo &ver) const
     {
         out.WriteByte(2); // audio codecs count, for some reason two codecs required
         out.WriteByte(CODEC_OPUS_OLD);
-        out.WriteByte(0);           // second useless codec
-        out.WriteByte(0);           // what is this
-        out.WriteByte(0);           // what is this
-        out.WriteInt32(CODEC_OPUS); // WHAT IS THIS
-        out.WriteByte(0);           // video codecs count (decode)
-        out.WriteByte(0);           // video codecs count (encode)
+        out.WriteByte(0);            // second useless codec
+        out.WriteByte(0);            // what is this
+        out.WriteByte(0);            // what is this
+        out.WriteInt32(Codec::Opus); // WHAT IS THIS
+        out.WriteByte(0);            // video codecs count (decode)
+        out.WriteByte(0);            // video codecs count (encode)
     }
     else
     {

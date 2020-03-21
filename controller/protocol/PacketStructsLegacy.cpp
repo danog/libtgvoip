@@ -1,5 +1,5 @@
-#include "PacketStructs.h"
 #include "../PrivateDefines.cpp"
+#include "PacketStructs.h"
 
 using namespace tgvoip;
 
@@ -140,54 +140,177 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
             }
         }
     }
+    return true;
 }
-void Packet::serializeLegacy(BufferOutputStream &out, const VersionInfo &ver) const
+
+void Packet::serializeLegacy(std::vector<std::pair<unsigned char *, size_t>> &outArray, const VersionInfo &ver, const int state, const unsigned char *callID)
 {
-    uint8_t type = PKT_NOP;
-    for (const auto &extra : extraSignaling) {
-        
-    }
-    if (ver.peerVersion >= 8 || (!ver.peerVersion && ver.connectionMaxLayer >= 92))
+    legacySeq = seq;
+    auto originalLegacySeq = legacySeq;
+
+    std::vector<Wrapped<Extra>> separatePackets;
+    std::vector<Wrapped<Extra>> allowedExtras;
+    std::partition_copy(
+        std::make_move_iterator(extraSignaling.begin()),
+        std::make_move_iterator(extraSignaling.end()),
+        std::back_inserter(separatePackets),
+        std::back_inserter(allowedExtras),
+        [peerVersion = ver.peerVersion](const Wrapped<Extra> &extra) { // Deliver as packet if
+            return extra.d->chooseType(peerVersion) != PKT_NOP;
+        });
+
+    for (const auto &extra : separatePackets)
     {
-        out.WriteByte(pkt.type);
-        out.WriteInt32(manager.getLastRemoteSeq());
-        out.WriteInt32(pkt.seq);
-        out.WriteInt32(acks);
+        BufferOutputStream out(1500);
 
-        unsigned char flags = currentExtras.empty() ? 0 : XPFLAG_HAS_EXTRA;
-
-        shared_ptr<Stream> videoStream = GetStreamByType(STREAM_TYPE_VIDEO, false);
-        if (peerVersion >= 9 && videoStream && videoStream->enabled)
-            flags |= XPFLAG_HAS_RECV_TS;
-
-        if (peerVersion >= PROTOCOL_RELIABLE && manager.getTransportId() != 0xFF)
-            flags |= XPFLAG_HAS_TRANSPORT_ID;
-
-        out.WriteByte(flags);
-
-        if (!currentExtras.empty())
+        uint8_t type = extra.d->chooseType(ver.peerVersion);
+        if (ver.peerVersion >= 8 || (!ver.peerVersion && ver.connectionMaxLayer >= 92))
         {
-            out.WriteByte(static_cast<unsigned char>(currentExtras.size()));
-            for (auto &x : currentExtras)
-            {
-                //LOGV("Writing extra into header: type %u, length %d", x.type, int(x.data.Length()));
-                assert(x.data.Length() <= 254);
-                out.WriteByte(static_cast<unsigned char>(x.data.Length() + 1));
-                out.WriteByte(x.type);
-                out.WriteBytes(*x.data, x.data.Length());
-                if (x.firstContainingSeq == 0)
-                    x.firstContainingSeq = pkt.seq;
-            }
+            writePacketHeaderLegacy(out, ver, legacySeq, ackSeq, ackMask, type, allowedExtras);
+            out.Write(extra, ver);
         }
-        if (peerVersion >= 9 && videoStream && videoStream->enabled)
+        else
         {
-            out.WriteUInt32((lastRecvPacketTime - connectionInitTime) * 1000.0);
+            BufferOutputStream accumulator(1500);
+            accumulator.Write(extra, ver);
+            writePacketHeaderLegacyLegacy(out, ver, legacySeq, ackSeq, ackMask, type, accumulator.GetLength(), allowedExtras, state, callID);
+            out.WriteBytes(accumulator.GetBuffer(), accumulator.GetLength());
         }
+        outArray.push_back(std::make_pair(out.GetBuffer(), out.GetLength()));
+        legacySeq++;
+    }
+    // Convert from mask to array
+    Array<Wrapped<Bytes>> extraECArray;
+    for (auto &ecPacket : extraEC.v)
+    {
+        extraECArray.v.push_back(std::move(ecPacket));
+    }
+
+    if (ver.peerVersion < 7 && extraEC)
+    {
+        BufferOutputStream out(1500);
+
+        if (!ver.isLegacyLegacy())
+        {
+            writePacketHeaderLegacy(out, ver, legacySeq, ackSeq, ackMask, PKT_STREAM_EC, allowedExtras);
+        }
+        out.WriteByte(streamId);
+        out.WriteUInt32(seq * 60);
+        out.Write(extraECArray, ver);
+
+        if (ver.isLegacyLegacy())
+        {
+            BufferOutputStream accumulator(1500);
+
+            writePacketHeaderLegacyLegacy(accumulator, ver, legacySeq, ackSeq, ackMask, PKT_STREAM_EC, out.GetLength(), allowedExtras, state, callID);
+            accumulator.WriteBytes(out.GetBuffer(), out.GetLength());
+
+            outArray.push_back(std::make_pair(accumulator.GetBuffer(), accumulator.GetLength()));
+        }
+        else
+        {
+            outArray.push_back(std::make_pair(out.GetBuffer(), out.GetLength()));
+        }
+
+        legacySeq++;
+    }
+    if (data)
+    {
+        BufferOutputStream out(1500);
+
+        if (!ver.isLegacyLegacy())
+        {
+            writePacketHeaderLegacy(out, ver, legacySeq, ackSeq, ackMask, PKT_STREAM_DATA, allowedExtras);
+        }
+
+        bool hasExtraFEC = ver.peerVersion >= 7 && extraEC;
+        uint8_t flags = static_cast<uint8_t>(data.Length() > 255 || hasExtraFEC ? STREAM_DATA_FLAG_LEN16 : 0);
+        out.WriteByte(flags | 1); // flags + streamID
+
+        if (flags & STREAM_DATA_FLAG_LEN16)
+        {
+            int16_t lenAndFlags = static_cast<int16_t>(data.Length());
+            if (hasExtraFEC)
+                lenAndFlags |= STREAM_DATA_XFLAG_EXTRA_FEC;
+            out.WriteInt16(lenAndFlags);
+        }
+        else
+        {
+            out.WriteByte(static_cast<uint8_t>(data.Length()));
+        }
+
+        out.WriteInt32(seq * 60);
+        out.WriteBytes(data);
+
+        //LOGE("SEND: For pts %u = seq %u, using seq %u", audioTimestampOut, audioTimestampOut/60 + 1, packetManager.getLocalSeq());
+
+        if (hasExtraFEC)
+        {
+            out.Write(extraECArray, ver);
+        }
+
+        if (ver.isLegacyLegacy())
+        {
+            BufferOutputStream accumulator(1500);
+
+            writePacketHeaderLegacyLegacy(accumulator, ver, legacySeq, ackSeq, ackMask, PKT_STREAM_EC, out.GetLength(), allowedExtras, state, callID);
+            accumulator.WriteBytes(out.GetBuffer(), out.GetLength());
+
+            outArray.push_back(std::make_pair(accumulator.GetBuffer(), accumulator.GetLength()));
+        }
+        else
+        {
+            outArray.push_back(std::make_pair(out.GetBuffer(), out.GetLength()));
+        }
+
+        legacySeq++;
+    }
+    if (legacySeq == originalLegacySeq)
+    {
+        LOGW("Serializing NOP packet");
+        BufferOutputStream out(1500);
+
+        if (ver.peerVersion >= 8 || (!ver.peerVersion && ver.connectionMaxLayer >= 92))
+        {
+            writePacketHeaderLegacy(out, ver, legacySeq, ackSeq, ackMask, PKT_NOP, allowedExtras);
+        }
+        else
+        {
+            writePacketHeaderLegacyLegacy(out, ver, legacySeq, ackSeq, ackMask, PKT_NOP, 0, allowedExtras, state, callID);
+        }
+        outArray.push_back(std::make_pair(out.GetBuffer(), out.GetLength()));
+    }
+}
+void Packet::writePacketHeaderLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t seq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const std::vector<Wrapped<Extra>> &extras)
+{
+    out.WriteByte(type);
+    out.WriteInt32(ackSeq);
+    out.WriteInt32(seq);
+    out.WriteInt32(ackMask);
+
+    unsigned char flags = extras.empty() ? 0 : XPFLAG_HAS_EXTRA;
+
+    if (recvTS)
+        flags |= XPFLAG_HAS_RECV_TS;
+
+    out.WriteByte(flags);
+
+    if (!extras.empty())
+    {
+        out.WriteByte(static_cast<unsigned char>(extras.size()));
+        for (auto &x : extras)
+        {
+            LOGV("Writing extra into header: type %u", x.getID());
+            out.Write(x, ver);
+        }
+    }
+    if (recvTS)
+    {
+        out.WriteUInt32(recvTS);
     }
 }
 bool Packet::parseLegacyLegacy(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion)
 {
-    size_t packetInnerLen = 0;
     uint32_t tlid = in.ReadUInt32();
     if (tlid == TLID_DECRYPTED_AUDIO_BLOCK)
     {
@@ -271,18 +394,19 @@ bool Packet::parseLegacyLegacy(const BufferInputStream &in, unsigned char &type,
     return true;
 }
 
-void Packet::serializeLegacyLegacy(BufferOutputStream &out, uint32_t pseq, uint32_t acks, unsigned char type, uint32_t length) const
+void Packet::writePacketHeaderLegacyLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t pseq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const uint32_t length, const std::vector<Wrapped<Extra>> &extras, const int state, const unsigned char *callID)
 {
+    out.WriteInt32(state == STATE_WAIT_INIT || state == STATE_WAIT_INIT_ACK ? TLID_DECRYPTED_AUDIO_BLOCK : TLID_SIMPLE_AUDIO_BLOCK);
+    int64_t randomID;
+    VoIPController::crypto.rand_bytes((uint8_t *)&randomID, 8);
+    out.WriteInt64(randomID);
+    unsigned char randBytes[7];
+    VoIPController::crypto.rand_bytes(randBytes, 7);
+    out.WriteByte(7);
+    out.WriteBytes(randBytes, 7);
+
     if (state == STATE_WAIT_INIT || state == STATE_WAIT_INIT_ACK)
     {
-        out.WriteInt32(TLID_DECRYPTED_AUDIO_BLOCK);
-        int64_t randomID;
-        crypto.rand_bytes((uint8_t *)&randomID, 8);
-        out.WriteInt64(randomID);
-        unsigned char randBytes[7];
-        crypto.rand_bytes(randBytes, 7);
-        out.WriteByte(7);
-        out.WriteBytes(randBytes, 7);
         uint32_t pflags = LEGACY_PFLAG_HAS_RECENT_RECV | LEGACY_PFLAG_HAS_SEQ;
         if (length > 0)
             pflags |= LEGACY_PFLAG_HAS_DATA;
@@ -297,9 +421,9 @@ void Packet::serializeLegacyLegacy(BufferOutputStream &out, uint32_t pseq, uint3
         {
             out.WriteBytes(callID, 16);
         }
-        out.WriteInt32(packetManager.getLastRemoteSeq());
+        out.WriteInt32(ackSeq);
         out.WriteInt32(pseq);
-        out.WriteInt32(acks);
+        out.WriteInt32(ackMask);
         if (pflags & LEGACY_PFLAG_HAS_PROTO)
         {
             out.WriteInt32(PROTOCOL_NAME);
@@ -321,14 +445,6 @@ void Packet::serializeLegacyLegacy(BufferOutputStream &out, uint32_t pseq, uint3
     }
     else
     {
-        out.WriteInt32(TLID_SIMPLE_AUDIO_BLOCK);
-        int64_t randomID;
-        crypto.rand_bytes((uint8_t *)&randomID, 8);
-        out.WriteInt64(randomID);
-        unsigned char randBytes[7];
-        crypto.rand_bytes(randBytes, 7);
-        out.WriteByte(7);
-        out.WriteBytes(randBytes, 7);
         uint32_t lenWithHeader = length + 13;
         if (lenWithHeader > 0)
         {
@@ -345,28 +461,23 @@ void Packet::serializeLegacyLegacy(BufferOutputStream &out, uint32_t pseq, uint3
             }
         }
         out.WriteByte(type);
-        out.WriteInt32(packetManager.getLastRemoteSeq());
+        out.WriteInt32(ackSeq);
         out.WriteInt32(pseq);
-        out.WriteInt32(acks);
-        if (peerVersion >= 6)
+        out.WriteInt32(ackMask);
+        if (ver.peerVersion >= 6)
         {
-            if (currentExtras.empty())
+            if (extras.empty())
             {
                 out.WriteByte(0);
             }
             else
             {
                 out.WriteByte(XPFLAG_HAS_EXTRA);
-                out.WriteByte(static_cast<unsigned char>(currentExtras.size()));
-                for (vector<UnacknowledgedExtraData>::iterator x = currentExtras.begin(); x != currentExtras.end(); ++x)
+                out.WriteByte(static_cast<unsigned char>(extras.size()));
+                for (auto &x : extras)
                 {
-                    LOGV("Writing extra into header: type %u, length %d", x->type, int(x->data.Length()));
-                    assert(x->data.Length() <= 254);
-                    out.WriteByte(static_cast<unsigned char>(x->data.Length() + 1));
-                    out.WriteByte(x->type);
-                    out.WriteBytes(*x->data, x->data.Length());
-                    if (x->firstContainingSeq == 0)
-                        x->firstContainingSeq = pseq;
+                    LOGV("Writing extra into header: type %u", x.getID());
+                    out.Write(x, ver);
                 }
             }
         }

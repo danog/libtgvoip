@@ -6,6 +6,12 @@
 
 #pragma once
 
+#if defined HAVE_CONFIG_H || defined TGVOIP_USE_INSTALLED_OPUS
+#include <opus/opus.h>
+#else
+#include <opus/opus.h>
+#endif
+
 #ifndef _WIN32
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -47,11 +53,6 @@
 #include "tools/utils.h"
 #include "controller/PrivateDefines.h"
 
-#if defined HAVE_CONFIG_H || defined TGVOIP_USE_INSTALLED_OPUS
-#include <opus/opus.h>
-#else
-#include <opus/opus.h>
-#endif
 
 #define LIBTGVOIP_VERSION "2.5"
 

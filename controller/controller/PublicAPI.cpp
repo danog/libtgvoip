@@ -209,7 +209,7 @@ string VoIPController::GetDebugString()
         r += buffer;
     }
     double avgLate[3];
-    shared_ptr<Stream> stm = GetStreamByType(STREAM_TYPE_AUDIO, false);
+    shared_ptr<Stream> stm = GetStreamByType(StreamInfo::Type::Audio, false);
     shared_ptr<JitterBuffer> jitterBuffer;
     if (stm)
         jitterBuffer = stm->jitterBuffer;
@@ -249,7 +249,7 @@ string VoIPController::GetDebugString()
 
     if (config.enableVideoSend)
     {
-        shared_ptr<Stream> vstm = GetStreamByType(STREAM_TYPE_VIDEO, true);
+        shared_ptr<Stream> vstm = GetStreamByType(StreamInfo::Type::Video, true);
         if (vstm && vstm->enabled && vstm->packetSender)
         {
             snprintf(buffer, sizeof(buffer), "\nVideo out: %ux%u '%c%c%c%c' %u kbit", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec), dynamic_cast<video::VideoPacketSender *>(vstm->packetSender.get())->GetBitrate());
@@ -267,7 +267,7 @@ string VoIPController::GetDebugString()
     }
     if (config.enableVideoReceive)
     {
-        shared_ptr<Stream> vstm = GetStreamByType(STREAM_TYPE_VIDEO, false);
+        shared_ptr<Stream> vstm = GetStreamByType(StreamInfo::Type::Video, false);
         if (vstm && vstm->enabled)
         {
             snprintf(buffer, sizeof(buffer), "\nVideo in: %ux%u '%c%c%c%c'", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec));
@@ -513,7 +513,7 @@ void VoIPController::SendGroupCallKey(unsigned char *key)
             return;
         }
         didSendGroupCallKey = true;
-        SendExtra(*keyPtr, EXTRA_TYPE_GROUP_CALL_KEY);
+        SendExtra(*keyPtr, ExtraGroupCallKey::ID);
     });
 }
 
@@ -537,7 +537,7 @@ void VoIPController::RequestCallUpgrade()
         }
         didSendUpgradeRequest = true;
         Buffer empty(0);
-        SendExtra(empty, EXTRA_TYPE_REQUEST_GROUP);
+        SendExtra(empty, ExtraGroupCallUpgrade::ID);
     });
 }
 
@@ -663,7 +663,7 @@ void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t *, size_t)
 {
     audioInputDataCallback = input;
     audioOutputDataCallback = output;
-    dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get())->setAudioPreprocDataCallback(preproc);
+    dynamic_cast<AudioPacketSender *>(GetStreamByType(StreamInfo::Type::Audio, true)->packetSender.get())->setAudioPreprocDataCallback(preproc);
 }
 #endif
 

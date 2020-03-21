@@ -329,7 +329,7 @@ int VideoPacketSender::GetVideoResolutionForCurrentBitrate()
 	if (VoIPController::GetCurrentTime() - sourceChangeTime > 10.0)
 	{
 		// TODO: probably move this to server config
-		if (stream->codec == CODEC_AVC || stream->codec == CODEC_VP8)
+		if (stream->codec == Codec::Avc || stream->codec == Codec::Vp8)
 		{
 			if (currentVideoBitrate > 400000)
 			{
@@ -344,7 +344,7 @@ int VideoPacketSender::GetVideoResolutionForCurrentBitrate()
 				resolutionFromBitrate = INIT_VIDEO_RES_360;
 			}
 		}
-		else if (stream->codec == CODEC_HEVC || stream->codec == CODEC_VP9)
+		else if (stream->codec == Codec::Hevc || stream->codec == Codec::Vp9)
 		{
 			if (currentVideoBitrate > 400000)
 			{
@@ -366,9 +366,9 @@ int VideoPacketSender::GetVideoResolutionForCurrentBitrate()
 	}
 	else
 	{
-		if (stream->codec == CODEC_AVC || stream->codec == CODEC_VP8)
+		if (stream->codec == Codec::Avc || stream->codec == Codec::Vp8)
 			resolutionFromBitrate = INIT_VIDEO_RES_720;
-		else if (stream->codec == CODEC_HEVC || stream->codec == CODEC_VP9)
+		else if (stream->codec == Codec::Hevc || stream->codec == Codec::Vp9)
 			resolutionFromBitrate = INIT_VIDEO_RES_1080;
 	}
 	return std::min(peerMaxVideoResolution, resolutionFromBitrate);

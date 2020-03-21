@@ -37,8 +37,8 @@ VoIPController::VoIPController() : rawSendQueue(64)
 
     shared_ptr<Stream> stm = make_shared<Stream>();
     stm->id = 1;
-    stm->type = STREAM_TYPE_AUDIO;
-    stm->codec = CODEC_OPUS;
+    stm->type = StreamInfo::Type::Audio;
+    stm->codec = Codec::Opus;
     stm->enabled = 1;
     stm->frameDuration = 60;
     stm->packetSender = std::make_unique<AudioPacketSender>(this, nullptr, stm);

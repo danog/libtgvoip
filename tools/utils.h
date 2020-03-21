@@ -7,6 +7,7 @@
 #pragma once
 #include <numeric>
 #include <algorithm>
+#include <assert.h>
 
 #define TGVOIP_DISALLOW_COPY_AND_ASSIGN(TypeName) \
 TypeName(const TypeName&) = delete;   \
@@ -44,9 +45,9 @@ public:
 	{
 		AVG_T avg = static_cast<AVG_T>(0);
 		int nonZeroCount = 0;
-		for (T &i : data)
+		for (const T &i : data)
 		{
-			if (i != 0)
+			if (i)
 			{
 				nonZeroCount++;
 				avg += i;

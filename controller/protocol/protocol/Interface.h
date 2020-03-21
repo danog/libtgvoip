@@ -1,21 +1,11 @@
 #pragma once
 #include "../../../tools/Buffers.h"
 #include <memory>
+#include <type_traits>
 
 namespace tgvoip
 {
-
-struct VersionInfo
-{
-    VersionInfo(int _peerVersion, int32_t _connectionMaxLayer) : peerVersion(_peerVersion), connectionMaxLayer(_connectionMaxLayer){};
-    const int peerVersion = 0;
-    const int32_t connectionMaxLayer = 0;
-
-    inline bool isNew() const
-    {
-        return peerVersion >= PROTOCOL_RELIABLE || connectionMaxLayer >= 110;
-    }
-};
+struct VersionInfo;
 
 template <typename T>
 struct SingleChoice
@@ -24,12 +14,53 @@ struct SingleChoice
     {
         return std::make_shared<T>();
     }
+
+    uint8_t getID() const
+    {
+        return 0;
+    }
+
+    static const uint8_t ID = 0;
 };
 
 template <typename T>
 struct MultiChoice
 {
-    static std::shared_ptr<T> choose(const BufferInputStream &in, const VersionInfo &ver);
+private:
+    static std::shared_ptr<T> __forceChoice(const BufferInputStream &in, const VersionInfo &ver)
+    {
+        return T::choose(in, ver);
+    }
+
+public:
+    virtual uint8_t getID() const = 0;
+};
+
+template <class T, class = void>
+struct has_flags : std::false_type
+{
+};
+
+template <class T>
+struct has_flags<T, std::void_t<typename T::Flags>> : std::true_type
+{
+};
+
+struct Empty
+{
+    enum Flags : uint8_t
+    {
+    };
+};
+
+template <typename T>
+struct Constructor // : public T
+{
+    uint8_t getID() const
+    {
+        return T::ID;
+    }
+    using Flags = typename std::conditional<tgvoip::has_flags<T>::value, T, Empty>::type::Flags;
 };
 
 struct Serializable
@@ -49,7 +80,7 @@ struct Mask : public Serializable, SingleChoice<Mask<T>>
         {
             return false;
         }
-        for (auto i = 0; i < sizeof(mask); i++)
+        for (uint8_t i = 0; i < 8; i++)
         {
             if (!(i & (1 << i)))
                 continue;
@@ -62,7 +93,7 @@ struct Mask : public Serializable, SingleChoice<Mask<T>>
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
     {
         uint8_t mask = 0;
-        for (auto i = 0; i < sizeof(mask); i++)
+        for (uint8_t i = 0; i < 8; i++)
         {
             if (v[i])
             {
@@ -72,24 +103,24 @@ struct Mask : public Serializable, SingleChoice<Mask<T>>
         out.WriteByte(mask);
         for (const auto &data : v)
         {
-            out.Write(v, data);
+            out.Write(data, ver);
         }
     }
-    typename std::array<T, 8>::iterator begin()
+    auto begin() noexcept
     {
         return v.begin();
     }
-    typename std::array<T, 8>::iterator end()
+    auto end() noexcept
     {
         return v.end();
     }
-    typename std::array<T, 8>::const_iterator cbegin()
+    const auto begin() const noexcept
     {
-        return v.cbegin();
+        return v.begin();
     }
-    typename std::array<T, 8>::const_iterator cend()
+    const auto end() const noexcept
     {
-        return v.cend();
+        return v.end();
     }
     operator bool() const
     {
@@ -133,21 +164,21 @@ struct Array : public Serializable, SingleChoice<Array<T>>
             data.serialize(out, ver);
         }
     }
-    typename std::vector<T>::iterator begin()
+    auto begin() noexcept
     {
         return v.begin();
     }
-    typename std::vector<T>::iterator end()
+    auto end() noexcept
     {
         return v.end();
     }
-    typename std::vector<T>::const_iterator cbegin()
+    const auto begin() const noexcept
     {
-        return v.cbegin();
+        return v.begin();
     }
-    typename std::vector<T>::const_iterator cend()
+    const auto end() const noexcept
     {
-        return v.cend();
+        return v.end();
     }
     operator bool() const
     {
@@ -169,7 +200,7 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
         if (!in.TryRead(len))
             return false;
         d = T::choose(in, ver);
-        return d->parse(in.GetPartBuffer(len));
+        return d->parse(in.GetPartBuffer(len), ver);
     }
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
     {
@@ -185,7 +216,39 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
     {
         return d && *d;
     }
+
+    uint8_t getID() const
+    {
+        return d->getID();
+    }
+
+    template <typename X>
+    X &get()
+    {
+        return *dynamic_cast<X>(d.get());
+    }
+
+    template <typename X>
+    const X &get() const
+    {
+        return *dynamic_cast<X>(d.get());
+    }
+
+    template <typename X>
+    operator X &()
+    {
+        return *dynamic_cast<X>(d.get());
+    }
+
+    template <typename X>
+    operator const X &() const
+    {
+        return *dynamic_cast<X>(d.get());
+    }
+
     std::shared_ptr<T> d;
+
+    static const uint8_t ID = T::ID;
 };
 
 struct Bytes : public Serializable,
@@ -206,6 +269,7 @@ struct Bytes : public Serializable,
     }
     Buffer data;
 };
+
 struct UInt32 : public Serializable, SingleChoice<UInt32>
 {
     bool parse(const BufferInputStream &in, const VersionInfo &ver)
@@ -218,4 +282,12 @@ struct UInt32 : public Serializable, SingleChoice<UInt32>
     }
     uint32_t data;
 };
+
+namespace Template
+{
+template <class T>
+struct Constructor : public T, tgvoip::Constructor<T>
+{
+};
+}; // namespace Template
 } // namespace tgvoip

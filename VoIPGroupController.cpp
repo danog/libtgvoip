@@ -95,7 +95,7 @@ void VoIPGroupController::AddGroupCallParticipant(int32_t userID, unsigned char 
 	{
 		shared_ptr<Stream> &s = *_s;
 		s->userID = userID;
-		if (s->type == STREAM_TYPE_AUDIO && s->codec == CODEC_OPUS && !audioStreamID)
+		if (s->type == StreamInfo::Type::Audio && s->codec == Codec::Opus && !audioStreamID)
 		{
 			audioStreamID = s->id;
 			s->jitterBuffer = make_shared<JitterBuffer>(s->frameDuration);
@@ -165,10 +165,10 @@ vector<shared_ptr<VoIPController::Stream>> VoIPGroupController::DeserializeStrea
 			BufferInputStream inner = in.GetPartBuffer(len, true);
 			shared_ptr<Stream> s = make_shared<Stream>();
 			s->id = inner.ReadByte();
-			s->type = static_cast<StreamType>(inner.ReadByte());
+			s->type = static_cast<StreamInfo::Type>(inner.ReadByte());
 			s->codec = (uint32_t)inner.ReadInt32();
 			uint32_t flags = (uint32_t)inner.ReadInt32();
-			s->enabled = (flags & STREAM_FLAG_ENABLED) == STREAM_FLAG_ENABLED;
+			s->enabled = flags & ExtraStreamFlags::Flags::Enabled;
 			s->frameDuration = (uint16_t)inner.ReadInt16();
 			res.push_back(s);
 		}
@@ -221,9 +221,9 @@ size_t VoIPGroupController::GetInitialStreams(unsigned char *buf, size_t size)
 
 	s.WriteInt16(12); // this object length
 	s.WriteByte(1);   // stream id
-	s.WriteByte(STREAM_TYPE_AUDIO);
-	s.WriteInt32(CODEC_OPUS);
-	s.WriteInt32(STREAM_FLAG_ENABLED | STREAM_FLAG_DTX); // flags
+	s.WriteByte(StreamInfo::Type::Audio);
+	s.WriteInt32(Codec::Opus);
+	s.WriteInt32(ExtraStreamFlags::Flags::Enabled | ExtraStreamFlags::Flags::Dtx); // flags
 	s.WriteInt16(60);									 // frame duration
 
 	return s.GetLength();
@@ -509,7 +509,7 @@ void VoIPGroupController::SetParticipantVolume(int32_t userID, float volume)
 		{
 			for (vector<shared_ptr<Stream>>::iterator s = p->streams.begin(); s != p->streams.end(); ++s)
 			{
-				if ((*s)->type == STREAM_TYPE_AUDIO)
+				if ((*s)->type == StreamInfo::Type::Audio)
 				{
 					if ((*s)->decoder)
 					{
@@ -544,7 +544,7 @@ void VoIPGroupController::SerializeAndUpdateOutgoingStreams()
 		o.WriteByte((*s)->id);
 		o.WriteByte((*s)->type);
 		o.WriteInt32((*s)->codec);
-		o.WriteInt32((unsigned char)(((*s)->enabled ? STREAM_FLAG_ENABLED : 0) | STREAM_FLAG_DTX));
+		o.WriteInt32((unsigned char)(((*s)->enabled ? ExtraStreamFlags::Flags::Enabled : 0) | ExtraStreamFlags::Flags::Dtx));
 		o.WriteInt16((*s)->frameDuration);
 		out.WriteInt16((int16_t)o.GetLength());
 		out.WriteBytes(o.GetBuffer(), o.GetLength());

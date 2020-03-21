@@ -1,8 +1,8 @@
 #pragma once
-#include "../PrivateDefines.h"
 #include "../../tools/Buffers.h"
-#include "protocol/Interface.h"
+#include "../PrivateDefines.h"
 #include "protocol/Extra.h"
+#include "protocol/Interface.h"
 //#include "../net/PacketSender.h"
 
 namespace tgvoip
@@ -19,8 +19,12 @@ private:
     bool parseLegacy(const BufferInputStream &in, const VersionInfo &ver);
     bool parseLegacyLegacy(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion);
 
-    void serializeLegacy(BufferOutputStream &out, const VersionInfo &ver) const;
-    void serializeLegacyLegacy(BufferOutputStream &out, uint32_t pseq, uint32_t acks, unsigned char type, uint32_t length) const;
+public:
+    void serializeLegacy(std::vector<std::pair<unsigned char *, size_t>> &out, const VersionInfo &ver, const int state, const unsigned char *callID);
+
+private:
+    void writePacketHeaderLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t seq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const std::vector<Wrapped<Extra>> &extras);
+    void writePacketHeaderLegacyLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t pseq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const uint32_t length, const std::vector<Wrapped<Extra>> &extras, const int state, const unsigned char *callID);
 
 public:
     enum Flags : uint8_t
@@ -64,11 +68,11 @@ public:
     Mask<Wrapped<Bytes>> extraEC;
     Array<Wrapped<Extra>> extraSignaling;
 
-    // Ugly backwards compatibility hack
-    std::vector<Packet> otherPackets;
-
+    // Ugly backwards compatibility hacks
+    std::vector<Packet> otherPackets; // parse
 public:
-    operator bool() {
+    operator bool()
+    {
         return data || extraEC || extraSignaling || seq;
     }
 };

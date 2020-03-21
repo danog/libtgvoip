@@ -196,7 +196,7 @@ void VoIPController::UpdateCongestion()
         double avgSendLossCount = sendLossCountHistory.Average() / packetCountHistory.Average();
         LOGE("avg send loss: %.3f%%", avgSendLossCount*100);
 
-        AudioPacketSender *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get());
+        AudioPacketSender *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType(StreamInfo::Type::Audio, true)->packetSender.get());
         //avgSendLossCount = sender->setPacketLoss(avgSendLossCount * 100.0) / 100.0;
         sender->setPacketLoss(avgSendLossCount * 100.0);
         if (avgSendLossCount > packetLossToEnableExtraEC && networkType != NET_TYPE_GPRS && networkType != NET_TYPE_EDGE)
@@ -207,7 +207,7 @@ void VoIPController::UpdateCongestion()
                 sender->setShittyInternetMode(true);
                 for (shared_ptr<Stream> &s : outgoingStreams)
                 {
-                    if (s->type == STREAM_TYPE_AUDIO)
+                    if (s->type == StreamInfo::Type::Audio)
                     {
                         s->extraECEnabled = true;
                         SendStreamFlags(*s);
@@ -248,7 +248,7 @@ void VoIPController::UpdateCongestion()
             sender->setShittyInternetMode(false);
             for (shared_ptr<Stream> &s : outgoingStreams)
             {
-                if (s->type == STREAM_TYPE_AUDIO)
+                if (s->type == StreamInfo::Type::Audio)
                 {
                     s->extraECEnabled = false;
                     SendStreamFlags(*s);
@@ -277,7 +277,7 @@ void VoIPController::UpdateAudioBitrate()
         }
 
         int act = conctl.GetBandwidthControlAction();
-        if (dynamic_cast<AudioPacketSender *>(GetStreamByType(STREAM_TYPE_AUDIO, true)->packetSender.get())->getShittyInternetMode())
+        if (dynamic_cast<AudioPacketSender *>(GetStreamByType(StreamInfo::Type::Audio, true)->packetSender.get())->getShittyInternetMode())
         {
             encoder->SetBitrate(8000);
         }
@@ -328,7 +328,7 @@ void VoIPController::UpdateAudioBitrate()
                     UpdateDataSavingState();
                     UpdateAudioBitrateLimit();
                     BufferOutputStream s(4);
-                    s.WriteInt32(dataSavingMode ? INIT_FLAG_DATA_SAVING_ENABLED : 0);
+                    s.WriteInt32(dataSavingMode ? ExtraInit::Flags::DataSavingEnabled : 0);
                     if (peerVersion < 6)
                     {
                         SendPacketReliably(PKT_NETWORK_CHANGED, s.GetBuffer(), s.GetLength(), 1, 20);
@@ -336,7 +336,7 @@ void VoIPController::UpdateAudioBitrate()
                     else
                     {
                         Buffer buf(move(s));
-                        SendExtra(buf, EXTRA_TYPE_NETWORK_CHANGED);
+                        SendExtra(buf, ExtraNetworkChanged::ID);
                     }
                     lastRecvPacketTime = time;
                 }

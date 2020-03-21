@@ -4,7 +4,7 @@ using namespace tgvoip;
 using namespace std;
 
 
-shared_ptr<VoIPController::Stream> VoIPController::GetStreamByType(StreamType type, bool outgoing)
+shared_ptr<VoIPController::Stream> VoIPController::GetStreamByType(StreamInfo::Type type, bool outgoing)
 {
     for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
     {

@@ -101,7 +101,7 @@ void VoIPController::SetNetworkType(int type)
                 SendPublicEndpointsRequest();
             }
             BufferOutputStream s(4);
-            s.WriteInt32(dataSavingMode ? INIT_FLAG_DATA_SAVING_ENABLED : 0);
+            s.WriteInt32(dataSavingMode ? ExtraInit::Flags::DataSavingEnabled : 0);
             if (peerVersion < 6)
             {
                 SendPacketReliably(PKT_NETWORK_CHANGED, s.GetBuffer(), s.GetLength(), 1, 20);
@@ -109,7 +109,7 @@ void VoIPController::SetNetworkType(int type)
             else
             {
                 Buffer buf(move(s));
-                SendExtra(buf, EXTRA_TYPE_NETWORK_CHANGED);
+                SendExtra(buf, ExtraNetworkChanged::ID);
             }
             needReInitUdpProxy = true;
             selectCanceller->CancelSelect();

@@ -51,7 +51,7 @@ bool VoIPController::parseRelayPacket(const BufferInputStream &in, Endpoint &src
                         o.WriteBytes(myIP, 16);
                         o.WriteInt16(udpSocket->GetLocalPort());
                         Buffer b(move(o));
-                        SendExtra(b, EXTRA_TYPE_IPV6_ENDPOINT);
+                        SendExtra(b, ExtraIpv6Endpoint::ID);
                     }
                 }
             }
@@ -103,7 +103,7 @@ bool VoIPController::parseRelayPacket(const BufferInputStream &in, Endpoint &src
                     else
                     {
                         Buffer buf(move(pkt));
-                        SendExtra(buf, EXTRA_TYPE_LAN_ENDPOINT);
+                        SendExtra(buf, ExtraLanEndpoint::ID);
                     }
                 }
                 waitingForRelayPeerInfo = false;
