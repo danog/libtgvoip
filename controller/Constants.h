@@ -8,7 +8,7 @@
 // Max recent packets
 #define MAX_RECENT_PACKETS 128
 
-// Packet types
+// Packet types (all deprecated)
 #define PKT_INIT 1
 #define PKT_INIT_ACK 2
 #define PKT_STREAM_DATA 4

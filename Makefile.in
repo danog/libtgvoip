@@ -818,8 +818,10 @@ am__libtgvoip_la_SOURCES_DIST = TgVoip.cpp VoIPController.cpp \
 	controller/audio/OpusEncoder.cpp \
 	controller/audio/AudioPacketSender.cpp \
 	controller/net/PacketReassembler.cpp \
-	controller/protocol/PacketManager.cpp \
-	controller/protocol/PacketStructs.cpp \
+	controller/protocol/packets/PacketManager.cpp \
+	controller/protocol/packets/PacketSender.cpp \
+	controller/protocol/packets/PacketStructs.cpp \
+	controller/protocol/Streams.cpp \
 	controller/protocol/protocol/Extra.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
@@ -1761,8 +1763,10 @@ am__objects_12 = TgVoip.lo VoIPController.lo tools/Buffers.lo \
 	controller/audio/OpusEncoder.lo \
 	controller/audio/AudioPacketSender.lo \
 	controller/net/PacketReassembler.lo \
-	controller/protocol/PacketManager.lo \
-	controller/protocol/PacketStructs.lo \
+	controller/protocol/packets/PacketManager.lo \
+	controller/protocol/packets/PacketSender.lo \
+	controller/protocol/packets/PacketStructs.lo \
+	controller/protocol/Streams.lo \
 	controller/protocol/protocol/Extra.lo VoIPGroupController.lo \
 	VoIPServerConfig.lo audio/AudioIO.lo audio/AudioInput.lo \
 	audio/AudioOutput.lo audio/Resampler.lo \
@@ -2079,8 +2083,10 @@ am__depfiles_remade = ./$(DEPDIR)/TgVoip.Plo \
 	controller/net/$(DEPDIR)/JitterBuffer.Plo \
 	controller/net/$(DEPDIR)/NetworkSocket.Plo \
 	controller/net/$(DEPDIR)/PacketReassembler.Plo \
-	controller/protocol/$(DEPDIR)/PacketManager.Plo \
-	controller/protocol/$(DEPDIR)/PacketStructs.Plo \
+	controller/protocol/$(DEPDIR)/Streams.Plo \
+	controller/protocol/packets/$(DEPDIR)/PacketManager.Plo \
+	controller/protocol/packets/$(DEPDIR)/PacketSender.Plo \
+	controller/protocol/packets/$(DEPDIR)/PacketStructs.Plo \
 	controller/protocol/protocol/$(DEPDIR)/Extra.Plo \
 	os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo \
 	os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo \
@@ -2399,8 +2405,10 @@ SRC = TgVoip.cpp VoIPController.cpp tools/Buffers.cpp \
 	controller/audio/OpusEncoder.cpp \
 	controller/audio/AudioPacketSender.cpp \
 	controller/net/PacketReassembler.cpp \
-	controller/protocol/PacketManager.cpp \
-	controller/protocol/PacketStructs.cpp \
+	controller/protocol/packets/PacketManager.cpp \
+	controller/protocol/packets/PacketSender.cpp \
+	controller/protocol/packets/PacketStructs.cpp \
+	controller/protocol/Streams.cpp \
 	controller/protocol/protocol/Extra.cpp VoIPGroupController.cpp \
 	VoIPServerConfig.cpp audio/AudioIO.cpp audio/AudioInput.cpp \
 	audio/AudioOutput.cpp audio/Resampler.cpp \
@@ -2570,17 +2578,28 @@ controller/audio/AudioPacketSender.lo:  \
 	controller/audio/$(DEPDIR)/$(am__dirstamp)
 controller/net/PacketReassembler.lo: controller/net/$(am__dirstamp) \
 	controller/net/$(DEPDIR)/$(am__dirstamp)
+controller/protocol/packets/$(am__dirstamp):
+	@$(MKDIR_P) controller/protocol/packets
+	@: > controller/protocol/packets/$(am__dirstamp)
+controller/protocol/packets/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) controller/protocol/packets/$(DEPDIR)
+	@: > controller/protocol/packets/$(DEPDIR)/$(am__dirstamp)
+controller/protocol/packets/PacketManager.lo:  \
+	controller/protocol/packets/$(am__dirstamp) \
+	controller/protocol/packets/$(DEPDIR)/$(am__dirstamp)
+controller/protocol/packets/PacketSender.lo:  \
+	controller/protocol/packets/$(am__dirstamp) \
+	controller/protocol/packets/$(DEPDIR)/$(am__dirstamp)
+controller/protocol/packets/PacketStructs.lo:  \
+	controller/protocol/packets/$(am__dirstamp) \
+	controller/protocol/packets/$(DEPDIR)/$(am__dirstamp)
 controller/protocol/$(am__dirstamp):
 	@$(MKDIR_P) controller/protocol
 	@: > controller/protocol/$(am__dirstamp)
 controller/protocol/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) controller/protocol/$(DEPDIR)
 	@: > controller/protocol/$(DEPDIR)/$(am__dirstamp)
-controller/protocol/PacketManager.lo:  \
-	controller/protocol/$(am__dirstamp) \
-	controller/protocol/$(DEPDIR)/$(am__dirstamp)
-controller/protocol/PacketStructs.lo:  \
-	controller/protocol/$(am__dirstamp) \
+controller/protocol/Streams.lo: controller/protocol/$(am__dirstamp) \
 	controller/protocol/$(DEPDIR)/$(am__dirstamp)
 controller/protocol/protocol/$(am__dirstamp):
 	@$(MKDIR_P) controller/protocol/protocol
@@ -3747,6 +3766,8 @@ mostlyclean-compile:
 	-rm -f controller/net/*.lo
 	-rm -f controller/protocol/*.$(OBJEXT)
 	-rm -f controller/protocol/*.lo
+	-rm -f controller/protocol/packets/*.$(OBJEXT)
+	-rm -f controller/protocol/packets/*.lo
 	-rm -f controller/protocol/protocol/*.$(OBJEXT)
 	-rm -f controller/protocol/protocol/*.lo
 	-rm -f os/darwin/*.$(OBJEXT)
@@ -4060,8 +4081,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/JitterBuffer.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/NetworkSocket.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/net/$(DEPDIR)/PacketReassembler.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/$(DEPDIR)/PacketManager.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/$(DEPDIR)/PacketStructs.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/$(DEPDIR)/Streams.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/packets/$(DEPDIR)/PacketManager.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/packets/$(DEPDIR)/PacketSender.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/packets/$(DEPDIR)/PacketStructs.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@controller/protocol/protocol/$(DEPDIR)/Extra.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo@am__quote@ # am--include-marker
@@ -4272,6 +4295,7 @@ clean-libtool:
 	-rm -rf controller/media/.libs controller/media/_libs
 	-rm -rf controller/net/.libs controller/net/_libs
 	-rm -rf controller/protocol/.libs controller/protocol/_libs
+	-rm -rf controller/protocol/packets/.libs controller/protocol/packets/_libs
 	-rm -rf controller/protocol/protocol/.libs controller/protocol/protocol/_libs
 	-rm -rf os/darwin/.libs os/darwin/_libs
 	-rm -rf os/linux/.libs os/linux/_libs
@@ -4581,6 +4605,8 @@ distclean-generic:
 	-rm -f controller/net/$(am__dirstamp)
 	-rm -f controller/protocol/$(DEPDIR)/$(am__dirstamp)
 	-rm -f controller/protocol/$(am__dirstamp)
+	-rm -f controller/protocol/packets/$(DEPDIR)/$(am__dirstamp)
+	-rm -f controller/protocol/packets/$(am__dirstamp)
 	-rm -f controller/protocol/protocol/$(DEPDIR)/$(am__dirstamp)
 	-rm -f controller/protocol/protocol/$(am__dirstamp)
 	-rm -f os/darwin/$(DEPDIR)/$(am__dirstamp)
@@ -4955,8 +4981,10 @@ distclean: distclean-am
 	-rm -f controller/net/$(DEPDIR)/JitterBuffer.Plo
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f controller/net/$(DEPDIR)/PacketReassembler.Plo
-	-rm -f controller/protocol/$(DEPDIR)/PacketManager.Plo
-	-rm -f controller/protocol/$(DEPDIR)/PacketStructs.Plo
+	-rm -f controller/protocol/$(DEPDIR)/Streams.Plo
+	-rm -f controller/protocol/packets/$(DEPDIR)/PacketManager.Plo
+	-rm -f controller/protocol/packets/$(DEPDIR)/PacketSender.Plo
+	-rm -f controller/protocol/packets/$(DEPDIR)/PacketStructs.Plo
 	-rm -f controller/protocol/protocol/$(DEPDIR)/Extra.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo
@@ -5327,8 +5355,10 @@ maintainer-clean: maintainer-clean-am
 	-rm -f controller/net/$(DEPDIR)/JitterBuffer.Plo
 	-rm -f controller/net/$(DEPDIR)/NetworkSocket.Plo
 	-rm -f controller/net/$(DEPDIR)/PacketReassembler.Plo
-	-rm -f controller/protocol/$(DEPDIR)/PacketManager.Plo
-	-rm -f controller/protocol/$(DEPDIR)/PacketStructs.Plo
+	-rm -f controller/protocol/$(DEPDIR)/Streams.Plo
+	-rm -f controller/protocol/packets/$(DEPDIR)/PacketManager.Plo
+	-rm -f controller/protocol/packets/$(DEPDIR)/PacketSender.Plo
+	-rm -f controller/protocol/packets/$(DEPDIR)/PacketStructs.Plo
 	-rm -f controller/protocol/protocol/$(DEPDIR)/Extra.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnit.Plo
 	-rm -f os/darwin/$(DEPDIR)/AudioInputAudioUnitOSX.Plo

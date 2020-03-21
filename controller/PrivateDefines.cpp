@@ -1,34 +1,35 @@
 #pragma once
 
 #ifndef _WIN32
-#include <unistd.h>
 #include <sys/time.h>
+#include <unistd.h>
 #endif
-#include <errno.h>
-#include <string.h>
-#include <wchar.h>
 #include "../VoIPController.h"
-#include "../tools/logging.h"
-#include "../tools/threading.h"
-#include "../tools/Buffers.h"
-#include "../controller/audio/OpusEncoder.h"
-#include "../controller/audio/OpusDecoder.h"
 #include "../VoIPServerConfig.h"
 #include "../controller/PrivateDefines.h"
-#include "../controller/net/Endpoint.h"
-#include "../tools/json11.hpp"
-#include "../controller/net/PacketSender.h"
 #include "../controller/audio/AudioPacketSender.h"
+#include "../controller/audio/OpusDecoder.h"
+#include "../controller/audio/OpusEncoder.h"
+#include "../controller/net/Endpoint.h"
+#include "../controller/protocol/packets/PacketSender.h"
+#include "../controller/protocol/protocol/Index.h"
+#include "../tools/Buffers.h"
+#include "../tools/json11.hpp"
+#include "../tools/logging.h"
+#include "../tools/threading.h"
 #include "../video/VideoPacketSender.h"
-#include <assert.h>
-#include <time.h>
-#include <math.h>
-#include <exception>
-#include <stdexcept>
 #include <algorithm>
-#include <sstream>
-#include <inttypes.h>
+#include <assert.h>
+#include <errno.h>
+#include <exception>
 #include <float.h>
+#include <inttypes.h>
+#include <math.h>
+#include <sstream>
+#include <stdexcept>
+#include <string.h>
+#include <time.h>
+#include <wchar.h>
 
 inline int pad4(int x)
 {
@@ -41,11 +42,13 @@ inline int pad4(int x)
 using namespace tgvoip;
 using namespace std;
 
+using StreamId = Packet::StreamId;
+using StreamType = StreamInfo::Type;
 
 #ifdef __ANDROID__
-#include "os/android/JNIUtilities.h"
-#include "os/android/AudioInputAndroid.h"
 #include "controller/net/NetworkSocket.h"
+#include "os/android/AudioInputAndroid.h"
+#include "os/android/JNIUtilities.h"
 
 extern jclass jniUtilitiesClass;
 #endif
@@ -53,4 +56,3 @@ extern jclass jniUtilitiesClass;
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
 #include "audio/AudioIOCallback.h"
 #endif
-

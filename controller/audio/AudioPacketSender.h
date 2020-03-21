@@ -1,5 +1,5 @@
 #pragma once
-#include "../net/PacketSender.h"
+#include "../protocol/packets/PacketSender.h"
 #include <list>
 
 namespace tgvoip
@@ -10,10 +10,10 @@ class AudioPacketSender : public PacketSender
     friend class VoIPController;
 
 public:
-    AudioPacketSender(VoIPController *controller, const std::shared_ptr<OpusEncoder> &encoder, const std::shared_ptr<VoIPController::Stream> &stream);
-    virtual ~AudioPacketSender();
-    virtual void PacketAcknowledged(uint32_t seq, double sendTime, double ackTime, uint8_t type, uint32_t size) override {};
-    virtual void PacketLost(uint32_t seq, uint8_t type, uint32_t size) override {};
+    AudioPacketSender(VoIPController *controller, const std::shared_ptr<Stream> &stream, const std::shared_ptr<OpusEncoder> &encoder);
+    virtual ~AudioPacketSender() = default;
+    virtual void PacketAcknowledged(const RecentOutgoingPacket &packet) override{};
+    virtual void PacketLost(const RecentOutgoingPacket &packet) override{};
     void SetSource(const std::shared_ptr<OpusEncoder> &encoder);
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)

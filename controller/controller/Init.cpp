@@ -34,16 +34,14 @@ VoIPController::VoIPController() : rawSendQueue(64)
     unackNopThreshold = ServerConfig::GetSharedInstance()->GetUInt("unack_nop_threshold", 10);
 
     //audioBitrateStepDecr /= 2;
+    outgoingStreams.push_back(std::make_shared<Stream>(StreamId::Signaling, StreamType::Signaling));
 
-    shared_ptr<Stream> stm = make_shared<Stream>();
-    stm->id = 1;
-    stm->type = StreamInfo::Type::Audio;
+    std::shared_ptr<AudioStream> stm = std::make_shared<AudioStream>();
     stm->codec = Codec::Opus;
-    stm->enabled = 1;
     stm->frameDuration = 60;
-    stm->packetSender = std::make_unique<AudioPacketSender>(this, nullptr, stm);
+    stm->packetSender = std::make_unique<AudioPacketSender>(this, stm, nullptr);
 
-    outgoingStreams.push_back(stm);
+    outgoingStreams.push_back(std::move(stm));
 }
 
 void VoIPController::InitializeTimers()
@@ -62,7 +60,7 @@ void VoIPController::InitializeTimers()
             [this] {
                 if (statsDump && incomingStreams.size() == 1)
                 {
-                    shared_ptr<JitterBuffer> &jitterBuffer = incomingStreams[0]->jitterBuffer;
+                    shared_ptr<JitterBuffer> &jitterBuffer = dynamic_pointer_cast<AudioStream>(incomingStreams[StreamId::Audio])->jitterBuffer;
                     statsDump << std::setprecision(3)
                               << GetCurrentTime() - connectionInitTime
                               << endpoints.at(currentEndpoint).rtts[0]

@@ -19,8 +19,10 @@ controller/audio/OpusDecoder.cpp \
 controller/audio/OpusEncoder.cpp \
 controller/audio/AudioPacketSender.cpp \
 controller/net/PacketReassembler.cpp \
-controller/protocol/PacketManager.cpp \
-controller/protocol/PacketStructs.cpp \
+controller/protocol/packets/PacketManager.cpp \
+controller/protocol/packets/PacketSender.cpp \
+controller/protocol/packets/PacketStructs.cpp \
+controller/protocol/Streams.cpp \
 controller/protocol/protocol/Extra.cpp \
 VoIPGroupController.cpp \
 VoIPServerConfig.cpp \

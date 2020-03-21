@@ -1,8 +1,8 @@
 #pragma once
-#include "../../tools/Buffers.h"
-#include "../PrivateDefines.h"
-#include "protocol/Extra.h"
-#include "protocol/Interface.h"
+#include "../../../tools/Buffers.h"
+#include "../../PrivateDefines.h"
+#include "../protocol/Extra.h"
+#include "../protocol/Interface.h"
 //#include "../net/PacketSender.h"
 
 namespace tgvoip
@@ -20,7 +20,7 @@ private:
     bool parseLegacyLegacy(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion);
 
 public:
-    void serializeLegacy(std::vector<std::pair<unsigned char *, size_t>> &out, const VersionInfo &ver, const int state, const unsigned char *callID);
+    void serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, bool>> &out, const VersionInfo &ver, const int state, const unsigned char *callID);
 
 private:
     void writePacketHeaderLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t seq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const std::vector<Wrapped<Extra>> &extras);
@@ -80,30 +80,33 @@ public:
 // Legacy stuff
 struct RecentOutgoingPacket
 {
-    // For simple NACK reliable resending
+    size_t size;
     int64_t endpoint;
-    Buffer data;
 
-    uint32_t seq;
     uint16_t id; // for group calls only
+    
     double sendTime;
     double ackTime;
     double rttTime;
-    uint8_t type;
-    uint32_t size;
-    PacketSender *sender;
     bool lost;
+
+    PacketSender *sender;
 };
 struct UnacknowledgedExtraData
 {
-    unsigned char type;
-    Buffer data;
-    uint32_t firstContainingSeq;
+    UnacknowledgedExtraData(Wrapped<Extra> &&data_)
+        : data(std::move(data_))
+    {
+    }
+    
+    TGVOIP_DISALLOW_COPY_AND_ASSIGN(UnacknowledgedExtraData);
+
+    Wrapped<Extra> data;
+    uint32_t firstContainingSeq = 0;
 };
 struct ReliableOutgoingPacket
 {
-    Buffer data;
-    unsigned char type;
+    Packet data;
     HistoricBuffer<uint32_t, 16> seqs;
     double firstSentTime;
     double lastSentTime;
@@ -113,19 +116,13 @@ struct ReliableOutgoingPacket
 };
 struct PendingOutgoingPacket
 {
-    PendingOutgoingPacket(uint32_t seq_, uint8_t type_, size_t len_, Buffer &&data_, int64_t endpoint_)
-        : seq(seq_),
-          type(type_),
-          len(len_),
-          data(std::move(data_)),
+    PendingOutgoingPacket(Packet &&packet_, int64_t endpoint_)
+        : packet(std::move(packet_)),
           endpoint(endpoint_)
     {
     }
     PendingOutgoingPacket(PendingOutgoingPacket &&other)
-        : seq(other.seq),
-          type(other.type),
-          len(other.len),
-          data(std::move(other.data)),
+        : packet(std::move(other.packet)),
           endpoint(other.endpoint)
     {
     }
@@ -133,19 +130,13 @@ struct PendingOutgoingPacket
     {
         if (this != &other)
         {
-            seq = other.seq;
-            type = other.type;
-            len = other.len;
-            data = std::move(other.data);
+            packet = std::move(other.packet);
             endpoint = other.endpoint;
         }
         return *this;
     }
     TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
-    uint32_t seq;
-    uint8_t type;
-    size_t len;
-    Buffer data;
+    Packet packet;
     int64_t endpoint;
 };
 

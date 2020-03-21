@@ -3,13 +3,9 @@
 
 using namespace tgvoip;
 
-AudioPacketSender::AudioPacketSender(VoIPController *controller, const std::shared_ptr<OpusEncoder> &encoder, const std::shared_ptr<VoIPController::Stream> &stream) : PacketSender(controller, stream), encoder(encoder)
+AudioPacketSender::AudioPacketSender(VoIPController *controller, const std::shared_ptr<Stream> &stream, const std::shared_ptr<OpusEncoder> &encoder) : PacketSender(controller, stream)
 {
     SetSource(encoder);
-}
-
-AudioPacketSender::~AudioPacketSender()
-{
 }
 
 void AudioPacketSender::SetSource(const std::shared_ptr<OpusEncoder> &encoder)

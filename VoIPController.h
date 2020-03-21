@@ -17,42 +17,42 @@
 #include <netinet/in.h>
 #endif
 #ifdef __APPLE__
-#include <TargetConditionals.h>
 #include "os/darwin/AudioUnitIO.h"
+#include <TargetConditionals.h>
 #endif
-#include <stdint.h>
-#include <vector>
-#include <deque>
-#include <fstream>
-#include <iomanip>
-#include <string>
-#include <unordered_map>
-#include <map>
-#include <memory>
-#include "video/VideoSource.h"
-#include "video/VideoRenderer.h"
-#include <atomic>
-#include "video/ScreamCongestionController.h"
+#include "audio/AudioIO.h"
 #include "audio/AudioInput.h"
+#include "audio/AudioOutput.h"
 #include "audio/Device.h"
 #include "tools/BlockingQueue.h"
-#include "audio/AudioOutput.h"
-#include "audio/AudioIO.h"
-#include "controller/net/JitterBuffer.h"
-#include "controller/net/Endpoint.h"
-#include "controller/audio/OpusDecoder.h"
-#include "controller/audio/OpusEncoder.h"
-#include "controller/audio/EchoCanceller.h"
-#include "controller/net/CongestionControl.h"
-#include "controller/protocol/PacketManager.h"
-#include "controller/protocol/PacketStructs.h"
-#include "controller/protocol/protocol/Extra.h"
 #include "tools/Buffers.h"
-#include "controller/net/PacketReassembler.h"
 #include "tools/MessageThread.h"
 #include "tools/utils.h"
 #include "controller/PrivateDefines.h"
-
+#include "controller/audio/EchoCanceller.h"
+#include "controller/audio/OpusDecoder.h"
+#include "controller/audio/OpusEncoder.h"
+#include "controller/net/CongestionControl.h"
+#include "controller/net/Endpoint.h"
+#include "controller/net/JitterBuffer.h"
+#include "controller/net/PacketReassembler.h"
+#include "controller/protocol/packets/PacketManager.h"
+#include "controller/protocol/packets/PacketStructs.h"
+#include "controller/protocol/protocol/Extra.h"
+#include "controller/protocol/Stream.h"
+#include "video/ScreamCongestionController.h"
+#include "video/VideoRenderer.h"
+#include "video/VideoSource.h"
+#include <atomic>
+#include <deque>
+#include <fstream>
+#include <iomanip>
+#include <map>
+#include <memory>
+#include <stdint.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #define LIBTGVOIP_VERSION "2.5"
 
@@ -396,33 +396,9 @@ public:
     void SetAudioOutputDuckingEnabled(bool enabled);
 #endif
 
-    struct Stream
-    {
-        int32_t userID;
-        uint8_t id;
-        StreamInfo::Type type;
-        uint32_t codec;
-        bool enabled;
-        bool extraECEnabled;
-        uint16_t frameDuration;
-        std::shared_ptr<JitterBuffer> jitterBuffer;
-        std::shared_ptr<OpusDecoder> decoder;
-        std::shared_ptr<PacketReassembler> packetReassembler;
-        std::shared_ptr<CallbackWrapper> callbackWrapper;
-        std::unique_ptr<PacketSender> packetSender;
-        std::vector<Buffer> codecSpecificData;
-        bool csdIsValid = false;
-        bool paused = false;
-        int resolution;
-
-        unsigned int width = 0;
-        unsigned int height = 0;
-        uint16_t rotation = 0;
-    };
-
     struct ProtocolInfo
     {
-        uint32_t version;
+        VersionInfo version;
         uint32_t maxVideoResolution;
         std::vector<uint32_t> videoDecoders;
         bool videoCaptureSupported;
@@ -439,17 +415,39 @@ protected:
     virtual void SendUdpPing(Endpoint &endpoint);
     virtual void SendRelayPings();
     virtual void OnAudioOutputReady();
-    virtual void SendExtra(Buffer &data, unsigned char type);
-    void SendStreamFlags(Stream &stream);
+    virtual void SendExtra(Wrapped<Extra> &&extra);
+    void SendStreamFlags(const Stream &stream);
     void InitializeTimers();
     void ResetEndpointPingStats();
     void ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe, uint16_t rotation);
-    std::shared_ptr<Stream> GetStreamByType(StreamInfo::Type type, bool outgoing);
-    std::shared_ptr<Stream> GetStreamByID(unsigned char id, bool outgoing);
     Endpoint *GetEndpointForPacket(const PendingOutgoingPacket &pkt);
     Endpoint *GetEndpointById(const int64_t id);
     bool SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue = true, PacketSender *source = NULL);
     CellularCarrierInfo GetCarrierInfo();
+
+    template <class T = Stream>
+    std::shared_ptr<T> &GetStreamByType(StreamInfo::Type type, bool outgoing)
+    {
+
+        for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
+        {
+            if (ss->type == type)
+                return dynamic_pointer_cast<T>(ss);
+        }
+        shared_ptr<T> s;
+        return s;
+    }
+    template <class T = Stream>
+    std::shared_ptr<T> &GetStreamByID(unsigned char id, bool outgoing)
+    {
+        for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
+        {
+            if (ss->id == id)
+                return dynamic_pointer_cast<T>(ss);
+        }
+        shared_ptr<T> s;
+        return s;
+    }
 
 private:
     struct RawPendingOutgoingPacket
@@ -561,10 +559,6 @@ private:
         return string("unknown(") + std::to_string(type) + ')';
     }
 
-    // More legacy
-    bool legacyParsePacket(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen);
-    void legacyWritePacketHeader(uint32_t pseq, uint32_t acks, BufferOutputStream *s, unsigned char type, uint32_t length);
-
     bool parseRelayPacket(const BufferInputStream &in, Endpoint &srcEndpoint);
 
     void handleReliablePackets();
@@ -579,8 +573,6 @@ private:
     int64_t preferredRelay = 0;
     int64_t peerPreferredRelay = 0;
     std::atomic<bool> runReceiver = ATOMIC_VAR_INIT(false);
-
-    // Acks now handled in Ack
 
     HistoricBuffer<uint32_t, 10, double> sendLossCountHistory;
     HistoricBuffer<uint32_t, 10, double> packetCountHistory;
@@ -635,7 +627,6 @@ private:
     double connectionInitTime = 0;
     double lastRecvPacketTime = 0;
     Config config;
-    int32_t peerVersion = 0;
     CongestionControl conctl;
     TrafficStats stats;
     bool receivedInit = false;
@@ -676,7 +667,6 @@ private:
     bool didSendUpgradeRequest = false;
     bool didInvokeUpgradeCallback = false;
 
-    int32_t connectionMaxLayer = 0;
     bool useMTProto2 = false;
     bool setCurrentEndpointToTCP = false;
 
@@ -729,7 +719,7 @@ private:
     uint32_t sendLosses = 0;
     uint32_t unacknowledgedIncomingPacketCount = 0;
 
-    ProtocolInfo protocolInfo{0};
+    ProtocolInfo protocolInfo;
 
     /*** debug report problems ***/
     bool wasReconnecting = false;

@@ -247,8 +247,6 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
     }
 
     std::shared_ptr<T> d;
-
-    static const uint8_t ID = T::ID;
 };
 
 struct Bytes : public Serializable,

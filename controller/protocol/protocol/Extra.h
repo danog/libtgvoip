@@ -43,8 +43,9 @@ public:
 
     enum Type : uint8_t
     {
+        Signaling = 0,
         Audio = 1,
-        Video
+        Video = 2
     };
 
     uint8_t streamId = 0;

@@ -1,5 +1,5 @@
 #include "PacketStructs.h"
-#include "../PrivateDefines.cpp"
+#include "../../PrivateDefines.cpp"
 
 using namespace tgvoip;
 
@@ -87,4 +87,4 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
         out.Write(extraSignaling, ver);
 }
 
-#include "PacketStructsLegacy.cpp"
+#include "Legacy.cpp"

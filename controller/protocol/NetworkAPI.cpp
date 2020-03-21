@@ -363,13 +363,14 @@ void VoIPController::SendNopPacket(PacketManager &pm)
     if (state != STATE_ESTABLISHED)
         return;
     PacketSender *source = pm.getTransportId() == 0xFF ? nullptr : outgoingStreams[pm.getTransportId()]->packetSender.get();
-    SendOrEnqueuePacket(PendingOutgoingPacket{
+    SendOrEnqueuePacket(PendingOutgoingPacket(Packet(), 0), source);
+    /* {
                             /*.seq=*/(firstSentPing = pm.nextLocalSeq()),
                             /*.type=*/PKT_NOP,
                             /*.len=*/0,
                             /*.data=*/Buffer(),
                             /*.endpoint=*/0},
-                        source);
+                        source);*/
 }
 
 void VoIPController::SendPublicEndpointsRequest()
@@ -433,21 +434,22 @@ Endpoint &VoIPController::GetEndpointByType(const Endpoint::Type type)
     throw out_of_range("no endpoint");
 }
 
-void VoIPController::SendExtra(Buffer &data, unsigned char type)
+void VoIPController::SendExtra(Wrapped<Extra> &&extra)
 {
     ENFORCE_MSG_THREAD;
 
-    LOGV("Sending extra type %u length %u", type, (unsigned int)data.Length());
+    auto type = extra.getID();
+    LOGV("Sending extra type %hhu", type);
     for (auto &extra : currentExtras)
     {
-        if (extra.type == type)
+        if (extra.data.getID() == type)
         {
             extra.firstContainingSeq = 0;
-            extra.data = move(data);
+            extra.data = std::move(extra.data);
             return;
         }
     }
-    currentExtras.push_back(UnacknowledgedExtraData{type, move(data), 0});
+    currentExtras.push_back(UnacknowledgedExtraData(std::move(extra)));
 }
 
 void VoIPController::SendUdpPing(Endpoint &endpoint)
@@ -505,21 +507,21 @@ void VoIPController::ResetEndpointPingStats()
     }
 }
 
-void VoIPController::SendStreamFlags(Stream &stream)
+void VoIPController::SendStreamFlags(const Stream &stream)
 {
     ENFORCE_MSG_THREAD;
 
-    BufferOutputStream s(5);
-    s.WriteByte(stream.id);
-    uint32_t flags = 0;
+    auto flags = std::make_shared<ExtraStreamFlags>();
+
+    flags->streamId = stream.id;
     if (stream.enabled)
-        flags |= ExtraStreamFlags::Flags::Enabled;
+        flags->flags |= ExtraStreamFlags::Flags::Enabled;
     if (stream.extraECEnabled)
-        flags |= ExtraStreamFlags::Flags::ExtraEC;
+        flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
     if (stream.paused)
-        flags |= ExtraStreamFlags::Flags::Paused;
-    s.WriteInt32(flags);
-    LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags);
-    Buffer buf(move(s));
-    SendExtra(buf, ExtraStreamFlags::ID);
+        flags->flags |= ExtraStreamFlags::Flags::Paused;
+
+    LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags.flags);
+
+    SendExtra(Wrapped<Extra>(flags));
 }

@@ -1,7 +1,7 @@
 #pragma once
+#include "PacketStructs.h"
 #include <atomic>
 #include <bitset>
-#include "PacketStructs.h"
 
 namespace tgvoip
 {
@@ -19,11 +19,11 @@ inline bool seqgte(uint32_t s1, uint32_t s2)
 }
 
 // Local and remote packet history management
-class PacketManager
+class PacketManager final
 {
 public:
-    PacketManager(uint8_t transportId = 0xFF);
-    virtual ~PacketManager() = default;
+    PacketManager() = delete;
+    PacketManager(uint8_t transportId);
 
     // Transport ID for multiplexing
     inline uint8_t getTransportId()
@@ -31,7 +31,7 @@ public:
         return transportId;
     }
 
-    uint8_t transportId = 0xFF; // Default transport ID
+    uint8_t transportId;
 
 public:
     /* Local seqno generation */

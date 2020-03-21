@@ -19,9 +19,9 @@ VoIPController::~VoIPController()
     for (auto &stm : incomingStreams)
     {
         LOGD("before stop decoder");
-        if (stm->decoder)
+        if (stm->type == StreamType::Audio && dynamic_pointer_cast<AudioStream>(stm)->decoder)
         {
-            stm->decoder->Stop();
+            dynamic_pointer_cast<AudioStream>(stm)->decoder->Stop();
         }
     }
     LOGD("before delete encoder");
@@ -155,17 +155,8 @@ void VoIPController::SetMicMute(bool mute)
                 if (s->type == StreamInfo::Type::Audio)
                 {
                     s->enabled = !micMuted;
-                    if (peerVersion < 6)
-                    {
-                        unsigned char buf[2];
-                        buf[0] = s->id;
-                        buf[1] = (char)(micMuted ? 0 : 1);
-                        SendPacketReliably(PKT_STREAM_STATE, buf, 2, .5f, 20);
-                    }
-                    else
-                    {
-                        SendStreamFlags(*s);
-                    }
+                    SendStreamFlags(*s);
+                    //SendPacketReliably(PKT_STREAM_STATE, buf, 2, .5f, 20);
                 }
             }
         });
@@ -209,7 +200,7 @@ string VoIPController::GetDebugString()
         r += buffer;
     }
     double avgLate[3];
-    shared_ptr<Stream> stm = GetStreamByType(StreamInfo::Type::Audio, false);
+    shared_ptr<AudioStream> stm = GetStreamByType(StreamInfo::Type::Audio, false);
     shared_ptr<JitterBuffer> jitterBuffer;
     if (stm)
         jitterBuffer = stm->jitterBuffer;
@@ -249,7 +240,7 @@ string VoIPController::GetDebugString()
 
     if (config.enableVideoSend)
     {
-        shared_ptr<Stream> vstm = GetStreamByType(StreamInfo::Type::Video, true);
+        shared_ptr<VideoStream> vstm = GetStreamByType(StreamInfo::Type::Video, true);
         if (vstm && vstm->enabled && vstm->packetSender)
         {
             snprintf(buffer, sizeof(buffer), "\nVideo out: %ux%u '%c%c%c%c' %u kbit", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec), dynamic_cast<video::VideoPacketSender *>(vstm->packetSender.get())->GetBitrate());

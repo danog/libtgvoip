@@ -15,9 +15,10 @@ namespace tgvoip
 {
 struct VersionInfo
 {
+    VersionInfo() = default;
     VersionInfo(int _peerVersion, int32_t _connectionMaxLayer) : peerVersion(_peerVersion), connectionMaxLayer(_connectionMaxLayer){};
-    const int peerVersion = 0;
-    const int32_t connectionMaxLayer = 0;
+    int peerVersion = 0;
+    int32_t connectionMaxLayer = 0;
 
     inline bool isNew() const
     {
