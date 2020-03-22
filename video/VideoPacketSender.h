@@ -21,10 +21,10 @@ class VideoSource;
 class VideoPacketSender : public PacketSender
 {
 public:
-	VideoPacketSender(VoIPController *controller, VideoSource *videoSource, const std::shared_ptr<VoIPController::Stream> &stream);
+	VideoPacketSender(VoIPController *controller, const std::shared_ptr<VideoStream> &stream, VideoSource *videoSource);
 	virtual ~VideoPacketSender();
-	virtual void PacketAcknowledged(uint32_t seq, double sendTime, double ackTime, uint8_t type, uint32_t size) override;
-	virtual void PacketLost(uint32_t seq, uint8_t type, uint32_t size) override;
+	virtual void PacketAcknowledged(const RecentOutgoingPacket &packet) override;
+	virtual void PacketLost(const RecentOutgoingPacket &packet) override;
 	void SetSource(VideoSource *source);
 
 	uint32_t GetBitrate()

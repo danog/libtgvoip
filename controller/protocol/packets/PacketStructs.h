@@ -75,16 +75,47 @@ public:
     {
         return data || extraEC || extraSignaling || seq;
     }
+    std::string print() const override
+    {
+        std::stringstream res;
+        res << data ? "Data packet" : extraEC ? "EC packet" : extraSignaling ? "Signaling packet" : seq ? "NOP packet" : "Empty packet";
+        res << "(streamId=" << streamId << ")";
+        if (extraEC)
+            res << "; extraEC";
+        if (extraSignaling)
+            res << "; signaling " + extraSignaling.print();
+        return res.str();
+    }
+    size_t getSize(const VersionInfo &ver) const override
+    {
+        if (!ver.isNew())
+            return 0; // Don't even try
+
+        return sizeof(seq) +
+               sizeof(ackSeq) +
+               sizeof(ackMask) +
+               sizeof(streamId) +
+               (streamId > StreamId::Extended ? sizeof(streamId) : 0) +
+               (data.Length() > 0xFF || eFlags ? 2 : 1) + // Length
+               (recvTS ? sizeof(recvTS) : 0) +
+               (extraEC ? extraEC.getSize(ver) : 0) +
+               (extraSignaling ? extraSignaling.getSize(ver) : 0);
+    }
 };
+
+using StreamId = Packet::StreamId;
 
 // Legacy stuff
 struct RecentOutgoingPacket
 {
     size_t size;
+    std::string type;
+    uint32_t seq;
+
     int64_t endpoint;
 
     uint16_t id; // for group calls only
-    
+
     double sendTime;
     double ackTime;
     double rttTime;
@@ -98,7 +129,7 @@ struct UnacknowledgedExtraData
         : data(std::move(data_))
     {
     }
-    
+
     TGVOIP_DISALLOW_COPY_AND_ASSIGN(UnacknowledgedExtraData);
 
     Wrapped<Extra> data;

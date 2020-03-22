@@ -61,7 +61,7 @@ void VoIPController::SetRemoteEndpoints(vector<Endpoint> endpoints, bool allowP2
     }
     preferredRelay = currentEndpoint;
     this->allowP2p = allowP2p;
-    this->connectionMaxLayer = connectionMaxLayer;
+    ver.connectionMaxLayer = connectionMaxLayer;
     if (connectionMaxLayer >= 74)
     {
         useMTProto2 = true;

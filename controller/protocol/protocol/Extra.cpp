@@ -106,6 +106,35 @@ uint8_t Extra::chooseType(int peerVersion) const
     }
     return PKT_NOP;
 }
+Extra::std::string print() const override
+{
+    switch (getID())
+    {
+    case ExtraStreamFlags::ID:
+        return "ExtraStreamFlags";
+    case ExtraStreamCsd::ID:
+        return "ExtraStreamCsd";
+    case ExtraLanEndpoint::ID:
+        return "ExtraLanEndpoint";
+    case ExtraIpv6Endpoint::ID:
+        return "ExtraIpv6Endpoint";
+    case ExtraGroupCallKey::ID:
+        return "ExtraGroupCallKey";
+    case ExtraGroupCallUpgrade::ID:
+        return "ExtraGroupCallUpgrade";
+    case ExtraNetworkChanged::ID:
+        return "ExtraNetworkChanged";
+    case ExtraInit::ID:
+        return "ExtraInit";
+    case ExtraInitAck::ID:
+        return "ExtraInitAck";
+    case ExtraPing::ID:
+        return "ExtraPing";
+    case ExtraPong::ID:
+        return "ExtraPong";
+    }
+    return "???";
+}
 
 bool StreamInfo::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
@@ -192,11 +221,11 @@ void ExtraIpv6Endpoint::serialize(BufferOutputStream &out, const VersionInfo &ve
 
 bool ExtraGroupCallKey::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
-    return in.TryRead(key.data(), key.size());
+    return in.TryRead(key);
 }
 void ExtraGroupCallKey::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
-    out.WriteBytes(key.data(), key.size());
+    out.WriteBytes(key);
 }
 
 bool ExtraInit::parse(const BufferInputStream &in, const VersionInfo &ver)

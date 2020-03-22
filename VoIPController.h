@@ -24,10 +24,6 @@
 #include "audio/AudioInput.h"
 #include "audio/AudioOutput.h"
 #include "audio/Device.h"
-#include "tools/BlockingQueue.h"
-#include "tools/Buffers.h"
-#include "tools/MessageThread.h"
-#include "tools/utils.h"
 #include "controller/PrivateDefines.h"
 #include "controller/audio/EchoCanceller.h"
 #include "controller/audio/OpusDecoder.h"
@@ -36,10 +32,14 @@
 #include "controller/net/Endpoint.h"
 #include "controller/net/JitterBuffer.h"
 #include "controller/net/PacketReassembler.h"
+#include "controller/protocol/Stream.h"
 #include "controller/protocol/packets/PacketManager.h"
 #include "controller/protocol/packets/PacketStructs.h"
 #include "controller/protocol/protocol/Extra.h"
-#include "controller/protocol/Stream.h"
+#include "tools/BlockingQueue.h"
+#include "tools/Buffers.h"
+#include "tools/MessageThread.h"
+#include "tools/utils.h"
 #include "video/ScreamCongestionController.h"
 #include "video/VideoRenderer.h"
 #include "video/VideoSource.h"
@@ -396,57 +396,75 @@ public:
     void SetAudioOutputDuckingEnabled(bool enabled);
 #endif
 
-    struct ProtocolInfo
-    {
-        VersionInfo version;
-        uint32_t maxVideoResolution;
-        std::vector<uint32_t> videoDecoders;
-        bool videoCaptureSupported;
-        bool videoDisplaySupported;
-        bool callUpgradeSupported;
-    };
-
 protected:
     virtual void ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcEndpoint);
+    virtual void ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint);
     virtual void ProcessExtraData(Buffer &data);
-    virtual uint8_t WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutputStream &s, PacketSender *source);
-    virtual void SendPacket(unsigned char *data, size_t len, Endpoint &ep, uint32_t seq, uint8_t type, uint8_t transportId);
-    virtual void SendInit();
+
+    //virtual uint8_t WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutputStream &s, PacketSender *source);
     virtual void SendUdpPing(Endpoint &endpoint);
     virtual void SendRelayPings();
-    virtual void OnAudioOutputReady();
+
+    bool SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue = true, PacketSender *source = NULL);
+    virtual void SendPacket(unsigned char *data, size_t len, Endpoint &ep);
+    virtual void SendInit();
+    virtual void SendDataSavingMode();
     virtual void SendExtra(Wrapped<Extra> &&extra);
-    void SendStreamFlags(const Stream &stream);
+    virtual void SendExtra(std::shared_ptr<Extra> &&_d);
+    virtual void SendExtra(std::shared_ptr<Extra> &_d);
+    template <class T>
+    void SendStreamFlags(const MediaStream<T> &stream)
+    {
+        ENFORCE_MSG_THREAD;
+
+        auto flags = std::make_shared<ExtraStreamFlags>();
+
+        flags->streamId = stream.id;
+        if (stream.enabled)
+            flags->flags |= ExtraStreamFlags::Flags::Enabled;
+        if (stream.extraECEnabled)
+            flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
+        if (stream.paused)
+            flags->flags |= ExtraStreamFlags::Flags::Paused;
+
+        LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags->flags);
+
+        SendExtra(Wrapped<Extra>(flags));
+    };
+
+    virtual void OnAudioOutputReady();
     void InitializeTimers();
     void ResetEndpointPingStats();
     void ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe, uint16_t rotation);
     Endpoint *GetEndpointForPacket(const PendingOutgoingPacket &pkt);
     Endpoint *GetEndpointById(const int64_t id);
-    bool SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue = true, PacketSender *source = NULL);
     CellularCarrierInfo GetCarrierInfo();
 
-    template <class T = Stream>
+    template <class T>
+    std::shared_ptr<T> &GetStreamByType(bool outgoing)
+    {
+        return GetStreamByType<T>(T::TYPE, outgoing);
+    }
+    template <class T>
     std::shared_ptr<T> &GetStreamByType(StreamInfo::Type type, bool outgoing)
     {
 
-        for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
+        for (shared_ptr<Stream<>> &ss : (outgoing ? outgoingStreams : incomingStreams))
         {
             if (ss->type == type)
                 return dynamic_pointer_cast<T>(ss);
         }
-        shared_ptr<T> s;
-        return s;
+        return nullptr;
     }
-    template <class T = Stream>
-    std::shared_ptr<T> &GetStreamByID(unsigned char id, bool outgoing)
+    template <class T>
+    std::shared_ptr<T> &GetStreamByID(uint8_t id, bool outgoing)
     {
-        for (shared_ptr<Stream> &ss : (outgoing ? outgoingStreams : incomingStreams))
+        auto &vec = (outgoing ? outgoingStreams : incomingStreams);
+        if (id < vec.size())
         {
-            if (ss->id == id)
-                return dynamic_pointer_cast<T>(ss);
+            return dynamic_pointer_cast<T>(vec[id]);
         }
-        shared_ptr<T> s;
-        return s;
+        return nullptr;
     }
 
 private:
@@ -608,8 +626,8 @@ private:
     uint32_t maxBitrate;
 
     //
-    std::vector<std::shared_ptr<Stream>> outgoingStreams;
-    std::vector<std::shared_ptr<Stream>> incomingStreams;
+    std::vector<std::shared_ptr<Stream<>>> outgoingStreams;
+    std::vector<std::shared_ptr<Stream<>>> incomingStreams;
 
     PacketManager &getBestPacketManager();
 
@@ -686,8 +704,6 @@ private:
     bool needRate = false;
     BlockingQueue<RawPendingOutgoingPacket> rawSendQueue;
 
-    PacketManager packetManager;
-
     uint32_t initTimeoutID = MessageThread::INVALID_ID;
     uint32_t udpPingTimeoutID = MessageThread::INVALID_ID;
 
@@ -719,7 +735,7 @@ private:
     uint32_t sendLosses = 0;
     uint32_t unacknowledgedIncomingPacketCount = 0;
 
-    ProtocolInfo protocolInfo;
+    VersionInfo ver;
 
     /*** debug report problems ***/
     bool wasReconnecting = false;

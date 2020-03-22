@@ -34,6 +34,8 @@ private:
 
 public:
     virtual uint8_t getID() const = 0;
+
+    virtual size_t getConstructorSize(const VersionInfo &ver) const = 0;
 };
 
 template <class T, class = void>
@@ -68,6 +70,9 @@ struct Serializable
 public:
     virtual bool parse(const BufferInputStream &in, const VersionInfo &ver) = 0;
     virtual void serialize(BufferOutputStream &out, const VersionInfo &ver) const = 0;
+
+    virtual std::string print() const = 0;
+    virtual size_t getSize(const VersionInfo &ver) const = 0;
 };
 
 template <typename T>
@@ -103,7 +108,8 @@ struct Mask : public Serializable, SingleChoice<Mask<T>>
         out.WriteByte(mask);
         for (const auto &data : v)
         {
-            out.Write(data, ver);
+            if (data)
+                out.Write(data, ver);
         }
     }
     auto begin() noexcept
@@ -130,6 +136,26 @@ struct Mask : public Serializable, SingleChoice<Mask<T>>
                 return true;
         }
         return false;
+    }
+    std::string print() const override
+    {
+        std::string res = "|";
+        for (const auto &data : v)
+        {
+            res += (data ? data.print() : "");
+            res += "|";
+        }
+        return res;
+    }
+    size_t getSize(const VersionInfo &ver) const override
+    {
+        size_t res = 1;
+        for (const auto &data : v)
+        {
+            if (data)
+                res += data.getSize(ver);
+        }
+        return res;
     }
     std::array<T, 8> v{};
 };
@@ -183,6 +209,25 @@ struct Array : public Serializable, SingleChoice<Array<T>>
     operator bool() const
     {
         return !v.empty();
+    }
+    size_t getSize(const VersionInfo &ver) const override
+    {
+        size_t res = 1;
+        for (const auto &data : v)
+        {
+            res += data.getSize(ver);
+        }
+        return res;
+    }
+    std::string print() const override
+    {
+        std::string res;
+        for (const auto &val : v)
+        {
+            res += val.print();
+            res += ", ";
+        }
+        return res;
     }
     std::vector<T> v;
 };
@@ -246,6 +291,14 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
         return *dynamic_cast<X>(d.get());
     }
 
+    std::string print() const override
+    {
+        return d->print();
+    }
+    size_t getSize(const VersionInfo &ver) const override
+    {
+        return 1 + d->getSize(ver);
+    }
     std::shared_ptr<T> d;
 };
 
@@ -265,6 +318,14 @@ struct Bytes : public Serializable,
     {
         return !data.IsEmpty();
     }
+    std::string print() const override
+    {
+        return "buffer";
+    }
+    size_t getSize(const VersionInfo &ver) const override
+    {
+        return data.Length();
+    }
     Buffer data;
 };
 
@@ -277,6 +338,15 @@ struct UInt32 : public Serializable, SingleChoice<UInt32>
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
     {
         out.WriteUInt32(data);
+    }
+    std::string print() const override
+    {
+        return std::to_string(data);
+    }
+
+    size_t getSize(const VersionInfo &ver) const override
+    {
+        return 4;
     }
     uint32_t data;
 };

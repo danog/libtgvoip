@@ -78,6 +78,8 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
         out.WriteUInt16(data.Length() | (eFlags << 11));
     else
         out.WriteByte(data.Length());
+    
+    out.Write(data);
 
     if (flags & Flags::RecvTS)
         out.WriteUInt32(recvTS);

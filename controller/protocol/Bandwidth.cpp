@@ -5,7 +5,6 @@ using namespace std;
 
 #pragma mark - Bandwidth management
 
-
 double VoIPController::GetAverageRTT()
 {
     ENFORCE_MSG_THREAD;
@@ -33,7 +32,6 @@ double VoIPController::GetAverageRTT()
     }
     return 999;
 }
-
 
 void VoIPController::SetNetworkType(int type)
 {
@@ -100,17 +98,8 @@ void VoIPController::SetNetworkType(int type)
             {
                 SendPublicEndpointsRequest();
             }
-            BufferOutputStream s(4);
-            s.WriteInt32(dataSavingMode ? ExtraInit::Flags::DataSavingEnabled : 0);
-            if (peerVersion < 6)
-            {
-                SendPacketReliably(PKT_NETWORK_CHANGED, s.GetBuffer(), s.GetLength(), 1, 20);
-            }
-            else
-            {
-                Buffer buf(move(s));
-                SendExtra(buf, ExtraNetworkChanged::ID);
-            }
+            SendDataSavingMode();
+            
             needReInitUdpProxy = true;
             selectCanceller->CancelSelect();
             didSendIPv6Endpoint = false;
@@ -121,7 +110,6 @@ void VoIPController::SetNetworkType(int type)
         });
     }
 }
-
 
 void VoIPController::UpdateAudioBitrateLimit()
 {

@@ -123,11 +123,13 @@ void VoIPController::EvaluateUdpPingResults()
 void VoIPController::TickJitterBufferAndCongestionControl()
 {
     // TODO get rid of this and update states of these things internally and retroactively
-    for (shared_ptr<Stream> &stm : incomingStreams)
+    for (auto &stm : incomingStreams)
     {
-        if (stm->jitterBuffer)
+        if (stm->type == StreamType::Audio)
         {
-            stm->jitterBuffer->Tick();
+            auto astm = dynamic_pointer_cast<AudioStream>(stm);
+            if (astm->jitterBuffer)
+                astm->jitterBuffer->Tick();
         }
     }
     conctl.Tick();
@@ -144,15 +146,15 @@ void VoIPController::TickJitterBufferAndCongestionControl()
         {
             pkt.lost = true;
             sendLosses++;
-            LOGW("Outgoing packet lost: seq=%u, type=%s, size=%u", pkt.seq, GetPacketTypeString(pkt.type).c_str(), (unsigned int)pkt.size);
+            LOGW("Outgoing packet lost: seq=%u, type=%s, size=%u", pkt.seq, pkt.type.c_str(), (unsigned int)pkt.size);
             if (pkt.sender)
             {
-                pkt.sender->PacketLost(pkt.seq, pkt.type, pkt.size);
+                pkt.sender->PacketLost(pkt);
             }
-            if (pkt.type == PKT_STREAM_DATA)
-            {
-                conctl.PacketLost(pkt.seq);
-            }
+            //if (pkt.type == PKT_STREAM_DATA)
+            //{
+            conctl.PacketLost(pkt.seq);
+            //}
         }
     }
 }
@@ -169,13 +171,17 @@ void VoIPController::UpdateRTT()
         waitingForAcks = false;
     }
     //LOGI("%.3lf/%.3lf, rtt diff %.3lf, waiting=%d, queue=%d", rttHistory[0], rttHistory[8], v, waitingForAcks, sendQueue->Size());
-    for (vector<shared_ptr<Stream>>::iterator stm = incomingStreams.begin(); stm != incomingStreams.end(); ++stm)
+    for (auto &stm : incomingStreams)
     {
-        if ((*stm)->jitterBuffer)
+        if (stm->type == StreamType::Audio)
         {
-            int lostCount = (*stm)->jitterBuffer->GetAndResetLostPacketCount();
-            if (lostCount > 0 || (lostCount < 0 && recvLossCount > ((uint32_t)-lostCount)))
-                recvLossCount += lostCount;
+            auto astm = dynamic_pointer_cast<AudioStream>(stm);
+            if (astm->jitterBuffer)
+            {
+                int lostCount = astm->jitterBuffer->GetAndResetLostPacketCount();
+                if (lostCount > 0 || (lostCount < 0 && recvLossCount > ((uint32_t)-lostCount)))
+                    recvLossCount += lostCount;
+            }
         }
     }
 }
@@ -187,16 +193,16 @@ void VoIPController::UpdateCongestion()
         uint32_t sendLossCount = conctl.GetSendLossCount();
         sendLossCountHistory.Add(sendLossCount - prevSendLossCount);
         prevSendLossCount = sendLossCount;
-        
+
         uint32_t lastSentSeq = getBestPacketManager().getLastSentSeq();
         packetCountHistory.Add(lastSentSeq - prevSeq);
         prevSeq = lastSentSeq;
 
         //double packetsPerSec = 1000 / (double)outgoingStreams[0]->frameDuration;
         double avgSendLossCount = sendLossCountHistory.Average() / packetCountHistory.Average();
-        LOGE("avg send loss: %.3f%%", avgSendLossCount*100);
+        LOGE("avg send loss: %.3f%%", avgSendLossCount * 100);
 
-        AudioPacketSender *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType(StreamInfo::Type::Audio, true)->packetSender.get());
+        auto &sender = GetStreamByType<AudioStream>(true)->packetSender;
         //avgSendLossCount = sender->setPacketLoss(avgSendLossCount * 100.0) / 100.0;
         sender->setPacketLoss(avgSendLossCount * 100.0);
         if (avgSendLossCount > packetLossToEnableExtraEC && networkType != NET_TYPE_GPRS && networkType != NET_TYPE_EDGE)
@@ -205,14 +211,11 @@ void VoIPController::UpdateCongestion()
             {
                 // Shitty Internet Mode™. Redundant redundancy you can trust.
                 sender->setShittyInternetMode(true);
-                for (shared_ptr<Stream> &s : outgoingStreams)
+                auto &s = GetStreamByType<AudioStream>(true);
+                if (s)
                 {
-                    if (s->type == StreamInfo::Type::Audio)
-                    {
-                        s->extraECEnabled = true;
-                        SendStreamFlags(*s);
-                        break;
-                    }
+                    s->extraECEnabled = true;
+                    SendStreamFlags(*s);
                 }
                 if (encoder)
                     encoder->SetSecondaryEncoderEnabled(true);
@@ -246,14 +249,12 @@ void VoIPController::UpdateCongestion()
         if ((avgSendLossCount < packetLossToEnableExtraEC || networkType == NET_TYPE_EDGE || networkType == NET_TYPE_GPRS) && sender->getShittyInternetMode())
         {
             sender->setShittyInternetMode(false);
-            for (shared_ptr<Stream> &s : outgoingStreams)
+
+            auto &s = GetStreamByType<AudioStream>(true);
+            if (s)
             {
-                if (s->type == StreamInfo::Type::Audio)
-                {
-                    s->extraECEnabled = false;
-                    SendStreamFlags(*s);
-                    break;
-                }
+                s->extraECEnabled = false;
+                SendStreamFlags(*s);
             }
             if (encoder)
                 encoder->SetSecondaryEncoderEnabled(false);
@@ -277,7 +278,7 @@ void VoIPController::UpdateAudioBitrate()
         }
 
         int act = conctl.GetBandwidthControlAction();
-        if (dynamic_cast<AudioPacketSender *>(GetStreamByType(StreamInfo::Type::Audio, true)->packetSender.get())->getShittyInternetMode())
+        if (GetStreamByType<AudioStream>(true)->packetSender->getShittyInternetMode())
         {
             encoder->SetBitrate(8000);
         }
@@ -327,17 +328,7 @@ void VoIPController::UpdateAudioBitrate()
                     }
                     UpdateDataSavingState();
                     UpdateAudioBitrateLimit();
-                    BufferOutputStream s(4);
-                    s.WriteInt32(dataSavingMode ? ExtraInit::Flags::DataSavingEnabled : 0);
-                    if (peerVersion < 6)
-                    {
-                        SendPacketReliably(PKT_NETWORK_CHANGED, s.GetBuffer(), s.GetLength(), 1, 20);
-                    }
-                    else
-                    {
-                        Buffer buf(move(s));
-                        SendExtra(buf, ExtraNetworkChanged::ID);
-                    }
+                    SendDataSavingMode();
                     lastRecvPacketTime = time;
                 }
                 else
@@ -354,7 +345,7 @@ void VoIPController::UpdateAudioBitrate()
 void VoIPController::UpdateSignalBars()
 {
     int prevSignalBarCount = GetSignalBarsCount();
-    double packetsPerSec = 1000 / (double)outgoingStreams[0]->frameDuration;
+    double packetsPerSec = 1000 / (double)GetStreamByID<AudioStream>(StreamId::Audio, true)->frameDuration;
     double avgSendLossCount = sendLossCountHistory.Average() / packetsPerSec;
 
     int signalBarCount = 4;
@@ -376,17 +367,20 @@ void VoIPController::UpdateSignalBars()
     {
         signalBarCount = std::min(signalBarCount, 3);
     }
-
-    for (shared_ptr<Stream> &stm : incomingStreams)
+    for (auto &stm : incomingStreams)
     {
-        if (stm->jitterBuffer)
+        if (stm->type == StreamType::Audio)
         {
-            double avgLateCount[3];
-            stm->jitterBuffer->GetAverageLateCount(avgLateCount);
-            if (avgLateCount[2] >= 0.2)
-                signalBarCount = 1;
-            else if (avgLateCount[2] >= 0.1)
-                signalBarCount = std::min(signalBarCount, 2);
+            auto astm = dynamic_pointer_cast<AudioStream>(stm);
+            if (astm->jitterBuffer)
+            {
+                double avgLateCount[3];
+                astm->jitterBuffer->GetAverageLateCount(avgLateCount);
+                if (avgLateCount[2] >= 0.2)
+                    signalBarCount = 1;
+                else if (avgLateCount[2] >= 0.1)
+                    signalBarCount = std::min(signalBarCount, 2);
+            }
         }
     }
 

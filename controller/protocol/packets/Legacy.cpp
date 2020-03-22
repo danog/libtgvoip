@@ -1,4 +1,4 @@
-#include "../PrivateDefines.cpp"
+#include "../../PrivateDefines.cpp"
 #include "PacketStructs.h"
 
 using namespace tgvoip;

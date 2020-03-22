@@ -8,8 +8,8 @@ size_t VoIPController::decryptPacket(unsigned char *buffer, BufferInputStream &i
     bool retryWith2 = false;
     size_t innerLen = 0;
     size_t offset = in.GetOffset();
-    bool shortFormat = peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92);
-
+    bool shortFormat = !ver.isLegacyLegacy();
+    
     if (!useMTProto2)
     {
         unsigned char fingerprint[8], msgHash[16];
@@ -118,7 +118,7 @@ void VoIPController::encryptPacket(unsigned char *data, size_t len, BufferOutput
     {
         BufferOutputStream inner(len + 128);
         size_t sizeSize;
-        if (peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92))
+        if (!ver.isLegacyLegacy())
         {
             inner.WriteInt16((uint16_t)len);
             sizeSize = 0;

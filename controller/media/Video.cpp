@@ -7,7 +7,7 @@ using namespace std;
 
 void VoIPController::SetVideoSource(video::VideoSource *source)
 {
-    shared_ptr<Stream> stm = GetStreamByType(StreamInfo::Type::Video, true);
+    auto &stm = GetStreamByType<VideoStream>(true);
     if (!stm)
     {
         LOGE("Can't set video source when there is no outgoing video stream");
@@ -48,10 +48,11 @@ void VoIPController::SetVideoRenderer(video::VideoRenderer *renderer)
 
 void VoIPController::SetVideoCodecSpecificData(const std::vector<Buffer> &data)
 {
-    outgoingStreams[1]->codecSpecificData.clear();
+    auto &stm = GetStreamByType<VideoStream>(true);
+    stm->codecSpecificData.clear();
     for (const Buffer &csd : data)
     {
-        outgoingStreams[1]->codecSpecificData.push_back(Buffer::CopyOf(csd));
+        stm->codecSpecificData.push_back(Buffer::CopyOf(csd));
     }
     LOGI("Set outgoing video stream CSD");
 }
@@ -65,7 +66,7 @@ void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool 
     }
     if (videoRenderer)
     {
-        shared_ptr<Stream> stm = GetStreamByType(StreamInfo::Type::Video, false);
+        auto &stm = GetStreamByType<VideoStream>(false);
         size_t offset = 0;
         if (keyframe)
         {
@@ -132,9 +133,7 @@ void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool 
 void VoIPController::SetupOutgoingVideoStream()
 {
     vector<uint32_t> myEncoders = video::VideoSource::GetAvailableEncoders();
-    shared_ptr<Stream> vstm = make_shared<Stream>();
-    vstm->id = 2;
-    vstm->type = StreamInfo::Type::Video;
+    shared_ptr<VideoStream> vstm = make_shared<VideoStream>();
 
     if (find(myEncoders.begin(), myEncoders.end(), Codec::Hevc) != myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), Codec::Hevc) != peerVideoDecoders.end())
     {
@@ -155,5 +154,5 @@ void VoIPController::SetupOutgoingVideoStream()
     }
 
     vstm->enabled = false;
-    outgoingStreams.push_back(vstm);
+    outgoingStreams.push_back(dynamic_pointer_cast<Stream<>>(vstm));
 }

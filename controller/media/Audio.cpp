@@ -8,7 +8,7 @@ using namespace std;
 void VoIPController::InitializeAudio()
 {
     double t = GetCurrentTime();
-    shared_ptr<Stream> outgoingAudioStream = GetStreamByType(StreamInfo::Type::Audio, true);
+    auto &outgoingAudioStream = GetStreamByType<AudioStream>(StreamType::Audio, true);
     LOGI("before create audio io");
     audioIO = audio::AudioIO::Create(currentAudioInput, currentAudioOutput);
     audioInput = audioIO->GetInput();
@@ -85,8 +85,8 @@ void VoIPController::StartAudio()
 void VoIPController::OnAudioOutputReady()
 {
     LOGI("Audio I/O ready");
-    auto &stm = incomingStreams[0];
-    stm->decoder = make_shared<OpusDecoder>(audioOutput, true, peerVersion >= 6);
+    auto &stm = GetStreamByID<AudioStream>(StreamId::Audio, false);
+    stm->decoder = make_shared<OpusDecoder>(audioOutput, true, ver.peerVersion >= 6);
     stm->decoder->SetEchoCanceller(echoCanceller);
     if (config.enableVolumeControl)
     {
@@ -100,10 +100,13 @@ void VoIPController::OnAudioOutputReady()
 void VoIPController::UpdateAudioOutputState()
 {
     bool areAnyAudioStreamsEnabled = false;
-    for (auto s = incomingStreams.begin(); s != incomingStreams.end(); ++s)
+    for (auto &s : incomingStreams)
     {
-        if ((*s)->type == StreamInfo::Type::Audio && (*s)->enabled)
+        if (s->type == StreamType::Audio && s->enabled)
+        {
             areAnyAudioStreamsEnabled = true;
+            break;
+        }
     }
     if (audioOutput)
     {

@@ -55,17 +55,32 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
         }
         return false;
     }
-    conctl.PacketSent(pkt.seq, pkt.len);
     if ((endpoint->type == Endpoint::Type::TCP_RELAY && useTCP) || (endpoint->type != Endpoint::Type::TCP_RELAY && useUDP))
     {
-        BufferOutputStream out(1500);
-        uint8_t transportId = WritePacketHeader(pkt, out, source);
+        if (ver.isNew())
+        {
+            //BufferOutputStream out(pkt.packet.getSize()); // Can precalc, should check if it's worth it
+            BufferOutputStream out(1500);
+            pkt.packet.serialize(out, ver);
+            SendPacket(out.GetBuffer(), out.GetLength(), *endpoint, )
+        }
+        else
+        {
+            SendPacket(out.GetBuffer(), out.GetLength(), *endpoint, pkt.seq, pkt.type, streamId);
+        }
+        conctl.PacketSent(seq, len);
+
+//LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
+#ifdef LOG_PACKETS
+        LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, streamId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), streamId);
+#endif
+        //BufferOutputStream out(1500);
+        //uint8_t streamId = WritePacketHeader(pkt, out, source);
         /*if (!dist6(rng))
         {
             LOGW("DROPPING");
         }
         else*/
-        SendPacket(out.GetBuffer(), out.GetLength(), *endpoint, pkt.seq, pkt.type, transportId);
         /*if (pkt.type == PKT_STREAM_DATA)
         {
             unsentStreamPackets--;
@@ -74,7 +89,7 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
     return true;
 }
 
-void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, uint32_t seq, uint8_t type, uint8_t transportId)
+void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep)
 {
     if (stopping)
         return;
@@ -83,18 +98,13 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep, u
     BufferOutputStream out(len + 128);
     if (ep.IsReflector())
         out.WriteBytes((unsigned char *)ep.peerTag, 16);
-    else if (peerVersion < 9)
+    else if (ver.peerVersion < 9)
         out.WriteBytes(callID, 16);
 
     if (len > 0)
     {
         encryptPacket(data, len, out);
     }
-
-//LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
-#ifdef LOG_PACKETS
-    LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, transportId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), transportId);
-#endif
 
     rawSendQueue.Put(
         RawPendingOutgoingPacket{
@@ -362,15 +372,18 @@ void VoIPController::SendNopPacket(PacketManager &pm)
 {
     if (state != STATE_ESTABLISHED)
         return;
-    PacketSender *source = pm.getTransportId() == 0xFF ? nullptr : outgoingStreams[pm.getTransportId()]->packetSender.get();
+    PacketSender *source = pm.getstreamId() == 0xFF ? nullptr : outgoingStreams[pm.getstreamId()]->packetSender.get();
     SendOrEnqueuePacket(PendingOutgoingPacket(Packet(), 0), source);
     /* {
-                            /*.seq=*/(firstSentPing = pm.nextLocalSeq()),
-                            /*.type=*/PKT_NOP,
-                            /*.len=*/0,
-                            /*.data=*/Buffer(),
-                            /*.endpoint=*/0},
-                        source);*/
+                            /*.seq=*/
+    (firstSentPing = pm.nextLocalSeq()),
+        /*.type=*/PKT_NOP,
+        /*.len=*/0,
+        /*.data=*/Buffer(),
+        /*.endpoint=*/0
+},
+                        source);
+* /
 }
 
 void VoIPController::SendPublicEndpointsRequest()
@@ -434,6 +447,22 @@ Endpoint &VoIPController::GetEndpointByType(const Endpoint::Type type)
     throw out_of_range("no endpoint");
 }
 
+void VoIPController::SendDataSavingMode()
+{
+    ENFORCE_MSG_THREAD;
+
+    auto s = std::make_shared<ExtraNetworkChanged>();
+    s->flags |= dataSavingMode ? ExtraInit::Flags::DataSavingEnabled : 0;
+    SendExtra(s);
+}
+void VoIPController::SendExtra(std::shared_ptr<Extra> &&_d)
+{
+    SendExtra(Wrapped<Extra>(_d));
+}
+void VoIPController::SendExtra(std::shared_ptr<Extra> &_d)
+{
+    SendExtra(Wrapped<Extra>(_d));
+}
 void VoIPController::SendExtra(Wrapped<Extra> &&extra)
 {
     ENFORCE_MSG_THREAD;
@@ -505,23 +534,4 @@ void VoIPController::ResetEndpointPingStats()
         e.second.averageRTT = 0.0;
         e.second.rtts.Reset();
     }
-}
-
-void VoIPController::SendStreamFlags(const Stream &stream)
-{
-    ENFORCE_MSG_THREAD;
-
-    auto flags = std::make_shared<ExtraStreamFlags>();
-
-    flags->streamId = stream.id;
-    if (stream.enabled)
-        flags->flags |= ExtraStreamFlags::Flags::Enabled;
-    if (stream.extraECEnabled)
-        flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
-    if (stream.paused)
-        flags->flags |= ExtraStreamFlags::Flags::Paused;
-
-    LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags.flags);
-
-    SendExtra(Wrapped<Extra>(flags));
 }

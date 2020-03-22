@@ -8,23 +8,19 @@ using namespace std;
 
 PacketManager &VoIPController::getBestPacketManager()
 {
-#if PROTOCOL_VERSION == 9
-    return packetManager;
-#else
-    return outgoingStreams.empty() ? packetManager : outgoingStreams[0]->packetSender->getPacketManager();
-#endif
+    return outgoingStreams[ver.isNew() ? StreamId::Audio : StreamId::Signaling]->packetManager;
 }
 
-void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcEndpoint)
+void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &srcEndpoint)
 {
     ENFORCE_MSG_THREAD;
 
     // Initial packet decryption and recognition
 
-    unsigned char *buffer = *packet.data;
-    size_t len = packet.data.Length();
-    BufferInputStream in(packet.data);
-    if (peerVersion < 9 || srcEndpoint.IsReflector())
+    unsigned char *buffer = *npacket.data;
+    size_t len = npacket.data.Length();
+    BufferInputStream in(npacket.data);
+    if (ver.peerVersion < 9 || srcEndpoint.IsReflector())
     {
         if (in.Remaining() < 16)
         {
@@ -64,42 +60,32 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
 
     if (srcEndpoint.type == Endpoint::Type::UDP_P2P_INET && !srcEndpoint.IsIPv6Only())
     {
-        if (srcEndpoint.port != packet.port || srcEndpoint.address != packet.address)
+        if (srcEndpoint.port != npacket.port || srcEndpoint.address != npacket.address)
         {
-            if (!packet.address.isIPv6)
+            if (!npacket.address.isIPv6)
             {
-                LOGI("Incoming packet was decrypted successfully, changing P2P endpoint to %s:%u", packet.address.ToString().c_str(), packet.port);
-                srcEndpoint.address = packet.address;
-                srcEndpoint.port = packet.port;
+                LOGI("Incoming packet was decrypted successfully, changing P2P endpoint to %s:%u", npacket.address.ToString().c_str(), npacket.port);
+                srcEndpoint.address = npacket.address;
+                srcEndpoint.port = npacket.port;
             }
         }
     }
 
-    // decryptedAudioBlock random_id:long random_bytes:string flags:# voice_call_id:flags.2?int128 in_seq_no:flags.4?int out_seq_no:flags.4?int
-    //   recent_received_mask:flags.5?int proto:flags.3?int extra:flags.1?string raw_data:flags.0?string = DecryptedAudioBlock
-    //
-    // simpleAudioBlock random_id:long random_bytes:string raw_data:string = DecryptedAudioBlock;
+    Packet packet;
+    if (!packet.parse(in, ver)) {
+        LOGW("Failure parsing incoming packet!");
+    }
+    ProcessIncomingPacket(packet, srcEndpoint);
 
-    // Version-specific extraction of packet fields ackId (last received packet seq on remote), (incoming packet seq) pseq, (ack mask) acks, (packet type) type, (flags) pflags, packet length
-    uint32_t ackId;             // Last received packet seqno on remote
-    uint32_t pseq;              // Incoming packet seqno
-    uint32_t acks;              // Ack mask
-    unsigned char type, pflags; // Packet type, flags
-    uint8_t transportId = 0xFF; // Transport ID for reliable multiplexing
-    size_t packetInnerLen = 0;
-    if (peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92))
-    {
-        type = in.ReadByte();
-        ackId = in.ReadUInt32();
-        pseq = in.ReadUInt32();
-        acks = in.ReadUInt32();
-        pflags = in.ReadByte();
-        packetInnerLen = innerLen - 14;
+    if (packet.otherPackets.size()) { // Legacy
+        for (Packet &packet : packet.otherPackets) {
+            ProcessIncomingPacket(packet, srcEndpoint);
+        }
     }
-    else if (!legacyParsePacket(in, type, ackId, pseq, acks, pflags, packetInnerLen))
-    {
-        return;
-    }
+}
+
+void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint)
+{
     packetsReceived++;
 
     // Use packet manager of outgoing streams on both sides (probably should separate in separate vector)
@@ -183,7 +169,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                 // TODO move this to a PacketSender
                 conctl.PacketAcknowledged(opkt.seq);
             }
-            else if (peerVersion >= PROTOCOL_RELIABLE && opkt.data.Length() && opkt.seq < manager->getLastAckedSeq())
+            else if (ver.peerVersion >= PROTOCOL_RELIABLE && opkt.data.Length() && opkt.seq < manager->getLastAckedSeq())
             {
                 if (manager->getLastAckedSeq() - opkt.seq > 32)
                 {
@@ -213,7 +199,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             }
         }
 
-        if (peerVersion >= 6)
+        if (ver.peerVersion >= 6)
         {
             for (auto x = currentExtras.begin(); x != currentExtras.end();)
             {
@@ -227,7 +213,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                 ++x;
             }
         }
-        if (peerVersion < PROTOCOL_RELIABLE)
+        if (ver.peerVersion < PROTOCOL_RELIABLE)
             handleReliablePackets(); // Use old reliability logic
     }
 
@@ -273,10 +259,10 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         LOGD("Received init");
         uint32_t ver = in.ReadUInt32();
         if (!receivedInit)
-            peerVersion = ver;
+            ver.peerVersion = ver;
         LOGI("Peer version is %d", peerVersion);
         uint32_t minVer = in.ReadUInt32();
-        if (minVer > PROTOCOL_VERSION || peerVersion < MIN_PROTOCOL_VERSION)
+        if (minVer > PROTOCOL_VERSION || ver.peerVersion < MIN_PROTOCOL_VERSION)
         {
             lastError = ERROR_INCOMPATIBLE;
 
@@ -309,7 +295,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         unsigned char numSupportedAudioCodecs = in.ReadByte();
         for (auto i = 0; i < numSupportedAudioCodecs; i++)
         {
-            if (peerVersion < 5)
+            if (ver.peerVersion < 5)
                 in.ReadByte(); // ignore for now
             else
                 in.ReadInt32();
@@ -340,7 +326,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
         {
             out.WriteByte(stream->id);
             out.WriteByte(stream->type);
-            if (peerVersion < 5)
+            if (ver.peerVersion < 5)
                 out.WriteByte((unsigned char)(stream->codec == Codec::Opus ? CODEC_OPUS_OLD : 0));
             else
                 out.WriteInt32(stream->codec);
@@ -384,9 +370,9 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
 
             if (packetInnerLen > 10)
             {
-                peerVersion = in.ReadInt32();
+                ver.peerVersion = in.ReadInt32();
                 uint32_t minVer = in.ReadUInt32();
-                if (minVer > PROTOCOL_VERSION || peerVersion < MIN_PROTOCOL_VERSION)
+                if (minVer > PROTOCOL_VERSION || ver.peerVersion < MIN_PROTOCOL_VERSION)
                 {
                     lastError = ERROR_INCOMPATIBLE;
 
@@ -396,10 +382,10 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             }
             else
             {
-                peerVersion = 1;
+                ver.peerVersion = 1;
             }
 
-            LOGI("peer version from init ack %d", peerVersion);
+            LOGI("peer version from init ack %d", ver.peerVersion);
 
             unsigned char streamCount = in.ReadByte();
             if (streamCount == 0)
@@ -412,7 +398,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                 shared_ptr<Stream> stm = make_shared<Stream>();
                 stm->id = in.ReadByte();
                 stm->type = static_cast<StreamInfo::Type>(in.ReadByte());
-                if (peerVersion < 5)
+                if (ver.peerVersion < 5)
                 {
                     unsigned char codec = in.ReadByte();
                     if (codec == CODEC_OPUS_OLD)
@@ -425,7 +411,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
                 in.ReadInt16();
                 stm->frameDuration = 60;
                 stm->enabled = in.ReadByte() == 1;
-                if (stm->type == StreamInfo::Type::Video && peerVersion < 9)
+                if (stm->type == StreamInfo::Type::Video && ver.peerVersion < 9)
                 {
                     LOGV("Skipping video stream for old protocol version");
                     continue;
@@ -461,7 +447,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcE
             if (!incomingAudioStream)
                 return;
 
-            if (peerVersion >= 5 && !useMTProto2)
+            if (ver.peerVersion >= 5 && !useMTProto2)
             {
                 useMTProto2 = true;
                 LOGD("MTProto2 wasn't initially enabled for whatever reason but peer supports it; upgrading");
@@ -935,10 +921,10 @@ void VoIPController::ProcessAcknowledgedOutgoingExtra(UnacknowledgedExtraData &e
 
 uint8_t VoIPController::WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutputStream &s, PacketSender *source)
 {
-    PacketManager &manager = peerVersion >= PROTOCOL_RELIABLE && source ? source->getPacketManager() : packetManager;
+    PacketManager &manager = ver.peerVersion >= PROTOCOL_RELIABLE && source ? source->getPacketManager() : packetManager;
     uint32_t acks = manager.getRemoteAckMask();
 
-    if (peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92))
+    if (ver.peerVersion >= 8 || (!peerVersion && ver.connectionMaxLayer >= 92))
     {
         s.WriteByte(pkt.type);
         s.WriteInt32(manager.getLastRemoteSeq());

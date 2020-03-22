@@ -42,9 +42,6 @@ inline int pad4(int x)
 using namespace tgvoip;
 using namespace std;
 
-using StreamId = Packet::StreamId;
-using StreamType = StreamInfo::Type;
-
 #ifdef __ANDROID__
 #include "controller/net/NetworkSocket.h"
 #include "os/android/AudioInputAndroid.h"

@@ -34,14 +34,14 @@ VoIPController::VoIPController() : rawSendQueue(64)
     unackNopThreshold = ServerConfig::GetSharedInstance()->GetUInt("unack_nop_threshold", 10);
 
     //audioBitrateStepDecr /= 2;
-    outgoingStreams.push_back(std::make_shared<Stream>(StreamId::Signaling, StreamType::Signaling));
+    outgoingStreams.push_back(std::make_shared<Stream<>>(StreamId::Signaling, StreamType::Signaling));
 
     std::shared_ptr<AudioStream> stm = std::make_shared<AudioStream>();
     stm->codec = Codec::Opus;
     stm->frameDuration = 60;
     stm->packetSender = std::make_unique<AudioPacketSender>(this, stm, nullptr);
 
-    outgoingStreams.push_back(std::move(stm));
+    outgoingStreams.push_back(dynamic_pointer_cast<Stream<>>(stm));
 }
 
 void VoIPController::InitializeTimers()
