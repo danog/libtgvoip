@@ -405,8 +405,9 @@ protected:
     virtual void SendUdpPing(Endpoint &endpoint);
     virtual void SendRelayPings();
 
-    bool SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue = true, PacketSender *source = NULL);
+    bool SendOrEnqueuePacket(PendingOutgoingPacket &&pkt, bool enqueue = true);
     virtual void SendPacket(unsigned char *data, size_t len, Endpoint &ep);
+    void SendPacketReliably(unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries = 0xFF);
     virtual void SendInit();
     virtual void SendDataSavingMode();
     virtual void SendExtra(Wrapped<Extra> &&extra);
@@ -501,7 +502,6 @@ private:
     void SendPublicEndpointsRequest();
     void SendPublicEndpointsRequest(const Endpoint &relay);
     Endpoint &GetEndpointByType(const Endpoint::Type type);
-    void SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries = 0xFF);
 
     void InitializeAudio();
     void StartAudio();

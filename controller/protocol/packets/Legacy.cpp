@@ -143,7 +143,7 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
     return true;
 }
 
-void Packet::serializeLegacy(std::vector<std::pair<unsigned char *, size_t, bool>> &outArray, const VersionInfo &ver, const int state, const unsigned char *callID)
+void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, bool>> &outArray, const VersionInfo &ver, const int state, const unsigned char *callID)
 {
     legacySeq = seq;
     auto originalLegacySeq = legacySeq;
@@ -265,7 +265,7 @@ void Packet::serializeLegacy(std::vector<std::pair<unsigned char *, size_t, bool
 
         legacySeq++;
     }
-    if (legacySeq == originalLegacySeq)
+    if (legacySeq == originalLegacySeq) // No data was serialized
     {
         LOGW("Serializing NOP packet");
         BufferOutputStream out(1500);
@@ -278,7 +278,7 @@ void Packet::serializeLegacy(std::vector<std::pair<unsigned char *, size_t, bool
         {
             writePacketHeaderLegacyLegacy(out, ver, legacySeq, ackSeq, ackMask, PKT_NOP, 0, allowedExtras, state, callID);
         }
-        outArray.push_back(std::make_pair(out.GetBuffer(), out.GetLength(), false));
+        outArray.push_back(std::make_tuple(out.GetBuffer(), out.GetLength(), false));
     }
 }
 void Packet::writePacketHeaderLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t seq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const std::vector<Wrapped<Extra>> &extras)

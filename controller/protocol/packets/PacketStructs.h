@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include "../../../tools/Buffers.h"
 #include "../../PrivateDefines.h"
 #include "../protocol/Extra.h"
@@ -8,6 +9,71 @@
 namespace tgvoip
 {
 class PacketSender;
+class PacketManager;
+struct RecentOutgoingPacket
+{
+    size_t size;
+    std::string type;
+    uint32_t seq;
+
+    int64_t endpoint;
+
+    uint16_t id; // for group calls only
+
+    double sendTime;
+    double ackTime;
+    double rttTime;
+    bool lost;
+
+    PacketSender *sender;
+};
+struct UnacknowledgedExtraData
+{
+    UnacknowledgedExtraData(Wrapped<Extra> &&data_)
+        : data(std::move(data_))
+    {
+    }
+
+    TGVOIP_DISALLOW_COPY_AND_ASSIGN(UnacknowledgedExtraData);
+
+    Wrapped<Extra> data;
+    uint32_t firstContainingSeq = 0;
+};
+struct ReliableOutgoingPacket
+{
+    Packet data;
+    HistoricBuffer<uint32_t, 16> seqs;
+    double firstSentTime;
+    double lastSentTime;
+    double retryInterval;
+    double timeout;
+    uint8_t tries;
+};
+struct PendingOutgoingPacket
+{
+    PendingOutgoingPacket(Packet &&packet_, int64_t endpoint_)
+        : packet(std::move(packet_)),
+          endpoint(endpoint_)
+    {
+    }
+    PendingOutgoingPacket(PendingOutgoingPacket &&other)
+        : packet(std::move(other.packet)),
+          endpoint(other.endpoint)
+    {
+    }
+    PendingOutgoingPacket &operator=(PendingOutgoingPacket &&other)
+    {
+        if (this != &other)
+        {
+            packet = std::move(other.packet);
+            endpoint = other.endpoint;
+        }
+        return *this;
+    }
+    TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
+    Packet packet;
+    int64_t endpoint;
+};
 
 struct Packet : public Serializable, SingleChoice<Packet>
 {
@@ -26,6 +92,9 @@ private:
     void writePacketHeaderLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t seq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const std::vector<Wrapped<Extra>> &extras);
     void writePacketHeaderLegacyLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t pseq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const uint32_t length, const std::vector<Wrapped<Extra>> &extras, const int state, const unsigned char *callID);
 
+public:
+    void prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras);
+    
 public:
     enum Flags : uint8_t
     {
@@ -104,72 +173,6 @@ public:
 };
 
 using StreamId = Packet::StreamId;
-
-// Legacy stuff
-struct RecentOutgoingPacket
-{
-    size_t size;
-    std::string type;
-    uint32_t seq;
-
-    int64_t endpoint;
-
-    uint16_t id; // for group calls only
-
-    double sendTime;
-    double ackTime;
-    double rttTime;
-    bool lost;
-
-    PacketSender *sender;
-};
-struct UnacknowledgedExtraData
-{
-    UnacknowledgedExtraData(Wrapped<Extra> &&data_)
-        : data(std::move(data_))
-    {
-    }
-
-    TGVOIP_DISALLOW_COPY_AND_ASSIGN(UnacknowledgedExtraData);
-
-    Wrapped<Extra> data;
-    uint32_t firstContainingSeq = 0;
-};
-struct ReliableOutgoingPacket
-{
-    Packet data;
-    HistoricBuffer<uint32_t, 16> seqs;
-    double firstSentTime;
-    double lastSentTime;
-    double retryInterval;
-    double timeout;
-    uint8_t tries;
-};
-struct PendingOutgoingPacket
-{
-    PendingOutgoingPacket(Packet &&packet_, int64_t endpoint_)
-        : packet(std::move(packet_)),
-          endpoint(endpoint_)
-    {
-    }
-    PendingOutgoingPacket(PendingOutgoingPacket &&other)
-        : packet(std::move(other.packet)),
-          endpoint(other.endpoint)
-    {
-    }
-    PendingOutgoingPacket &operator=(PendingOutgoingPacket &&other)
-    {
-        if (this != &other)
-        {
-            packet = std::move(other.packet);
-            endpoint = other.endpoint;
-        }
-        return *this;
-    }
-    TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
-    Packet packet;
-    int64_t endpoint;
-};
 
 /*
 struct DebugLoggedPacket

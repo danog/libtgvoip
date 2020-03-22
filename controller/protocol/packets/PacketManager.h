@@ -48,6 +48,11 @@ public:
         return seq;
     }
 
+    inline void setLocalSeq(uint32_t _seq)
+    {
+        seq = _seq;
+    }
+
     inline uint32_t getLastSentSeq()
     {
         return lastSentSeq;

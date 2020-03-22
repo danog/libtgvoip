@@ -3,7 +3,7 @@
 using namespace tgvoip;
 using namespace std;
 
-void VoIPController::SendPacketReliably(unsigned char type, unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries)
+void VoIPController::SendPacketReliably(unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries)
 {
     ENFORCE_MSG_THREAD;
 #ifdef LOG_PACKETS
@@ -38,7 +38,7 @@ void VoIPController::UpdateReliablePackets()
         if (qp->timeout > 0 && qp->firstSentTime > 0 && GetCurrentTime() - qp->firstSentTime >= qp->timeout)
         {
 #ifdef LOG_PACKETS
-            LOGD("Removing queued packet because of timeout");
+            LOGD("Removing reliable queued packet because of timeout");
 #endif
             qp = reliablePackets.erase(qp);
             continue;
@@ -46,7 +46,7 @@ void VoIPController::UpdateReliablePackets()
         if (!qp->tries--)
         {
 #ifdef LOG_PACKETS
-            LOGD("Removing queued packet because of no more tries");
+            LOGD("Removing reliable queued packet because of no more tries");
 #endif
             qp = reliablePackets.erase(qp);
             continue;

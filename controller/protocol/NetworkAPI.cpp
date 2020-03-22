@@ -8,7 +8,7 @@ using namespace std;
 //std::mt19937 rng(dev());
 //std::uniform_int_distribution<std::mt19937::result_type> dist6(0, 9); // distribution in range [1, 6]
 
-bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue, PacketSender *source)
+bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &&pkt, bool enqueue)
 {
     ENFORCE_MSG_THREAD;
 
@@ -57,23 +57,43 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket pkt, bool enqueue
     }
     if ((endpoint->type == Endpoint::Type::TCP_RELAY && useTCP) || (endpoint->type != Endpoint::Type::TCP_RELAY && useUDP))
     {
+        Packet &packet = pkt.packet;
+        PacketManager &pm = outgoingStreams[ver.isNew() ? packet.streamId : StreamId::Signaling]->packetManager;
+        packet.prepare(pm, currentExtras);
+
         if (ver.isNew())
         {
-            //BufferOutputStream out(pkt.packet.getSize()); // Can precalc, should check if it's worth it
+            //BufferOutputStream out(packet.getSize()); // Can precalc, should check if it's worth it
             BufferOutputStream out(1500);
-            pkt.packet.serialize(out, ver);
-            SendPacket(out.GetBuffer(), out.GetLength(), *endpoint, )
+            packet.serialize(out, ver);
+            SendPacket(out.GetBuffer(), out.GetLength(), *endpoint);
+            conctl.PacketSent(packet.seq, out.GetLength(), packet.streamId);
         }
         else
         {
-            SendPacket(out.GetBuffer(), out.GetLength(), *endpoint, pkt.seq, pkt.type, streamId);
+            std::vector<std::tuple<unsigned char *, size_t, bool>> out;
+            packet.serializeLegacy(out, ver, state, callID);
+            size_t length = 0;
+            for (auto &t : out)
+            {
+                if (std::get<2>(t))
+                {
+                }
+                else
+                {
+                    SendPacket(std::get<0>(t), std::get<1>(t), *endpoint);
+                }
+                length += std::get<1>(t);
+            }
+            conctl.PacketSent(packet.seq, length, packet.streamId);
+            pm.setLocalSeq(packet.legacySeq);
         }
-        conctl.PacketSent(seq, len);
 
 //LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
 #ifdef LOG_PACKETS
-        LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, streamId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), streamId);
+        //LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, streamId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), streamId);
 #endif
+
         //BufferOutputStream out(1500);
         //uint8_t streamId = WritePacketHeader(pkt, out, source);
         /*if (!dist6(rng))

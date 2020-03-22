@@ -1,5 +1,6 @@
 #include "PacketStructs.h"
 #include "../../PrivateDefines.cpp"
+#include "PacketManager.h"
 
 using namespace tgvoip;
 
@@ -78,8 +79,8 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
         out.WriteUInt16(data.Length() | (eFlags << 11));
     else
         out.WriteByte(data.Length());
-    
-    out.Write(data);
+
+    out.WriteBytes(data);
 
     if (flags & Flags::RecvTS)
         out.WriteUInt32(recvTS);
@@ -89,4 +90,19 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
         out.Write(extraSignaling, ver);
 }
 
+void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras)
+{
+    if (!seq)
+    {
+        seq = pm.nextLocalSeq();
+        ackSeq = pm.getLastRemoteSeq();
+        ackMask = pm.getRemoteAckMask();
+    }
+    extraSignaling.v.clear();
+    for (auto &extra : currentExtras)
+    {
+        extraSignaling.v.push_back(extra.data);
+        extra.firstContainingSeq = seq;
+    }
+}
 #include "Legacy.cpp"
