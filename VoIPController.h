@@ -399,7 +399,7 @@ public:
 protected:
     virtual void ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcEndpoint);
     virtual void ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint);
-    virtual void ProcessExtraData(Buffer &data);
+    virtual void ProcessExtraData(const Wrapped<Extra> &data);
 
     //virtual uint8_t WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutputStream &s, PacketSender *source);
     virtual void SendUdpPing(Endpoint &endpoint);
@@ -418,7 +418,25 @@ protected:
     virtual void SendExtra(Wrapped<Extra> &&extra, int64_t endpointId = 0);
     virtual void SendExtra(std::shared_ptr<Extra> &&_d, int64_t endpointId = 0);
     virtual void SendExtra(std::shared_ptr<Extra> &_d, int64_t endpointId = 0);
-    void SendStreamFlags(const OutgoingAudioStream &stream);
+    template <class T>
+    void SendStreamFlags(const OutgoingStream<T> &stream)
+    {
+        ENFORCE_MSG_THREAD;
+
+        auto flags = std::make_shared<ExtraStreamFlags>();
+
+        flags->streamId = stream.id;
+        if (stream.enabled)
+            flags->flags |= ExtraStreamFlags::Flags::Enabled;
+        if constexpr (std::is_same_v<AudioPacketSender, V> && stream.extraECEnabled)
+            flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
+        if (stream.paused)
+            flags->flags |= ExtraStreamFlags::Flags::Paused;
+
+        LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags->flags);
+
+        SendExtra(Wrapped<Extra>(std::move(flags)));
+    };
 
     virtual void OnAudioOutputReady();
     void InitializeTimers();

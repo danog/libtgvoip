@@ -96,8 +96,11 @@ private:
 
 public:
     /* Remote seqno ack */
+    // Ack specified remote packet, returns false if too old or dupe
+    bool ackRemoteSeq(const Packet &pkt);
+
     // Ack specified remote seq, returns false if too old or dupe
-    bool ackRemoteSeq(uint32_t ackId);
+    bool ackRemoteSeq(const uint32_t ackId);
 
     // Ack remote seqs older than the specified seq
     inline void ackRemoteSeqsOlderThan(uint32_t seq)
@@ -111,6 +114,7 @@ public:
         return lastRemoteSeqsMask;
     }
 
+    // Get last remote seqno
     inline uint32_t getLastRemoteSeq() const
     {
         return lastRemoteSeq;

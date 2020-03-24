@@ -74,4 +74,23 @@ void VoIPController::HandleReliablePackets(const PacketManager &pm)
         }
         ++it;
     }
+
+    for (auto it = currentExtras.begin(); it != currentExtras.end();)
+    {
+        bool acked = false;
+        for (const auto &seq : it->seqs)
+        {
+            if (seq && pm.wasLocalAcked(seq))
+            {
+
+                LOGV("Peer acknowledged extra type %u", it->data.print().c_str());
+                ProcessAcknowledgedOutgoingExtra(*it);
+                it = currentExtras.erase(it);
+                acked = true;
+                break;
+            }
+        }
+        if (!acked)
+            ++it;
+    }
 }

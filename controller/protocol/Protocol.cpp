@@ -93,35 +93,22 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
     // Use packet manager of outgoing stream
     PacketManager &manager = outgoingStreams[packet.legacy ? StreamId::Signaling : packet.streamId]->packetManager;
 
-    if (!manager.ackRemoteSeq(packet.legacy ? packet.legacySeq : packet.seq))
+    if (!manager.ackRemoteSeq(packet))
     {
         return;
     }
 
-#ifdef LOG_PACKETS
+#ifdef LOG_PACKETSackId
     LOGV("Received: from=%s:%u, seq=%u, length=%u, type=%s, transportId=%hhu", srcEndpoint.GetAddress().ToString().c_str(), srcEndpoint.port, pseq, (unsigned int)packet.data.Length(), GetPacketTypeString(type).c_str(), transportId);
 #endif
 
-    // Extra data
-    if (pflags & XPFLAG_HAS_EXTRA)
+    for (auto &extra : packet.extraSignaling)
     {
-        unsigned char extraCount = in.ReadByte();
-        for (int i = 0; i < extraCount; i++)
-        {
-            size_t extraLen = in.ReadByte();
-            Buffer xbuffer(extraLen);
-            in.ReadBytes(*xbuffer, extraLen);
-            ProcessExtraData(xbuffer);
-        }
+        ProcessExtraData(extra);
     }
 
-    uint32_t recvTS = 0;
-    if (pflags & XPFLAG_HAS_RECV_TS)
-    {
-        recvTS = in.ReadUInt32();
-    }
-
-    if (seqgt(ackId, manager.getLastAckedSeq()))
+    auto &sender = outgoingStreams[manager.transportId]->packetSender;
+    if (packet.ackSeq && seqgt(packet.ackSeq, manager.getLastAckedSeq()))
     {
         if (waitingForAcks && manager.getLastAckedSeq() >= firstSentPing)
         {
@@ -135,88 +122,30 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                 1.0);
             LOGI("resuming sending");
         }
-        conctl.PacketAcknowledged(ackId);
-
-        manager.ackLocal(ackId, acks);
-
-        if (transportId != 0xFF && !incomingStreams.empty() && incomingStreams[transportId]->jitterBuffer)
-        {
-            // Technically I should be using the specific packet manager's rtt history but will separate later
-            uint32_t tooOldSeq = incomingStreams[transportId]->jitterBuffer->GetSeqTooLate(rttHistory[0]);
-            LOGW("Reverse acking seqs older than %u, newest seq received from remote %u (transportId %hhu)", tooOldSeq, manager.getLastRemoteSeq(), transportId);
-            manager.ackRemoteSeqsOlderThan(tooOldSeq);
-        }
+        conctl.PacketAcknowledged(CongestionControlPacket(packet));
+        manager.ackLocal(packet.ackSeq, packet.ackMask);
 
         for (auto &opkt : manager.getRecentOutgoingPackets())
         {
-            if (opkt.ackTime)
+            if (!opkt.ackTime && manager.wasLocalAcked(opkt.pkt.seq))
             {
-                continue;
-            }
-            if (manager.wasLocalAcked(opkt.seq))
-            {
-                opkt.data = Buffer();
                 opkt.ackTime = GetCurrentTime();
                 opkt.rttTime = opkt.ackTime - opkt.sendTime;
                 if (opkt.lost)
                 {
-                    LOGW("acknowledged lost packet %u (transportId %hhu)", opkt.seq, transportId);
+                    LOGW("acknowledged lost packet %u (streamId %hhu)", opkt.pkt.seq, packet.streamId);
                     sendLosses--;
                 }
-                if (opkt.sender && !opkt.lost)
-                { // don't report lost packets as acknowledged to PacketSenders
-                    opkt.sender->PacketAcknowledged(opkt.seq, opkt.sendTime, recvTS / 1000.0f, opkt.type, opkt.size);
+                else // Don't report lost packets as acked?
+                {
+                    sender->PacketAcknowledged(opkt);
                 }
 
-                // TODO move this to a PacketSender
-                conctl.PacketAcknowledged(opkt.seq);
-            }
-            else if (ver.peerVersion >= PROTOCOL_RELIABLE && opkt.data.Length() && opkt.seq < manager.getLastAckedSeq())
-            {
-                if (manager.getLastAckedSeq() - opkt.seq > 32)
-                {
-                    LOGW("Marking reliable NACK packet %u as lost, since is more than 32 seqs old (last acked %u, transportId %hhu)", opkt.seq, manager.getLastAckedSeq(), transportId);
-                    opkt.lost = true;
-                    opkt.data = Buffer();
-                    continue;
-                }
-                if (opkt.sendTime + rttHistory[0] < VoIPController::GetCurrentTime())
-                {
-                    LOGW("It is possibly a bit too early to resend NACK packet %u (transportId %hhu)", opkt.seq, transportId);
-                }
-                LOGW("Resending reliable NACK packet %u, (transportId %hhu)", opkt.seq, transportId);
-                BufferOutputStream copy(opkt.data.Length());
-                copy.WriteBytes(opkt.data);
-                Endpoint *endpoint = GetEndpointById(opkt.endpoint);
-                if (!endpoint)
-                {
-                    LOGE("Recent NACK queue contained packet (%u) for nonexistent endpoint, (transportId %hhu)", opkt.seq, transportId);
-                    opkt.lost = true;
-                    opkt.data = Buffer();
-                    continue;
-                }
-                opkt.sendTime = GetCurrentTime();
-                SendPacket(copy.GetBuffer(), copy.GetLength(), *endpoint, opkt.seq, opkt.type, transportId);
-                //SendOrEnqueuePacket()
+                conctl.PacketAcknowledged(opkt.pkt);
             }
         }
 
-        if (ver.peerVersion >= 6)
-        {
-            for (auto x = currentExtras.begin(); x != currentExtras.end();)
-            {
-                if (x->firstContainingSeq != 0 && seqgte(manager.getLastAckedSeq(), x->firstContainingSeq))
-                {
-                    LOGV("Peer acknowledged extra type %u length %u", x->type, (unsigned int)x->data.Length());
-                    ProcessAcknowledgedOutgoingExtra(*x);
-                    x = currentExtras.erase(x);
-                    continue;
-                }
-                ++x;
-            }
-        }
-        if (ver.peerVersion < PROTOCOL_RELIABLE)
-            handleReliablePackets(); // Use old reliability logic
+        HandleReliablePackets(manager);
     }
 
     Endpoint &_currentEndpoint = endpoints.at(currentEndpoint);
@@ -249,229 +178,13 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
     if (unacknowledgedIncomingPacketCount++ > unackNopThreshold)
     {
         //LOGV("Sending nop packet as ack");
-        SendNopPacket(packetManager);
+        SendNopPacket();
     }
 
     //LOGV("acks: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", manager.getLastAckedSeq()(), remoteAcks[0], remoteAcks[1], remoteAcks[2], remoteAcks[3], remoteAcks[4], remoteAcks[5], remoteAcks[6], remoteAcks[7]);
     //LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", getLastRemoteSeq(), recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
     //LOGI("RTT = %.3lf", GetAverageRTT());
     //LOGV("Packet %u type is %d", pseq, type);
-    if (type == PKT_INIT)
-    {
-        LOGD("Received init");
-        uint32_t ver = in.ReadUInt32();
-        if (!receivedInit)
-            ver.peerVersion = ver;
-        LOGI("Peer version is %d", peerVersion);
-        uint32_t minVer = in.ReadUInt32();
-        if (minVer > PROTOCOL_VERSION || ver.peerVersion < MIN_PROTOCOL_VERSION)
-        {
-            lastError = ERROR_INCOMPATIBLE;
-
-            SetState(STATE_FAILED);
-            return;
-        }
-        uint32_t flags = in.ReadUInt32();
-        if (!receivedInit)
-        {
-            if (flags & ExtraInit::Flags::DataSavingEnabled)
-            {
-                dataSavingRequestedByPeer = true;
-                UpdateDataSavingState();
-                UpdateAudioBitrateLimit();
-            }
-            if (flags & ExtraInit::Flags::GroupCallSupported)
-            {
-                peerCapabilities |= TGVOIP_PEER_CAP_GROUP_CALLS;
-            }
-            if (flags & ExtraInit::Flags::VideoRecvSupported)
-            {
-                peerCapabilities |= TGVOIP_PEER_CAP_VIDEO_DISPLAY;
-            }
-            if (flags & ExtraInit::Flags::VideoSendSupported)
-            {
-                peerCapabilities |= TGVOIP_PEER_CAP_VIDEO_CAPTURE;
-            }
-        }
-
-        unsigned char numSupportedAudioCodecs = in.ReadByte();
-        for (auto i = 0; i < numSupportedAudioCodecs; i++)
-        {
-            if (ver.peerVersion < 5)
-                in.ReadByte(); // ignore for now
-            else
-                in.ReadInt32();
-        }
-        if (!receivedInit && ((flags & ExtraInit::Flags::VideoSendSupported && config.enableVideoReceive) || (flags & ExtraInit::Flags::VideoRecvSupported && config.enableVideoSend)))
-        {
-            LOGD("Peer video decoders:");
-            uint8_t numSupportedVideoDecoders = in.ReadByte();
-            for (auto i = 0; i < numSupportedVideoDecoders; i++)
-            {
-                uint32_t id = in.ReadUInt32();
-                peerVideoDecoders.push_back(id);
-                char *_id = reinterpret_cast<char *>(&id);
-                LOGD("%c%c%c%c", _id[3], _id[2], _id[1], _id[0]);
-            }
-            protocolInfo.maxVideoResolution = in.ReadByte();
-
-            SetupOutgoingVideoStream();
-        }
-
-        BufferOutputStream out(1024);
-
-        out.WriteInt32(PROTOCOL_VERSION);
-        out.WriteInt32(MIN_PROTOCOL_VERSION);
-
-        out.WriteByte((unsigned char)outgoingStreams.size());
-        for (const auto &stream : outgoingStreams)
-        {
-            out.WriteByte(stream->id);
-            out.WriteByte(stream->type);
-            if (ver.peerVersion < 5)
-                out.WriteByte((unsigned char)(stream->codec == Codec::Opus ? CODEC_OPUS_OLD : 0));
-            else
-                out.WriteInt32(stream->codec);
-            out.WriteInt16(stream->frameDuration);
-            out.WriteByte((unsigned char)(stream->enabled ? 1 : 0));
-        }
-        LOGI("Sending init ack");
-        size_t outLength = out.GetOffset();
-        SendOrEnqueuePacket(PendingOutgoingPacket{
-            /*.seq=*/packetManager.nextLocalSeq(),
-            /*.type=*/PKT_INIT_ACK,
-            /*.len=*/outLength,
-            /*.data=*/Buffer(move(out)),
-            /*.endpoint=*/0});
-        if (!receivedInit)
-        {
-            receivedInit = true;
-            if ((srcEndpoint.type == Endpoint::Type::UDP_RELAY && udpConnectivityState != UDP_BAD && udpConnectivityState != UDP_NOT_AVAILABLE) || srcEndpoint.type == Endpoint::Type::TCP_RELAY)
-            {
-                currentEndpoint = srcEndpoint.id;
-                if (srcEndpoint.type == Endpoint::Type::UDP_RELAY || (useTCP && srcEndpoint.type == Endpoint::Type::TCP_RELAY))
-                    preferredRelay = srcEndpoint.id;
-            }
-        }
-        if (!audioStarted && receivedInitAck)
-        {
-            StartAudio();
-            audioStarted = true;
-        }
-    }
-    if (type == PKT_INIT_ACK)
-    {
-        LOGD("Received init ack");
-
-        if (!receivedInitAck)
-        {
-            receivedInitAck = true;
-
-            messageThread.Cancel(initTimeoutID);
-            initTimeoutID = MessageThread::INVALID_ID;
-
-            if (packetInnerLen > 10)
-            {
-                ver.peerVersion = in.ReadInt32();
-                uint32_t minVer = in.ReadUInt32();
-                if (minVer > PROTOCOL_VERSION || ver.peerVersion < MIN_PROTOCOL_VERSION)
-                {
-                    lastError = ERROR_INCOMPATIBLE;
-
-                    SetState(STATE_FAILED);
-                    return;
-                }
-            }
-            else
-            {
-                ver.peerVersion = 1;
-            }
-
-            LOGI("peer version from init ack %d", ver.peerVersion);
-
-            unsigned char streamCount = in.ReadByte();
-            if (streamCount == 0)
-                return;
-
-            int i;
-            shared_ptr<Stream> incomingAudioStream = nullptr;
-            for (i = 0; i < streamCount; i++)
-            {
-                shared_ptr<Stream> stm = make_shared<Stream>();
-                stm->id = in.ReadByte();
-                stm->type = static_cast<StreamType>(in.ReadByte());
-                if (ver.peerVersion < 5)
-                {
-                    unsigned char codec = in.ReadByte();
-                    if (codec == CODEC_OPUS_OLD)
-                        stm->codec = Codec::Opus;
-                }
-                else
-                {
-                    stm->codec = in.ReadUInt32();
-                }
-                in.ReadInt16();
-                stm->frameDuration = 60;
-                stm->enabled = in.ReadByte() == 1;
-                if (stm->type == StreamType::Video && ver.peerVersion < 9)
-                {
-                    LOGV("Skipping video stream for old protocol version");
-                    continue;
-                }
-                if (stm->type == StreamType::Audio)
-                {
-                    stm->jitterBuffer = make_shared<JitterBuffer>(stm->frameDuration);
-                    if (stm->frameDuration > 50)
-                        stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_60", 2));
-                    else if (stm->frameDuration > 30)
-                        stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_40", 4));
-                    else
-                        stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_20", 6));
-                    stm->decoder = nullptr;
-                }
-                else if (stm->type == StreamType::Video)
-                {
-                    if (!stm->packetReassembler)
-                    {
-                        stm->packetReassembler = make_shared<PacketReassembler>();
-                        stm->packetReassembler->SetCallback(bind(&VoIPController::ProcessIncomingVideoFrame, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
-                    }
-                }
-                else
-                {
-                    LOGW("Unknown incoming stream type: %d", stm->type);
-                    continue;
-                }
-                incomingStreams.push_back(stm);
-                if (stm->type == StreamType::Audio && !incomingAudioStream)
-                    incomingAudioStream = stm;
-            }
-            if (!incomingAudioStream)
-                return;
-
-            if (ver.peerVersion >= 5 && !useMTProto2)
-            {
-                useMTProto2 = true;
-                LOGD("MTProto2 wasn't initially enabled for whatever reason but peer supports it; upgrading");
-            }
-
-            if (!audioStarted && receivedInit)
-            {
-                StartAudio();
-                audioStarted = true;
-            }
-            messageThread.Post(
-                [this] {
-                    if (state == STATE_WAIT_INIT_ACK)
-                    {
-                        SetState(STATE_ESTABLISHED);
-                    }
-                },
-                ServerConfig::GetSharedInstance()->GetDouble("established_delay_if_no_stream_data", 1.5));
-            if (allowP2p)
-                SendPublicEndpointsRequest();
-        }
-    }
     if (type == PKT_STREAM_DATA || type == PKT_STREAM_DATA_X2 || type == PKT_STREAM_DATA_X3)
     {
         if (!receivedFirstStreamPacket)
@@ -751,19 +464,233 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
     }
 }
 
-void VoIPController::ProcessExtraData(Buffer &data)
+void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
 {
-    BufferInputStream in(*data, data.Length());
-    unsigned char type = in.ReadByte();
-    unsigned char fullHash[SHA1_LENGTH];
-    crypto.sha1(*data, data.Length(), fullHash);
-    uint64_t hash = *reinterpret_cast<uint64_t *>(fullHash);
-    if (lastReceivedExtrasByType[type] == hash)
+    auto type = _data.getID();
+    if (lastReceivedExtrasByType[type] == _data.d->hash)
     {
         return;
     }
-    LOGE("ProcessExtraData");
-    lastReceivedExtrasByType[type] = hash;
+    lastReceivedExtrasByType[type] = _data.d->hash;
+    LOGE("ProcessExtraData=%s", _data.print().c_str());
+
+    if (type == ExtraInit)
+    {
+        ExtraInit &data = _data;
+
+        LOGD("Received init");
+        if (!receivedInit)
+            ver.peerVersion = data.peerVersion;
+        LOGI("Peer version is %d", peerVersion);
+        uint32_t minVer = in.ReadUInt32();
+        if (minVer > PROTOCOL_VERSION || ver.peerVersion < MIN_PROTOCOL_VERSION)
+        {
+            lastError = ERROR_INCOMPATIBLE;
+
+            SetState(STATE_FAILED);
+            return;
+        }
+        uint32_t flags = in.ReadUInt32();
+        if (!receivedInit)
+        {
+            if (flags & ExtraInit::Flags::DataSavingEnabled)
+            {
+                dataSavingRequestedByPeer = true;
+                UpdateDataSavingState();
+                UpdateAudioBitrateLimit();
+            }
+            if (flags & ExtraInit::Flags::GroupCallSupported)
+            {
+                peerCapabilities |= TGVOIP_PEER_CAP_GROUP_CALLS;
+            }
+            if (flags & ExtraInit::Flags::VideoRecvSupported)
+            {
+                peerCapabilities |= TGVOIP_PEER_CAP_VIDEO_DISPLAY;
+            }
+            if (flags & ExtraInit::Flags::VideoSendSupported)
+            {
+                peerCapabilities |= TGVOIP_PEER_CAP_VIDEO_CAPTURE;
+            }
+        }
+
+        unsigned char numSupportedAudioCodecs = in.ReadByte();
+        for (auto i = 0; i < numSupportedAudioCodecs; i++)
+        {
+            if (ver.peerVersion < 5)
+                in.ReadByte(); // ignore for now
+            else
+                in.ReadInt32();
+        }
+        if (!receivedInit && ((flags & ExtraInit::Flags::VideoSendSupported && config.enableVideoReceive) || (flags & ExtraInit::Flags::VideoRecvSupported && config.enableVideoSend)))
+        {
+            LOGD("Peer video decoders:");
+            uint8_t numSupportedVideoDecoders = in.ReadByte();
+            for (auto i = 0; i < numSupportedVideoDecoders; i++)
+            {
+                uint32_t id = in.ReadUInt32();
+                peerVideoDecoders.push_back(id);
+                char *_id = reinterpret_cast<char *>(&id);
+                LOGD("%c%c%c%c", _id[3], _id[2], _id[1], _id[0]);
+            }
+            protocolInfo.maxVideoResolution = in.ReadByte();
+
+            SetupOutgoingVideoStream();
+        }
+
+        BufferOutputStream out(1024);
+
+        out.WriteInt32(PROTOCOL_VERSION);
+        out.WriteInt32(MIN_PROTOCOL_VERSION);
+
+        out.WriteByte((unsigned char)outgoingStreams.size());
+        for (const auto &stream : outgoingStreams)
+        {
+            out.WriteByte(stream->id);
+            out.WriteByte(stream->type);
+            if (ver.peerVersion < 5)
+                out.WriteByte((unsigned char)(stream->codec == Codec::Opus ? CODEC_OPUS_OLD : 0));
+            else
+                out.WriteInt32(stream->codec);
+            out.WriteInt16(stream->frameDuration);
+            out.WriteByte((unsigned char)(stream->enabled ? 1 : 0));
+        }
+        LOGI("Sending init ack");
+        size_t outLength = out.GetOffset();
+        SendOrEnqueuePacket(PendingOutgoingPacket{
+            /*.seq=*/packetManager.nextLocalSeq(),
+            /*.type=*/PKT_INIT_ACK,
+            /*.len=*/outLength,
+            /*.data=*/Buffer(move(out)),
+            /*.endpoint=*/0});
+        if (!receivedInit)
+        {
+            receivedInit = true;
+            if ((srcEndpoint.type == Endpoint::Type::UDP_RELAY && udpConnectivityState != UDP_BAD && udpConnectivityState != UDP_NOT_AVAILABLE) || srcEndpoint.type == Endpoint::Type::TCP_RELAY)
+            {
+                currentEndpoint = srcEndpoint.id;
+                if (srcEndpoint.type == Endpoint::Type::UDP_RELAY || (useTCP && srcEndpoint.type == Endpoint::Type::TCP_RELAY))
+                    preferredRelay = srcEndpoint.id;
+            }
+        }
+        if (!audioStarted && receivedInitAck)
+        {
+            StartAudio();
+            audioStarted = true;
+        }
+    }
+    if (type == PKT_INIT_ACK)
+    {
+        LOGD("Received init ack");
+
+        if (!receivedInitAck)
+        {
+            receivedInitAck = true;
+
+            messageThread.Cancel(initTimeoutID);
+            initTimeoutID = MessageThread::INVALID_ID;
+
+            if (packetInnerLen > 10)
+            {
+                ver.peerVersion = in.ReadInt32();
+                uint32_t minVer = in.ReadUInt32();
+                if (minVer > PROTOCOL_VERSION || ver.peerVersion < MIN_PROTOCOL_VERSION)
+                {
+                    lastError = ERROR_INCOMPATIBLE;
+
+                    SetState(STATE_FAILED);
+                    return;
+                }
+            }
+            else
+            {
+                ver.peerVersion = 1;
+            }
+
+            LOGI("peer version from init ack %d", ver.peerVersion);
+
+            unsigned char streamCount = in.ReadByte();
+            if (streamCount == 0)
+                return;
+
+            int i;
+            shared_ptr<Stream> incomingAudioStream = nullptr;
+            for (i = 0; i < streamCount; i++)
+            {
+                shared_ptr<Stream> stm = make_shared<Stream>();
+                stm->id = in.ReadByte();
+                stm->type = static_cast<StreamType>(in.ReadByte());
+                if (ver.peerVersion < 5)
+                {
+                    unsigned char codec = in.ReadByte();
+                    if (codec == CODEC_OPUS_OLD)
+                        stm->codec = Codec::Opus;
+                }
+                else
+                {
+                    stm->codec = in.ReadUInt32();
+                }
+                in.ReadInt16();
+                stm->frameDuration = 60;
+                stm->enabled = in.ReadByte() == 1;
+                if (stm->type == StreamType::Video && ver.peerVersion < 9)
+                {
+                    LOGV("Skipping video stream for old protocol version");
+                    continue;
+                }
+                if (stm->type == StreamType::Audio)
+                {
+                    stm->jitterBuffer = make_shared<JitterBuffer>(stm->frameDuration);
+                    if (stm->frameDuration > 50)
+                        stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_60", 2));
+                    else if (stm->frameDuration > 30)
+                        stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_40", 4));
+                    else
+                        stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_20", 6));
+                    stm->decoder = nullptr;
+                }
+                else if (stm->type == StreamType::Video)
+                {
+                    if (!stm->packetReassembler)
+                    {
+                        stm->packetReassembler = make_shared<PacketReassembler>();
+                        stm->packetReassembler->SetCallback(bind(&VoIPController::ProcessIncomingVideoFrame, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
+                    }
+                }
+                else
+                {
+                    LOGW("Unknown incoming stream type: %d", stm->type);
+                    continue;
+                }
+                incomingStreams.push_back(stm);
+                if (stm->type == StreamType::Audio && !incomingAudioStream)
+                    incomingAudioStream = stm;
+            }
+            if (!incomingAudioStream)
+                return;
+
+            if (ver.peerVersion >= 5 && !useMTProto2)
+            {
+                useMTProto2 = true;
+                LOGD("MTProto2 wasn't initially enabled for whatever reason but peer supports it; upgrading");
+            }
+
+            if (!audioStarted && receivedInit)
+            {
+                StartAudio();
+                audioStarted = true;
+            }
+            messageThread.Post(
+                [this] {
+                    if (state == STATE_WAIT_INIT_ACK)
+                    {
+                        SetState(STATE_ESTABLISHED);
+                    }
+                },
+                ServerConfig::GetSharedInstance()->GetDouble("established_delay_if_no_stream_data", 1.5));
+            if (allowP2p)
+                SendPublicEndpointsRequest();
+        }
+    }
     if (type == ExtraStreamFlags::ID)
     {
         unsigned char id = in.ReadByte();
@@ -904,7 +831,7 @@ void VoIPController::ProcessExtraData(Buffer &data)
 
 void VoIPController::ProcessAcknowledgedOutgoingExtra(UnacknowledgedExtraData &extra)
 {
-    if (extra.type == ExtraGroupCallKey::ID)
+    if (extra.data.getID() == ExtraGroupCallKey::ID)
     {
         if (!didReceiveGroupCallKeyAck)
         {

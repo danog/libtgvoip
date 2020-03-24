@@ -1,4 +1,5 @@
 #include "Extra.h"
+#include "../../../VoIPController.h"
 #include "../../PrivateDefines.h"
 
 using namespace tgvoip;
@@ -31,30 +32,56 @@ std::shared_ptr<Extra> Extra::choose(const BufferInputStream &in, const VersionI
     {
         return nullptr;
     }
+    unsigned char fullHash[SHA1_LENGTH];
+    VoIPController::crypto.sha1(const_cast<uint8_t *>(in.GetRawBuffer() + in.GetOffset()), in.Remaining(), fullHash);
+    uint64_t hash = *reinterpret_cast<uint64_t *>(fullHash);
+
     switch (id)
     {
     case ExtraStreamFlags::ID:
-        return std::make_shared<ExtraStreamFlags>();
+        auto res = std::make_shared<ExtraStreamFlags>();
+        res->hash = hash;
+        return res;
     case ExtraStreamCsd::ID:
-        return std::make_shared<ExtraStreamCsd>();
+        auto res = std::make_shared<ExtraStreamCsd>();
+        res->hash = hash;
+        return res;
     case ExtraLanEndpoint::ID:
-        return std::make_shared<ExtraLanEndpoint>();
+        auto res = std::make_shared<ExtraLanEndpoint>();
+        res->hash = hash;
+        return res;
     case ExtraIpv6Endpoint::ID:
-        return std::make_shared<ExtraIpv6Endpoint>();
+        auto res = std::make_shared<ExtraIpv6Endpoint>();
+        res->hash = hash;
+        return res;
     case ExtraNetworkChanged::ID:
-        return std::make_shared<ExtraNetworkChanged>();
+        auto res = std::make_shared<ExtraNetworkChanged>();
+        res->hash = hash;
+        return res;
     case ExtraGroupCallKey::ID:
-        return std::make_shared<ExtraGroupCallKey>();
+        auto res = std::make_shared<ExtraGroupCallKey>();
+        res->hash = hash;
+        return res;
     case ExtraGroupCallUpgrade::ID:
-        return std::make_shared<ExtraGroupCallUpgrade>();
+        auto res = std::make_shared<ExtraGroupCallUpgrade>();
+        res->hash = hash;
+        return res;
     case ExtraInit::ID:
-        return std::make_shared<ExtraInit>();
+        auto res = std::make_shared<ExtraInit>();
+        res->hash = hash;
+        return res;
     case ExtraInitAck::ID:
-        return std::make_shared<ExtraInitAck>();
+        auto res = std::make_shared<ExtraInitAck>();
+        res->hash = hash;
+        return res;
     case ExtraPing::ID:
-        return std::make_shared<ExtraPing>();
+        auto res = std::make_shared<ExtraPing>();
+        res->hash = hash;
+        return res;
     case ExtraPong::ID:
-        return std::make_shared<ExtraPong>();
+        auto res = std::make_shared<ExtraPong>();
+        res->hash = hash;
+        return res;
     }
     return nullptr;
 }

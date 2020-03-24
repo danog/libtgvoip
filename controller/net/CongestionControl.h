@@ -9,7 +9,8 @@
 
 #include "tools/Buffers.h"
 #include "tools/threading.h"
-#include <stdint.h>
+#include <cstdint>
+#include <map>
 #include <stdlib.h>
 
 #define TGVOIP_CONCTL_ACT_INCREASE 1

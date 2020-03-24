@@ -138,23 +138,22 @@ void VoIPController::TickJitterBufferAndCongestionControl()
     double currentTime = GetCurrentTime();
     double rtt = GetAverageRTT();
     double packetLossTimeout = std::max(rtt * 2.0, 0.1);
-    for (RecentOutgoingPacket &pkt : getBestPacketManager().getRecentOutgoingPackets())
+    for (auto &stm : outgoingStreams)
     {
-        if (pkt.ackTime != 0.0 || pkt.lost)
-            continue;
-        if (currentTime - pkt.sendTime > packetLossTimeout)
+        auto &sender = stm->packetSender;
+        for (RecentOutgoingPacket &pkt : stm->packetManager.getRecentOutgoingPackets())
         {
-            pkt.lost = true;
-            sendLosses++;
-            LOGW("Outgoing packet lost: seq=%u, type=%s, size=%u", pkt.seq, pkt.type.c_str(), (unsigned int)pkt.size);
-            if (pkt.sender)
+            if (pkt.ackTime || pkt.lost)
+                continue;
+            if (currentTime - pkt.sendTime > packetLossTimeout)
             {
-                pkt.sender->PacketLost(pkt);
+                pkt.lost = true;
+                sendLosses++;
+                LOGW("Outgoing packet lost: seq=%u, streamId=%hhu, size=%u", pkt.pkt.seq, pkt.pkt.streamId, (unsigned int)pkt.size);
+
+                conctl.PacketLost(pkt.pkt);
+                sender->PacketLost(pkt);
             }
-            //if (pkt.type == PKT_STREAM_DATA)
-            //{
-            conctl.PacketLost(pkt.seq);
-            //}
         }
     }
 }
@@ -344,7 +343,7 @@ void VoIPController::UpdateAudioBitrate()
 void VoIPController::UpdateSignalBars()
 {
     int prevSignalBarCount = GetSignalBarsCount();
-    double packetsPerSec = 1000 / (double)GetStreamByID<AudioStream>(StreamId::Audio, true)->frameDuration;
+    double packetsPerSec = 1000 / (double)GetStreamByID<OutgoingAudioStream>(StreamId::Audio)->frameDuration;
     double avgSendLossCount = sendLossCountHistory.Average() / packetsPerSec;
 
     int signalBarCount = 4;

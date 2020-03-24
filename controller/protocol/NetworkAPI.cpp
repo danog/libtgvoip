@@ -52,7 +52,7 @@ void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, doub
     else
     {
         PacketManager &legacyPm = outgoingStreams[StreamId::Signaling]->packetManager;
-        packet.prepare(pm, currentExtras, endpoint.id, legacyPm);
+        packet.prepare(pm, currentExtras, endpoint.id, legacyPm, ver.peerVersion);
 
         uint32_t seq = legacyPm.getLocalSeq();
 
@@ -449,24 +449,6 @@ void VoIPController::SendDataSavingMode()
     s->flags |= dataSavingMode ? ExtraInit::Flags::DataSavingEnabled : 0;
     SendExtra(s);
 }
-void VoIPController::SendStreamFlags(const OutgoingAudioStream &stream)
-{
-    ENFORCE_MSG_THREAD;
-
-    auto flags = std::make_shared<ExtraStreamFlags>();
-
-    flags->streamId = stream.id;
-    if (stream.enabled)
-        flags->flags |= ExtraStreamFlags::Flags::Enabled;
-    if (stream.extraECEnabled)
-        flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
-    if (stream.paused)
-        flags->flags |= ExtraStreamFlags::Flags::Paused;
-
-    LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags->flags);
-
-    SendExtra(Wrapped<Extra>(std::move(flags)));
-};
 
 void VoIPController::SendExtra(std::shared_ptr<Extra> &&_d, int64_t endpointId)
 {
@@ -486,7 +468,7 @@ void VoIPController::SendExtra(Wrapped<Extra> &&extra, int64_t endpointId)
     {
         if (extra.data.getID() == type && extra.endpointId == endpointId)
         {
-            extra.firstContainingSeq = 0;
+            extra.seqs.Reset();
             extra.data = std::move(extra.data);
             return;
         }

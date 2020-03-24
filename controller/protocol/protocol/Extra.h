@@ -19,6 +19,8 @@ struct Extra : public Serializable, MultiChoice<Extra>
 
     std::string print() const override;
 
+    uint64_t hash;
+    
     size_t getSize(const VersionInfo &ver) const override
     {
         return 1 + getConstructorSize(ver);

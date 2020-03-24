@@ -212,13 +212,13 @@ void VoIPController::NetworkPacketReceived(shared_ptr<NetworkPacket> _packet)
     }
 
     if (IS_MOBILE_NETWORK(networkType))
-        stats.bytesRecvdMobile += (uint64_t)packet.data.Length();
+        stats.bytesRecvdMobile += (uint64_t)packet.data->Length();
     else
-        stats.bytesRecvdWifi += (uint64_t)packet.data.Length();
+        stats.bytesRecvdWifi += (uint64_t)packet.data->Length();
 
     /*try
     {*/
-        ProcessIncomingPacket(packet, endpoints.at(srcEndpointID));
+    ProcessIncomingPacket(packet, endpoints.at(srcEndpointID));
     /*}
     catch (out_of_range &x)
     {

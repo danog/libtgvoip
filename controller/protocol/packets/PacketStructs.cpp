@@ -101,19 +101,10 @@ void Packet::prepare(PacketManager &pm)
 void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId)
 {
     prepare(pm);
-    extraSignaling.v.clear();
-    for (auto &extra : currentExtras)
-    {
-        if (!endpointId || extra.endpointId == endpointId)
-        {
-            extraSignaling.v.push_back(extra.data);
-            extra.firstContainingSeq = seq;
-        }
-    }
 }
-void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId, PacketManager &legacyPm)
+void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId, PacketManager &legacyPm, const int peerVersion)
 {
-    prepare(pm, currentExtras, endpointId);
+    prepare(pm);
     if (!legacySeq)
     {
         if (pm != legacyPm)
@@ -125,6 +116,25 @@ void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &cu
         else
         {
             legacySeq = seq;
+        }
+    }
+
+    int tmpLegacySeq = legacySeq;
+
+    extraSignaling.v.clear();
+    for (auto &extra : currentExtras)
+    {
+        if (!endpointId || extra.endpointId == endpointId)
+        {
+            extraSignaling.v.push_back(extra.data);
+            if (extra.data.d->chooseType(peerVersion) == PKT_NOP)
+            {
+                extra.seqs.Add(seq);
+            }
+            else
+            {
+                extra.seqs.Add(tmpLegacySeq++);
+            }
         }
     }
 }

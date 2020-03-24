@@ -30,13 +30,25 @@ bool PacketManager::wasLocalAcked(uint32_t seq) const
     return false;
 }
 
-bool PacketManager::ackRemoteSeq(uint32_t ackId)
+bool PacketManager::ackRemoteSeq(const Packet &pkt)
+{
+    if (pkt.legacy) {
+        if (pkt.legacySeq) {
+            return ackRemoteSeq(pkt.legacySeq);
+        }
+    } else {
+        return ackRemoteSeq(pkt.seq);
+    }
+    return true;
+}
+
+bool PacketManager::ackRemoteSeq(const uint32_t ackId)
 {
     if (seqgt(ackId, lastRemoteSeq - MAX_RECENT_PACKETS))
     {
         if (ackId == lastRemoteSeq)
         {
-            LOGW("Received duplicated packet for seq %u", ackId);
+            LOGW("Received duplicated packet for seq %u, streamId=%hhu", ackId, transportId);
             return false;
         }
         else if (ackId > lastRemoteSeq)
@@ -50,7 +62,7 @@ bool PacketManager::ackRemoteSeq(uint32_t ackId)
             uint32_t pos = 1 << ((lastRemoteSeq - ackId) - 1);
             if (lastRemoteSeqsMask & pos)
             {
-                LOGW("Received duplicated packet for seq %u", ackId);
+                LOGW("Received duplicated packet for seq %u, streamId=%hhu", ackId, transportId);
                 return false;
             }
             lastRemoteSeqsMask |= pos;
@@ -58,7 +70,7 @@ bool PacketManager::ackRemoteSeq(uint32_t ackId)
     }
     else
     {
-        LOGW("Packet %u is out of order and too late", ackId);
+        LOGW("Packet %u, streamId=%hhu is out of order and too late", ackId, transportId);
         return false;
     }
     return true;

@@ -73,7 +73,7 @@ struct UnacknowledgedExtraData
     TGVOIP_DISALLOW_COPY_AND_ASSIGN(UnacknowledgedExtraData);
 
     Wrapped<Extra> data;
-    uint32_t firstContainingSeq = 0;
+    HistoricBuffer<uint32_t, 16> seqs{};
     int64_t endpointId = 0;
 };
 struct Packet : public Serializable, SingleChoice<Packet>
@@ -96,7 +96,7 @@ private:
 public:
     void prepare(PacketManager &pm);
     void prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId);
-    void prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId, PacketManager &legacyPm);
+    void prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId, PacketManager &legacyPm, const int peerVersion);
 
 public:
     enum Flags : uint8_t

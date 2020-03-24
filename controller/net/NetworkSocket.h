@@ -171,7 +171,7 @@ public:
     virtual ~NetworkSocketTCPObfuscated();
     virtual std::shared_ptr<NetworkSocket> GetWrapped();
     virtual void InitConnection();
-    virtual void Send(NetworkPacket packet) override;
+    virtual void Send(NetworkPacket &&packet) override;
     virtual NetworkPacket Receive(size_t maxLen) override;
     virtual void Open();
     virtual void Close();
@@ -196,7 +196,7 @@ class NetworkSocketSOCKS5Proxy : public NetworkSocketWrapper
 public:
     NetworkSocketSOCKS5Proxy(const std::shared_ptr<NetworkSocket> &tcp, const std::shared_ptr<NetworkSocket> &udp, std::string username, std::string password);
     virtual ~NetworkSocketSOCKS5Proxy();
-    virtual void Send(NetworkPacket packet) override;
+    virtual void Send(NetworkPacket &&packet) override;
     virtual NetworkPacket Receive(size_t maxLen) override;
     virtual void Open() override;
     virtual void Close();
