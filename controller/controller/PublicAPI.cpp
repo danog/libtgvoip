@@ -21,7 +21,7 @@ VoIPController::~VoIPController()
         LOGD("before stop decoder");
         if (stm->type == StreamType::Audio)
         {
-            auto astm = dynamic_pointer_cast<AudioStream>(stm);
+            auto astm = dynamic_pointer_cast<IncomingAudioStream>(stm);
             if (astm->decoder)
                 astm->decoder->Stop();
         }
@@ -152,7 +152,7 @@ void VoIPController::SetMicMute(bool mute)
     if (state == STATE_ESTABLISHED)
     {
         messageThread.Post([this] {
-            auto &s = GetStreamByType<AudioStream>(true);
+            auto &s = GetStreamByType<OutgoingAudioStream>();
             if (s)
             {
                 s->enabled = !micMuted;
@@ -193,14 +193,14 @@ string VoIPController::GetDebugString()
         snprintf(buffer, sizeof(buffer), "%s:%u %dms %d 0x%" PRIx64 " [%s%s]\n", endpoint.address.IsEmpty() ? ("[" + endpoint.v6address.ToString() + "]").c_str() : endpoint.address.ToString().c_str(), endpoint.port, (int)(endpoint.averageRTT * 1000), endpoint.udpPongCount, (uint64_t)endpoint.id, type, currentEndpoint == endpoint.id ? ", IN_USE" : "");
         r += buffer;
     }
-    auto sender = GetStreamByType<AudioStream>(StreamInfo::Type::Audio, true)->packetSender;
+    auto &sender = GetStreamByType<OutgoingAudioStream>()->packetSender;
     if (sender->getShittyInternetMode())
     {
         snprintf(buffer, sizeof(buffer), "ShittyInternetMode: level %u\n", sender->getExtraEcLevel());
         r += buffer;
     }
     double avgLate[3];
-    auto &stm = GetStreamByType<AudioStream>(StreamInfo::Type::Audio, false);
+    auto &stm = GetStreamByType<IncomingAudioStream>();
     shared_ptr<JitterBuffer> jitterBuffer;
     if (stm)
         jitterBuffer = stm->jitterBuffer;
@@ -233,14 +233,14 @@ string VoIPController::GetDebugString()
              encoder ? (encoder->GetBitrate() / 1000) : 0,
              static_cast<unsigned int>(unsentStreamPackets),
              //			 audioPacketGrouping,
-             GetStreamByID<AudioStream>(StreamId::Audio, true)->frameDuration, incomingStreams.size() > 0 ? GetStreamByID<AudioStream>(StreamId::Audio, false)->frameDuration : 0,
+             GetStreamByID<OutgoingAudioStream>(StreamId::Audio)->frameDuration, incomingStreams.size() > 0 ? GetStreamByID<IncomingAudioStream>(StreamId::Audio)->frameDuration : 0,
              (long long unsigned int)(stats.bytesSentMobile + stats.bytesSentWifi),
              (long long unsigned int)(stats.bytesRecvdMobile + stats.bytesRecvdWifi));
     r += buffer;
 
     if (config.enableVideoSend)
     {
-        auto &vstm = GetStreamByType<VideoStream>(StreamInfo::Type::Video, true);
+        auto &vstm = GetStreamByType<OutgoingVideoStream>();
         if (vstm && vstm->enabled && vstm->packetSender)
         {
             snprintf(buffer, sizeof(buffer), "\nVideo out: %ux%u '%c%c%c%c' %u kbit", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec), vstm->packetSender->GetBitrate());
@@ -258,7 +258,7 @@ string VoIPController::GetDebugString()
     }
     if (config.enableVideoReceive)
     {
-        auto &vstm = GetStreamByType<VideoStream>(StreamInfo::Type::Video, false);
+        auto &vstm = GetStreamByType<OutgoingVideoStream>();
         if (vstm && vstm->enabled)
         {
             snprintf(buffer, sizeof(buffer), "\nVideo in: %ux%u '%c%c%c%c'", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec));
@@ -654,7 +654,7 @@ void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t *, size_t)
 {
     audioInputDataCallback = input;
     audioOutputDataCallback = output;
-    GetStreamByType<AudioStream>(StreamInfo::Type::Audio, true)->packetSender->setAudioPreprocDataCallback(preproc);
+    GetStreamByType<OutgoingAudioStream>()->packetSender->setAudioPreprocDataCallback(preproc);
 }
 #endif
 

@@ -34,11 +34,6 @@ public:
         return transportId != other.transportId;
     }
     // Transport ID for multiplexing
-    inline uint8_t getTransportId()
-    {
-        return transportId;
-    }
-
     uint8_t transportId;
 
 public:
@@ -61,7 +56,7 @@ public:
         seq = _seq;
     }
 
-    inline uint32_t getLastSentSeq() onst
+    inline uint32_t getLastSentSeq() const
     {
         return lastSentSeq;
     }
@@ -81,16 +76,16 @@ private:
 public:
     /* Local seqno acks */
 
+    inline uint32_t getLastAckedSeq() const
+    {
+        return lastAckedSeq;
+    }
+
     // Ack specified local seq + up to 32 seqs ago, specified by mask
     void ackLocal(uint32_t ackId, uint32_t mask);
 
     // Check if local seq was acked
     bool wasLocalAcked(uint32_t seq) const;
-
-    inline uint32_t getLastAckedSeq() const
-    {
-        return lastAckedSeq;
-    }
 
 private:
     // Seqno of last acked packet
@@ -129,13 +124,9 @@ private:
     uint32_t lastRemoteSeqsMask;
 
 public: // Recent outgoing packet list
-    inline std::vector<RecentOutgoingPacket> &getRecentOutgoingPackets()
-    {
-        return recentOutgoingPackets;
-    }
-
-    RecentOutgoingPacket *GetRecentOutgoingPacket(uint32_t seq);
-
+    std::vector<RecentOutgoingPacket> &getRecentOutgoingPackets();
+    void addRecentOutgoingPacket(const PendingOutgoingPacket &pkt);
+    void addRecentOutgoingPacket(RecentOutgoingPacket &&pkt);
 private:
     // Recent ougoing packets
     std::vector<RecentOutgoingPacket> recentOutgoingPackets;

@@ -133,7 +133,7 @@ void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool 
 void VoIPController::SetupOutgoingVideoStream()
 {
     vector<uint32_t> myEncoders = video::VideoSource::GetAvailableEncoders();
-    shared_ptr<VideoStream> vstm = make_shared<VideoStream>();
+    auto vstm = make_shared<OutgoingVideoStream>();
 
     if (find(myEncoders.begin(), myEncoders.end(), Codec::Hevc) != myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), Codec::Hevc) != peerVideoDecoders.end())
     {
@@ -154,5 +154,5 @@ void VoIPController::SetupOutgoingVideoStream()
     }
 
     vstm->enabled = false;
-    outgoingStreams.push_back(dynamic_pointer_cast<Stream<>>(vstm));
+    outgoingStreams.push_back(dynamic_pointer_cast<OutgoingStream<>>(vstm));
 }

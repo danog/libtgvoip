@@ -136,7 +136,7 @@ std::string Extra::print() const
     return "???";
 }
 
-bool StreamInfo::parse(const BufferInputStream &in, const VersionInfo &ver)
+bool ExtraStreamInfo::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
     return in.TryRead(streamId) &&
            in.TryReadCompat<uint8_t>(type) &&
@@ -145,7 +145,7 @@ bool StreamInfo::parse(const BufferInputStream &in, const VersionInfo &ver)
            in.TryReadCompat<uint8_t>(enabled);
 }
 
-void StreamInfo::serialize(BufferOutputStream &out, const VersionInfo &ver) const
+void ExtraStreamInfo::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
     out.WriteByte(streamId);
     out.WriteByte(type);

@@ -127,7 +127,7 @@ void VoIPController::TickJitterBufferAndCongestionControl()
     {
         if (stm->type == StreamType::Audio)
         {
-            auto astm = dynamic_pointer_cast<AudioStream>(stm);
+            auto astm = dynamic_pointer_cast<IncomingAudioStream>(stm);
             if (astm->jitterBuffer)
                 astm->jitterBuffer->Tick();
         }
@@ -175,7 +175,7 @@ void VoIPController::UpdateRTT()
     {
         if (stm->type == StreamType::Audio)
         {
-            auto astm = dynamic_pointer_cast<AudioStream>(stm);
+            auto astm = dynamic_pointer_cast<IncomingAudioStream>(stm);
             if (astm->jitterBuffer)
             {
                 int lostCount = astm->jitterBuffer->GetAndResetLostPacketCount();
@@ -202,7 +202,8 @@ void VoIPController::UpdateCongestion()
         double avgSendLossCount = sendLossCountHistory.Average() / packetCountHistory.Average();
         LOGE("avg send loss: %.3f%%", avgSendLossCount * 100);
 
-        auto &sender = GetStreamByType<AudioStream>(true)->packetSender;
+        auto &s = GetStreamByType<OutgoingAudioStream>();
+        auto &sender = s->packetSender;
         //avgSendLossCount = sender->setPacketLoss(avgSendLossCount * 100.0) / 100.0;
         sender->setPacketLoss(avgSendLossCount * 100.0);
         if (avgSendLossCount > packetLossToEnableExtraEC && networkType != NET_TYPE_GPRS && networkType != NET_TYPE_EDGE)
@@ -211,12 +212,10 @@ void VoIPController::UpdateCongestion()
             {
                 // Shitty Internet Mode™. Redundant redundancy you can trust.
                 sender->setShittyInternetMode(true);
-                auto &s = GetStreamByType<AudioStream>(true);
-                if (s)
-                {
-                    s->extraECEnabled = true;
-                    SendStreamFlags(*s);
-                }
+
+                s->extraECEnabled = true;
+                SendStreamFlags(*s);
+
                 if (encoder)
                     encoder->SetSecondaryEncoderEnabled(true);
                 LOGW("Enabling extra EC");
@@ -250,7 +249,7 @@ void VoIPController::UpdateCongestion()
         {
             sender->setShittyInternetMode(false);
 
-            auto &s = GetStreamByType<AudioStream>(true);
+            auto &s = GetStreamByType<OutgoingAudioStream>();
             if (s)
             {
                 s->extraECEnabled = false;
@@ -278,7 +277,7 @@ void VoIPController::UpdateAudioBitrate()
         }
 
         int act = conctl.GetBandwidthControlAction();
-        if (GetStreamByType<AudioStream>(true)->packetSender->getShittyInternetMode())
+        if (GetStreamByType<OutgoingAudioStream>()->packetSender->getShittyInternetMode())
         {
             encoder->SetBitrate(8000);
         }
@@ -371,7 +370,7 @@ void VoIPController::UpdateSignalBars()
     {
         if (stm->type == StreamType::Audio)
         {
-            auto astm = dynamic_pointer_cast<AudioStream>(stm);
+            auto astm = dynamic_pointer_cast<IncomingAudioStream>(stm);
             if (astm->jitterBuffer)
             {
                 double avgLateCount[3];

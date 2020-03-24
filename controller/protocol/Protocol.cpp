@@ -72,13 +72,17 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
     }
 
     Packet packet;
-    if (!packet.parse(in, ver)) {
+    if (!packet.parse(in, ver))
+    {
         LOGW("Failure parsing incoming packet!");
     }
+    packetsReceived++;
     ProcessIncomingPacket(packet, srcEndpoint);
 
-    if (packet.otherPackets.size()) { // Legacy
-        for (Packet &packet : packet.otherPackets) {
+    if (packet.otherPackets.size())
+    { // Legacy for PKT_STREAM_X2-3
+        for (Packet &packet : packet.otherPackets)
+        {
             ProcessIncomingPacket(packet, srcEndpoint);
         }
     }
@@ -86,12 +90,10 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
 
 void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint)
 {
-    packetsReceived++;
+    // Use packet manager of outgoing stream
+    PacketManager &manager = outgoingStreams[packet.legacy ? StreamId::Signaling : packet.streamId]->packetManager;
 
-    // Use packet manager of outgoing streams on both sides (probably should separate in separate vector)
-    PacketManager *manager = transportId == 0xFF ? &packetManager : &outgoingStreams[transportId]->packetSender->getPacketManager();
-
-    if (!manager->ackRemoteSeq(pseq))
+    if (!manager.ackRemoteSeq(packet.legacy ? packet.legacySeq : packet.seq))
     {
         return;
     }
@@ -119,9 +121,9 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
         recvTS = in.ReadUInt32();
     }
 
-    if (seqgt(ackId, manager->getLastAckedSeq()))
+    if (seqgt(ackId, manager.getLastAckedSeq()))
     {
-        if (waitingForAcks && manager->getLastAckedSeq() >= firstSentPing)
+        if (waitingForAcks && manager.getLastAckedSeq() >= firstSentPing)
         {
             rttHistory.Reset();
             waitingForAcks = false;
@@ -135,23 +137,23 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
         }
         conctl.PacketAcknowledged(ackId);
 
-        manager->ackLocal(ackId, acks);
+        manager.ackLocal(ackId, acks);
 
         if (transportId != 0xFF && !incomingStreams.empty() && incomingStreams[transportId]->jitterBuffer)
         {
             // Technically I should be using the specific packet manager's rtt history but will separate later
             uint32_t tooOldSeq = incomingStreams[transportId]->jitterBuffer->GetSeqTooLate(rttHistory[0]);
-            LOGW("Reverse acking seqs older than %u, newest seq received from remote %u (transportId %hhu)", tooOldSeq, manager->getLastRemoteSeq(), transportId);
-            manager->ackRemoteSeqsOlderThan(tooOldSeq);
+            LOGW("Reverse acking seqs older than %u, newest seq received from remote %u (transportId %hhu)", tooOldSeq, manager.getLastRemoteSeq(), transportId);
+            manager.ackRemoteSeqsOlderThan(tooOldSeq);
         }
 
-        for (auto &opkt : manager->getRecentOutgoingPackets())
+        for (auto &opkt : manager.getRecentOutgoingPackets())
         {
             if (opkt.ackTime)
             {
                 continue;
             }
-            if (manager->wasLocalAcked(opkt.seq))
+            if (manager.wasLocalAcked(opkt.seq))
             {
                 opkt.data = Buffer();
                 opkt.ackTime = GetCurrentTime();
@@ -169,11 +171,11 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                 // TODO move this to a PacketSender
                 conctl.PacketAcknowledged(opkt.seq);
             }
-            else if (ver.peerVersion >= PROTOCOL_RELIABLE && opkt.data.Length() && opkt.seq < manager->getLastAckedSeq())
+            else if (ver.peerVersion >= PROTOCOL_RELIABLE && opkt.data.Length() && opkt.seq < manager.getLastAckedSeq())
             {
-                if (manager->getLastAckedSeq() - opkt.seq > 32)
+                if (manager.getLastAckedSeq() - opkt.seq > 32)
                 {
-                    LOGW("Marking reliable NACK packet %u as lost, since is more than 32 seqs old (last acked %u, transportId %hhu)", opkt.seq, manager->getLastAckedSeq(), transportId);
+                    LOGW("Marking reliable NACK packet %u as lost, since is more than 32 seqs old (last acked %u, transportId %hhu)", opkt.seq, manager.getLastAckedSeq(), transportId);
                     opkt.lost = true;
                     opkt.data = Buffer();
                     continue;
@@ -203,7 +205,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
         {
             for (auto x = currentExtras.begin(); x != currentExtras.end();)
             {
-                if (x->firstContainingSeq != 0 && seqgte(manager->getLastAckedSeq(), x->firstContainingSeq))
+                if (x->firstContainingSeq != 0 && seqgte(manager.getLastAckedSeq(), x->firstContainingSeq))
                 {
                     LOGV("Peer acknowledged extra type %u length %u", x->type, (unsigned int)x->data.Length());
                     ProcessAcknowledgedOutgoingExtra(*x);
@@ -220,7 +222,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
     Endpoint &_currentEndpoint = endpoints.at(currentEndpoint);
     if (srcEndpoint.id != currentEndpoint && srcEndpoint.IsReflector() && (_currentEndpoint.IsP2P() || _currentEndpoint.averageRTT == 0))
     {
-        if (seqgt(manager->getLastSentSeq() - 32, manager->getLastAckedSeq()))
+        if (seqgt(manager.getLastSentSeq() - 32, manager.getLastAckedSeq()))
         {
             currentEndpoint = srcEndpoint.id;
             _currentEndpoint = srcEndpoint;
@@ -397,7 +399,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
             {
                 shared_ptr<Stream> stm = make_shared<Stream>();
                 stm->id = in.ReadByte();
-                stm->type = static_cast<StreamInfo::Type>(in.ReadByte());
+                stm->type = static_cast<StreamType>(in.ReadByte());
                 if (ver.peerVersion < 5)
                 {
                     unsigned char codec = in.ReadByte();
@@ -411,12 +413,12 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                 in.ReadInt16();
                 stm->frameDuration = 60;
                 stm->enabled = in.ReadByte() == 1;
-                if (stm->type == StreamInfo::Type::Video && ver.peerVersion < 9)
+                if (stm->type == StreamType::Video && ver.peerVersion < 9)
                 {
                     LOGV("Skipping video stream for old protocol version");
                     continue;
                 }
-                if (stm->type == StreamInfo::Type::Audio)
+                if (stm->type == StreamType::Audio)
                 {
                     stm->jitterBuffer = make_shared<JitterBuffer>(stm->frameDuration);
                     if (stm->frameDuration > 50)
@@ -427,7 +429,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                         stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_20", 6));
                     stm->decoder = nullptr;
                 }
-                else if (stm->type == StreamInfo::Type::Video)
+                else if (stm->type == StreamType::Video)
                 {
                     if (!stm->packetReassembler)
                     {
@@ -441,7 +443,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                     continue;
                 }
                 incomingStreams.push_back(stm);
-                if (stm->type == StreamInfo::Type::Audio && !incomingAudioStream)
+                if (stm->type == StreamType::Audio && !incomingAudioStream)
                     incomingAudioStream = stm;
             }
             if (!incomingAudioStream)
@@ -542,7 +544,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                     break;
                 }
             }
-            if (stm && stm->type == StreamInfo::Type::Audio)
+            if (stm && stm->type == StreamType::Audio)
             {
                 if (stm->jitterBuffer)
                 {
@@ -551,8 +553,8 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                     {
                         // Technically I should be using the specific packet manager's rtt history but will separate later
                         uint32_t tooOldSeq = stm->jitterBuffer->GetSeqTooLate(rttHistory[0]) - 1;
-                        LOGW("Reverse acking seqs older than %u, newest acked seq %u (transportId %hhu)", tooOldSeq, manager->getLastRemoteSeq(), transportId);
-                        manager->ackRemoteSeqsOlderThan(tooOldSeq);
+                        LOGW("Reverse acking seqs older than %u, newest acked seq %u (transportId %hhu)", tooOldSeq, manager.getLastRemoteSeq(), transportId);
+                        manager.ackRemoteSeqsOlderThan(tooOldSeq);
                     }*/
                     if (extraFEC)
                     {
@@ -568,7 +570,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                     }
                 }
             }
-            else if (stm && stm->type == StreamInfo::Type::Video)
+            else if (stm && stm->type == StreamType::Video)
             {
                 if (stm->packetReassembler)
                 {
@@ -726,7 +728,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                 LOGW("Received FEC packet for unknown stream %u", streamID);
                 return;
             }
-            if (stm->type != StreamInfo::Type::Video)
+            if (stm->type != StreamType::Video)
             {
                 LOGW("Received FEC packet for non-video stream %u", streamID);
                 return;
@@ -793,9 +795,9 @@ void VoIPController::ProcessExtraData(Buffer &data)
                             s->jitterBuffer->SetMinPacketCount(2);
                     }
                 }
-                if (prevEnabled != s->enabled && s->type == StreamInfo::Type::Video && videoRenderer)
+                if (prevEnabled != s->enabled && s->type == StreamType::Video && videoRenderer)
                     videoRenderer->SetStreamEnabled(s->enabled);
-                if (prevPaused != s->paused && s->type == StreamInfo::Type::Video && videoRenderer)
+                if (prevPaused != s->paused && s->type == StreamType::Video && videoRenderer)
                     videoRenderer->SetStreamPaused(s->paused);
                 UpdateAudioOutputState();
                 break;
@@ -913,80 +915,4 @@ void VoIPController::ProcessAcknowledgedOutgoingExtra(UnacknowledgedExtraData &e
             });
         }
     }
-}
-
-uint8_t VoIPController::WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutputStream &s, PacketSender *source)
-{
-    PacketManager &manager = ver.peerVersion >= PROTOCOL_RELIABLE && source ? source->getPacketManager() : packetManager;
-    uint32_t acks = manager.getRemoteAckMask();
-
-    if (ver.peerVersion >= 8 || (!peerVersion && ver.connectionMaxLayer >= 92))
-    {
-        s.WriteByte(pkt.type);
-        s.WriteInt32(manager.getLastRemoteSeq());
-        s.WriteInt32(pkt.seq);
-        s.WriteInt32(acks);
-
-        unsigned char flags = currentExtras.empty() ? 0 : XPFLAG_HAS_EXTRA;
-
-        shared_ptr<Stream> videoStream = GetStreamByType(StreamInfo::Type::Video, false);
-        if (peerVersion >= 9 && videoStream && videoStream->enabled)
-            flags |= XPFLAG_HAS_RECV_TS;
-
-        s.WriteByte(flags);
-
-        if (!currentExtras.empty())
-        {
-            s.WriteByte(static_cast<unsigned char>(currentExtras.size()));
-            for (auto &x : currentExtras)
-            {
-                //LOGV("Writing extra into header: type %u, length %d", x.type, int(x.data.Length()));
-                assert(x.data.Length() <= 254);
-                s.WriteByte(static_cast<unsigned char>(x.data.Length() + 1));
-                s.WriteByte(x.type);
-                s.WriteBytes(*x.data, x.data.Length());
-                if (x.firstContainingSeq == 0)
-                    x.firstContainingSeq = pkt.seq;
-            }
-        }
-        if (peerVersion >= 9 && videoStream && videoStream->enabled)
-        {
-            s.WriteUInt32((lastRecvPacketTime - connectionInitTime) * 1000.0);
-        }
-    }
-    else
-    {
-        legacyWritePacketHeader(pkt.seq, acks, &s, pkt.type, pkt.len);
-    }
-
-    s.WriteBytes(pkt.data);
-
-    Buffer copyBuf(s.GetLength());
-    if (peerVersion >= PROTOCOL_RELIABLE)
-        copyBuf.CopyFrom(s.GetBuffer(), 0, s.GetLength());
-
-    unacknowledgedIncomingPacketCount = 0;
-
-    auto &recentOutgoingPackets = manager.getRecentOutgoingPackets();
-
-    recentOutgoingPackets.push_back(RecentOutgoingPacket{
-        pkt.endpoint,
-        std::move(copyBuf),
-        pkt.seq,
-        0,
-        GetCurrentTime(),
-        0,
-        0,
-        pkt.type,
-        static_cast<uint32_t>(pkt.len),
-        source,
-        false});
-    while (recentOutgoingPackets.size() > MAX_RECENT_PACKETS)
-    {
-        recentOutgoingPackets.erase(recentOutgoingPackets.begin());
-    }
-    manager.setLastSentSeq(pkt.seq);
-
-    return manager.getTransportId();
-    //LOGI("packet header size %d", s->GetLength());
 }

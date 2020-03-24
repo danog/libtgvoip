@@ -20,62 +20,59 @@ class VideoPacketSender;
 }
 
 template <class T = PacketSender>
-struct Stream
+struct OutgoingStream : public StreamInfo
 {
-    Stream() = delete;
-    Stream(uint8_t _id, StreamInfo::Type _type);
+    OutgoingStream() = delete;
+    OutgoingStream(uint8_t _id, StreamType _type);
 
-    uint8_t id;
-    StreamInfo::Type type;
     PacketManager packetManager;
 
     std::shared_ptr<T> packetSender;
-
-    bool enabled = true;
-    bool paused = false;
 };
 
-template <class T = PacketSender>
-struct MediaStream : public Stream<T>
+struct OutgoingAudioStream : public AudioStreamInfo, public OutgoingStream<AudioPacketSender>
 {
-    MediaStream() = delete;
-    MediaStream(uint8_t _id, StreamInfo::Type _type);
+    OutgoingAudioStream(uint8_t _id = Packet::StreamId::Audio) : OutgoingStream(_id, TYPE){};
 
-    int32_t userID;
-
-    uint32_t codec;
-    bool extraECEnabled;
-    uint16_t frameDuration;
-    std::shared_ptr<PacketReassembler> packetReassembler;
-    std::shared_ptr<CallbackWrapper> callbackWrapper;
-    std::vector<Buffer> codecSpecificData;
-    bool csdIsValid = false;
+    static const StreamType TYPE = StreamType::Audio;
+    static const bool OUTGOING = true;
 };
-struct AudioStream : public MediaStream<AudioPacketSender>
+struct IncomingAudioStream : public AudioStreamInfo, public IncomingStream
 {
-    AudioStream(uint8_t _id = Packet::StreamId::Audio) : MediaStream(_id, StreamInfo::Type::Audio){};
+    IncomingAudioStream(uint8_t _id = Packet::StreamId::Audio) : IncomingStream(_id, TYPE){};
 
     std::shared_ptr<JitterBuffer> jitterBuffer;
     std::shared_ptr<tgvoip::OpusDecoder> decoder;
 
-    static const StreamType TYPE = StreamType::Audio;
-};
-struct VideoStream : public MediaStream<video::VideoPacketSender>
-{
-    VideoStream(uint8_t _id = Packet::StreamId::Video) : MediaStream(_id, StreamInfo::Type::Video){};
+    std::shared_ptr<CallbackWrapper> callbackWrapper;
 
-    unsigned int width = 0;
-    unsigned int height = 0;
-    uint16_t rotation = 0;
-    int resolution;
+    static const StreamType TYPE = StreamType::Audio;
+    static const bool OUTGOING = false;
+};
+
+struct OutgoingVideoStream : public VideoStreamInfo, public OutgoingStream<video::VideoPacketSender>
+{
+    OutgoingVideoStream(uint8_t _id = Packet::StreamId::Video) : OutgoingStream(_id, TYPE){};
 
     static const StreamType TYPE = StreamType::Video;
+    static const bool OUTGOING = true;
+};
+struct IncomingVideoStream : public VideoStreamInfo, public IncomingStream
+{
+    IncomingVideoStream(uint8_t _id = Packet::StreamId::Video) : IncomingStream(_id, TYPE){};
+
+    std::shared_ptr<PacketReassembler> packetReassembler;
+    std::vector<Buffer> codecSpecificData;
+    bool csdIsValid = false;
+
+    static const StreamType TYPE = StreamType::Video;
+    static const bool OUTGOING = false;
 };
 
 class PacketSender
 {
 public:
-    PacketSender(VoIPController *_controller, const std::shared_ptr<Stream<>> &_stream);
+    PacketSender(VoIPController *_controller, const std::shared_ptr<OutgoingStream<>> &_stream);
     virtual ~PacketSender() = default;
 
     virtual void PacketAcknowledged(const RecentOutgoingPacket &packet) = 0;
@@ -155,7 +152,7 @@ protected:
     }*/
 
     VoIPController *controller;
-    std::shared_ptr<Stream<>> stream;
+    std::shared_ptr<OutgoingStream<>> stream;
     PacketManager &packetManager;
 
     //std::vector<PendingOutgoingPacket> reliableQueue;

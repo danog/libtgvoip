@@ -418,25 +418,7 @@ protected:
     virtual void SendExtra(Wrapped<Extra> &&extra, int64_t endpointId = 0);
     virtual void SendExtra(std::shared_ptr<Extra> &&_d, int64_t endpointId = 0);
     virtual void SendExtra(std::shared_ptr<Extra> &_d, int64_t endpointId = 0);
-    template <class T>
-    void SendStreamFlags(const MediaStream<T> &stream)
-    {
-        ENFORCE_MSG_THREAD;
-
-        auto flags = std::make_shared<ExtraStreamFlags>();
-
-        flags->streamId = stream.id;
-        if (stream.enabled)
-            flags->flags |= ExtraStreamFlags::Flags::Enabled;
-        if (stream.extraECEnabled)
-            flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
-        if (stream.paused)
-            flags->flags |= ExtraStreamFlags::Flags::Paused;
-
-        LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags->flags);
-
-        SendExtra(Wrapped<Extra>(flags));
-    };
+    void SendStreamFlags(const OutgoingAudioStream &stream);
 
     virtual void OnAudioOutputReady();
     void InitializeTimers();
@@ -448,15 +430,14 @@ protected:
     CellularCarrierInfo GetCarrierInfo();
 
     template <class T>
-    std::shared_ptr<T> &GetStreamByType(bool outgoing)
+    std::shared_ptr<T> &GetStreamByType()
     {
-        return GetStreamByType<T>(T::TYPE, outgoing);
+        return GetStreamByType<T>(T::TYPE, T::OUTGOING);
     }
     template <class T>
-    std::shared_ptr<T> &GetStreamByType(StreamInfo::Type type, bool outgoing)
+    std::shared_ptr<T> &GetStreamByType(StreamType type, bool outgoing)
     {
-
-        for (shared_ptr<Stream<>> &ss : (outgoing ? outgoingStreams : incomingStreams))
+        for (auto &ss : (outgoing ? outgoingStreams : incomingStreams))
         {
             if (ss->type == type)
                 return dynamic_pointer_cast<T>(ss);
@@ -464,9 +445,9 @@ protected:
         return nullptr;
     }
     template <class T>
-    std::shared_ptr<T> &GetStreamByID(uint8_t id, bool outgoing)
+    std::shared_ptr<T> &GetStreamByID(uint8_t id)
     {
-        auto &vec = (outgoing ? outgoingStreams : incomingStreams);
+        auto &vec = T::OUTGOING ? outgoingStreams : incomingStreams;
         if (id < vec.size())
         {
             return dynamic_pointer_cast<T>(vec[id]);
@@ -631,8 +612,8 @@ private:
     uint32_t maxBitrate;
 
     //
-    std::vector<std::shared_ptr<Stream<>>> outgoingStreams;
-    std::vector<std::shared_ptr<Stream<>>> incomingStreams;
+    std::vector<std::shared_ptr<OutgoingStream<>>> outgoingStreams;
+    std::vector<std::shared_ptr<IncomingStream>> incomingStreams;
 
     PacketManager &getBestPacketManager();
 

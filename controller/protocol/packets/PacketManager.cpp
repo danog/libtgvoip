@@ -8,12 +8,13 @@ PacketManager::PacketManager(uint8_t transportId) : transportId(transportId)
 {
     recentOutgoingPackets.reserve(MAX_RECENT_PACKETS);
 }
+
 void PacketManager::ackLocal(uint32_t ackId, uint32_t mask)
 {
     lastAckedSeq = ackId;
     lastAckedSeqsMask = mask;
 }
-bool PacketManager::wasLocalAcked(uint32_t seq)
+bool PacketManager::wasLocalAcked(uint32_t seq) const
 {
     if (seq == lastAckedSeq)
         return true;
@@ -63,14 +64,20 @@ bool PacketManager::ackRemoteSeq(uint32_t ackId)
     return true;
 }
 
-RecentOutgoingPacket *PacketManager::GetRecentOutgoingPacket(uint32_t seq)
+std::vector<RecentOutgoingPacket> &PacketManager::getRecentOutgoingPackets()
 {
-    for (RecentOutgoingPacket &opkt : recentOutgoingPackets)
+    return recentOutgoingPackets;
+}
+void PacketManager::addRecentOutgoingPacket(const PendingOutgoingPacket &pkt)
+{
+    addRecentOutgoingPacket(PendingOutgoingPacket(pkt));
+}
+void PacketManager::addRecentOutgoingPacket(RecentOutgoingPacket &&pkt)
+{
+    recentOutgoingPackets.push_back(std::move(pkt));
+    while (recentOutgoingPackets.size() > MAX_RECENT_PACKETS)
     {
-        if (opkt.seq == seq)
-        {
-            return &opkt;
-        }
+        recentOutgoingPackets.erase(recentOutgoingPackets.begin());
     }
-    return nullptr;
+    lastSentSeq = pkt.pkt.seq;
 }

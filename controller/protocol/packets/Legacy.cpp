@@ -5,6 +5,8 @@ using namespace tgvoip;
 
 bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
 {
+    legacy = true;
+    
     // Version-specific extraction of legacy packet fields ackId (last received packet seq on remote), (incoming packet seq) pseq, (ack mask) acks, (packet type) type, (flags) pflags, packet length
     uint32_t ackId;             // Last received packet seqno on remote
     uint32_t pseq;              // Incoming packet seqno

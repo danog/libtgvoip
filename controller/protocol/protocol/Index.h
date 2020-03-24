@@ -3,5 +3,5 @@
 
 namespace tgvoip
 {
-using StreamType = StreamInfo::Type;
+using StreamType = ExtraStreamInfo::Type;
 }

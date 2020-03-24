@@ -8,7 +8,6 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
     if (!ver.isNew())
     {
-        legacy = true;
         return parseLegacy(in, ver);
     }
 

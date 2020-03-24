@@ -133,6 +133,8 @@ bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueu
                     endpoint.type == Endpoint::Type::TCP_RELAY ? NetworkProtocol::TCP : NetworkProtocol::UDP},
                 endpoint.type == Endpoint::Type::TCP_RELAY ? endpoint.socket : nullptr});
 
+        unacknowledgedIncomingPacketCount = 0;
+        outgoingStreams[pkt.pktInfo.streamId]->packetManager.addRecentOutgoingPacket(pkt);
 //LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
 #ifdef LOG_PACKETS
         //LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, streamId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), streamId);
@@ -447,6 +449,25 @@ void VoIPController::SendDataSavingMode()
     s->flags |= dataSavingMode ? ExtraInit::Flags::DataSavingEnabled : 0;
     SendExtra(s);
 }
+void VoIPController::SendStreamFlags(const OutgoingAudioStream &stream)
+{
+    ENFORCE_MSG_THREAD;
+
+    auto flags = std::make_shared<ExtraStreamFlags>();
+
+    flags->streamId = stream.id;
+    if (stream.enabled)
+        flags->flags |= ExtraStreamFlags::Flags::Enabled;
+    if (stream.extraECEnabled)
+        flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
+    if (stream.paused)
+        flags->flags |= ExtraStreamFlags::Flags::Paused;
+
+    LOGV("My stream state: id %u flags %u", (unsigned int)stream.id, (unsigned int)flags->flags);
+
+    SendExtra(Wrapped<Extra>(std::move(flags)));
+};
+
 void VoIPController::SendExtra(std::shared_ptr<Extra> &&_d, int64_t endpointId)
 {
     SendExtra(Wrapped<Extra>(_d), endpointId);

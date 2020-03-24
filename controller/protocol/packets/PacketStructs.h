@@ -11,20 +11,6 @@ namespace tgvoip
 {
 class PacketSender;
 class PacketManager;
-struct RecentOutgoingPacket
-{
-    CongestionControlPacket pkt;
-    size_t size;
-
-    int64_t endpoint;
-
-    uint16_t id; // for group calls only
-
-    double sendTime;
-    double ackTime;
-    double rttTime;
-    bool lost;
-};
 struct OutgoingPacket
 {
     OutgoingPacket(Packet &&packet_, int64_t endpoint_ = 0)
@@ -58,6 +44,24 @@ struct ReliableOutgoingPacket
     uint8_t tries;
 };
 
+struct RecentOutgoingPacket
+{
+    RecentOutgoingPacket(const PendingOutgoingPacket &_pkt) : pkt(_pkt.pktInfo),
+                                                              size(_pkt.packet->Length()),
+                                                              endpoint(_pkt.endpoint),
+                                                              sendTime(VoIPController::GetCurrentTime()){};
+    CongestionControlPacket pkt;
+    size_t size;
+
+    int64_t endpoint;
+
+    uint16_t id; // for group calls only
+
+    double sendTime;
+    double ackTime = 0.0;
+    double rttTime = 0.0;
+    bool lost = false;
+};
 struct UnacknowledgedExtraData
 {
     UnacknowledgedExtraData(Wrapped<Extra> &&data_, int64_t _endpointId = 0)

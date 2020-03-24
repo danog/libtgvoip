@@ -54,7 +54,7 @@ public:
     uint32_t codec = 0;
 };
 
-struct StreamInfo : public Serializable, SingleChoice<StreamInfo>
+struct ExtraStreamInfo : public Serializable, SingleChoice<ExtraStreamInfo>
 {
 public:
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
@@ -294,7 +294,7 @@ struct ExtraInitAck : public Extra
     uint32_t peerVersion = 0;
     uint32_t minVersion = 0;
 
-    Array<StreamInfo> streams;
+    Array<ExtraStreamInfo> streams;
 
     uint8_t getID() const
     {
