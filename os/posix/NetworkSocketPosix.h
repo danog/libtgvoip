@@ -36,7 +36,7 @@ class NetworkSocketPosix : public NetworkSocket
 public:
 	NetworkSocketPosix(NetworkProtocol protocol);
 	virtual ~NetworkSocketPosix() override;
-	virtual void Send(NetworkPacket packet) override;
+	virtual void Send(NetworkPacket &&packet) override;
 	virtual NetworkPacket Receive(size_t maxLen) override;
 	virtual void Open() override;
 	virtual void Close() override;

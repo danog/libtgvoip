@@ -47,11 +47,10 @@ bool VoIPController::parseRelayPacket(const BufferInputStream &in, Endpoint &src
                     if (allowP2p)
                     {
                         didSendIPv6Endpoint = true;
-                        BufferOutputStream o(18);
-                        o.WriteBytes(myIP, 16);
-                        o.WriteInt16(udpSocket->GetLocalPort());
-                        Buffer b(move(o));
-                        SendExtra(b, ExtraIpv6Endpoint::ID);
+                        auto s = std::make_shared<ExtraIpv6Endpoint>();
+                        s->address = realAddr;
+                        s->port = udpSocket->GetLocalPort();
+                        SendExtra(s);
                     }
                 }
             }
@@ -66,26 +65,23 @@ bool VoIPController::parseRelayPacket(const BufferInputStream &in, Endpoint &src
             uint32_t peerAddr = in.ReadUInt32();
             uint32_t peerPort = in.ReadUInt32();
 
-            constexpr int64_t p2pID = static_cast<int64_t>(FOURCC('P', '2', 'P', '4')) << 32;
-            constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
-
-            if (currentEndpoint == p2pID || currentEndpoint == lanID)
+            if (currentEndpoint == Endpoint::ID::P2Pv4 || currentEndpoint == Endpoint::ID::LANv4)
                 currentEndpoint = preferredRelay;
 
-            if (endpoints.find(lanID) != endpoints.end())
+            if (endpoints.find(Endpoint::ID::LANv4) != endpoints.end())
             {
                 MutexGuard m(endpointsMutex);
-                endpoints.erase(lanID);
+                endpoints.erase(Endpoint::ID::LANv4);
             }
 
             unsigned char peerTag[16];
             LOGW("Received reflector peer info, my=%s:%u, peer=%s:%u", NetworkAddress::IPv4(myAddr).ToString().c_str(), myPort, NetworkAddress::IPv4(peerAddr).ToString().c_str(), peerPort);
             if (waitingForRelayPeerInfo)
             {
-                Endpoint p2p(p2pID, (uint16_t)peerPort, NetworkAddress::IPv4(peerAddr), NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_INET, peerTag);
+                Endpoint p2p(Endpoint::ID::P2Pv4, (uint16_t)peerPort, NetworkAddress::IPv4(peerAddr), NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_INET, peerTag);
                 {
                     MutexGuard m(endpointsMutex);
-                    endpoints[p2pID] = p2p;
+                    endpoints[Endpoint::ID::P2Pv4] = p2p;
                 }
                 if (myAddr == peerAddr)
                 {
@@ -93,18 +89,10 @@ bool VoIPController::parseRelayPacket(const BufferInputStream &in, Endpoint &src
                     NetworkAddress lanAddr = NetworkAddress::IPv4(0);
                     udpSocket->GetLocalInterfaceInfo(&lanAddr, NULL);
 
-                    BufferOutputStream pkt(8);
-                    pkt.WriteInt32(lanAddr.addr.ipv4);
-                    pkt.WriteInt32(udpSocket->GetLocalPort());
-                    if (peerVersion < 6)
-                    {
-                        SendPacketReliably(PKT_LAN_ENDPOINT, pkt.GetBuffer(), pkt.GetLength(), 0.5, 10);
-                    }
-                    else
-                    {
-                        Buffer buf(move(pkt));
-                        SendExtra(buf, ExtraLanEndpoint::ID);
-                    }
+                    auto extra = std::make_shared<ExtraLanEndpoint>();
+                    extra->address = lanAddr;
+                    extra->port = udpSocket->GetLocalPort();
+                    SendExtra(extra);
                 }
                 waitingForRelayPeerInfo = false;
             }

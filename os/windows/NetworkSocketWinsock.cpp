@@ -53,7 +53,7 @@ void NetworkSocketWinsock::SetMaxPriority()
 {
 }
 
-void NetworkSocketWinsock::Send(NetworkPacket packet)
+void NetworkSocketWinsock::Send(NetworkPacket &&packet)
 {
 	if (packet.IsEmpty() || (protocol == NetworkProtocol::UDP && packet.address.IsEmpty()))
 	{
@@ -129,7 +129,7 @@ void NetworkSocketWinsock::Send(NetworkPacket packet)
 				memcpy(addr.sin6_addr.s6_addr, packet.address.addr.ipv6, 16);
 			}
 			addr.sin6_port = htons(packet.port);
-			res = sendto(fd, (const char *)*packet.data, packet.data.Length(), 0, (const sockaddr *)&addr, sizeof(addr));
+			res = sendto(fd, (const char *)*(packet.data.get()), packet.data->Length(), 0, (const sockaddr *)&addr, sizeof(addr));
 		}
 		else
 		{
@@ -137,12 +137,12 @@ void NetworkSocketWinsock::Send(NetworkPacket packet)
 			addr.sin_addr.s_addr = packet.address.addr.ipv4;
 			addr.sin_port = htons(packet.port);
 			addr.sin_family = AF_INET;
-			res = sendto(fd, (const char *)*packet.data, packet.data.Length(), 0, (const sockaddr *)&addr, sizeof(addr));
+			res = sendto(fd, (const char *)*(packet.data.get()), packet.data->Length(), 0, (const sockaddr *)&addr, sizeof(addr));
 		}
 	}
 	else
 	{
-		res = send(fd, (const char *)*packet.data, packet.data.Length(), 0);
+		res = send(fd, (const char *)*(packet.data.get()), packet.data->Length(), 0);
 	}
 	if (res == SOCKET_ERROR)
 	{
@@ -171,7 +171,7 @@ void NetworkSocketWinsock::Send(NetworkPacket packet)
 			}
 		}
 	}
-	else if (res < packet.data.Length() && protocol == NetworkProtocol::TCP)
+	else if (res < packet.data->Length() && protocol == NetworkProtocol::TCP)
 	{
 		if (!pendingOutgoingPacket.IsEmpty())
 		{

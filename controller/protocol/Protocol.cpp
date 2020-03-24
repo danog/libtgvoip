@@ -670,15 +670,14 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
         LOGV("received lan endpoint");
         uint32_t peerAddr = in.ReadUInt32();
         uint16_t peerPort = (uint16_t)in.ReadInt32();
-        constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
         unsigned char peerTag[16];
-        Endpoint lan(lanID, peerPort, NetworkAddress::IPv4(peerAddr), NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_LAN, peerTag);
+        Endpoint lan(Endpoint::ID::LANv4, peerPort, NetworkAddress::IPv4(peerAddr), NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_LAN, peerTag);
 
-        if (currentEndpoint == lanID)
+        if (currentEndpoint == Endpoint::ID::LANv4)
             currentEndpoint = preferredRelay;
 
         MutexGuard m(endpointsMutex);
-        endpoints[lanID] = lan;
+        endpoints[Endpoint::ID::LANv4] = lan;
     }
     if (type == PKT_NETWORK_CHANGED && _currentEndpoint.IsP2P())
     {
@@ -834,14 +833,13 @@ void VoIPController::ProcessExtraData(Buffer &data)
         LOGV("received lan endpoint (extra)");
         uint32_t peerAddr = in.ReadUInt32();
         uint16_t peerPort = static_cast<uint16_t>(in.ReadInt32());
-        constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
-        if (currentEndpoint == lanID)
+        if (currentEndpoint == Endpoint::ID::LANv4)
             currentEndpoint = preferredRelay;
 
         unsigned char peerTag[16];
-        Endpoint lan(lanID, peerPort, NetworkAddress::IPv4(peerAddr), NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_LAN, peerTag);
+        Endpoint lan(Endpoint::ID::LANv4, peerPort, NetworkAddress::IPv4(peerAddr), NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_LAN, peerTag);
         MutexGuard m(endpointsMutex);
-        endpoints[lanID] = lan;
+        endpoints[Endpoint::ID::LANv4] = lan;
     }
     else if (type == ExtraNetworkChanged::ID)
     {
@@ -891,16 +889,14 @@ void VoIPController::ProcessExtraData(Buffer &data)
         peerIPv6Available = true;
         LOGV("Received peer IPv6 endpoint [%s]:%u", addr.ToString().c_str(), port);
 
-        constexpr int64_t p2pID = static_cast<int64_t>(FOURCC('P', '2', 'P', '6')) << 32;
-
         Endpoint ep;
         ep.type = Endpoint::Type::UDP_P2P_INET;
         ep.port = port;
         ep.v6address = addr;
-        ep.id = p2pID;
-        endpoints[p2pID] = ep;
+        ep.id = Endpoint::ID::P2Pv6;
+        endpoints[Endpoint::ID::P2Pv6] = ep;
         if (!myIPv6.IsEmpty())
-            currentEndpoint = p2pID;
+            currentEndpoint = Endpoint::ID::P2Pv6;
     }
 }
 

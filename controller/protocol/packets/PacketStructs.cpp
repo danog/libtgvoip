@@ -90,7 +90,7 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
         out.Write(extraSignaling, ver);
 }
 
-void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras)
+void Packet::prepare(PacketManager &pm)
 {
     if (!seq)
     {
@@ -98,11 +98,35 @@ void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &cu
         ackSeq = pm.getLastRemoteSeq();
         ackMask = pm.getRemoteAckMask();
     }
+}
+void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId)
+{
+    prepare(pm);
     extraSignaling.v.clear();
     for (auto &extra : currentExtras)
     {
-        extraSignaling.v.push_back(extra.data);
-        extra.firstContainingSeq = seq;
+        if (!endpointId || extra.endpointId == endpointId)
+        {
+            extraSignaling.v.push_back(extra.data);
+            extra.firstContainingSeq = seq;
+        }
+    }
+}
+void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId, PacketManager &legacyPm)
+{
+    prepare(pm, currentExtras, endpointId);
+    if (!legacySeq)
+    {
+        if (pm != legacyPm)
+        {
+            legacySeq = legacyPm.nextLocalSeq();
+            ackSeq = pm.getLastRemoteSeq();
+            ackMask = pm.getRemoteAckMask();
+        }
+        else
+        {
+            legacySeq = seq;
+        }
     }
 }
 #include "Legacy.cpp"

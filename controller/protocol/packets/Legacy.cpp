@@ -145,7 +145,6 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
 
 void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, bool>> &outArray, const VersionInfo &ver, const int state, const unsigned char *callID)
 {
-    legacySeq = seq;
     auto originalLegacySeq = legacySeq;
 
     std::vector<Wrapped<Extra>> separatePackets;
@@ -265,7 +264,7 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
 
         legacySeq++;
     }
-    if (legacySeq == originalLegacySeq) // No data was serialized
+    if (legacySeq == originalLegacySeq && nopPacket) // No data was serialized
     {
         LOGW("Serializing NOP packet");
         BufferOutputStream out(1500);

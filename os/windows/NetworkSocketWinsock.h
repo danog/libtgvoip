@@ -33,7 +33,7 @@ class NetworkSocketWinsock : public NetworkSocket
 public:
 	NetworkSocketWinsock(NetworkProtocol protocol);
 	virtual ~NetworkSocketWinsock();
-	virtual void Send(NetworkPacket packet) override;
+	virtual void Send(NetworkPacket &&packet) override;
 	virtual NetworkPacket Receive(size_t maxLen) override;
 	virtual void Open() override;
 	virtual void Close() override;

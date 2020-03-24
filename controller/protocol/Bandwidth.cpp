@@ -69,8 +69,7 @@ void VoIPController::SetNetworkType(int type)
                     if (_preferredRelay.type == Endpoint::Type::UDP_RELAY)
                         currentEndpoint = preferredRelay;
                     MutexGuard m(endpointsMutex);
-                    constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
-                    endpoints.erase(lanID);
+                    endpoints.erase(Endpoint::ID::LANv4);
                     for (pair<const int64_t, Endpoint> &e : endpoints)
                     {
                         Endpoint &endpoint = e.second;
@@ -99,7 +98,7 @@ void VoIPController::SetNetworkType(int type)
                 SendPublicEndpointsRequest();
             }
             SendDataSavingMode();
-            
+
             needReInitUdpProxy = true;
             selectCanceller->CancelSelect();
             didSendIPv6Endpoint = false;

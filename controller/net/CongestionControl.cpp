@@ -6,6 +6,7 @@
 
 #include "CongestionControl.h"
 #include "../PrivateDefines.h"
+#include "../protocol/packets/PacketStructs.h"
 #include "VoIPController.h"
 #include "VoIPServerConfig.h"
 #include "tools/logging.h"
@@ -13,6 +14,9 @@
 #include <math.h>
 
 using namespace tgvoip;
+
+CongestionControlPacket::CongestionControlPacket(uint32_t _seq, uint8_t _streamId) : seq(_seq), streamId(_streamId){};
+CongestionControlPacket::CongestionControlPacket(const Packet &pkt) : seq(pkt.seq), streamId(pkt.streamId){};
 
 CongestionControl::CongestionControl() : cwnd(static_cast<size_t>(ServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024))),
                                          max(cwnd * 1.1),
@@ -49,18 +53,18 @@ double CongestionControl::GetMinimumRTT()
     return rttHistory.Min();
 }
 
-void CongestionControl::PacketSent(uint32_t seq, size_t size, uint8_t streamId)
+void CongestionControl::PacketSent(const CongestionControlPacket &pkt, size_t size)
 {
-    if (lastSentSeq.size() <= streamId)
+    if (lastSentSeq.find(pkt.streamId) == lastSentSeq.end())
     {
-        lastSentSeq[streamId] = 0;
+        lastSentSeq[pkt.streamId] = 0;
     }
-    if (!seqgt(seq, lastSentSeq[streamId]) || seq == lastSentSeq[streamId])
+    if (!seqgt(pkt.seq, lastSentSeq[pkt.streamId]) || pkt.seq == lastSentSeq[pkt.streamId])
     {
-        LOGW("Duplicate outgoing seq %u", seq);
+        LOGW("Duplicate outgoing seq %u", pkt.seq);
         return;
     }
-    lastSentSeq[streamId] = seq;
+    lastSentSeq[pkt.streamId] = pkt.seq;
     double smallestSendTime = INFINITY;
     tgvoip_congestionctl_packet_t *slot = NULL;
     for (auto &packet : inflightPackets)
@@ -83,18 +87,18 @@ void CongestionControl::PacketSent(uint32_t seq, size_t size, uint8_t streamId)
         lossCount++;
         LOGD("Packet with seq %u, streamId=%hhu was not acknowledged", slot->seq, slot->streamId);
     }
-    slot->seq = seq;
+    slot->seq = pkt.seq;
     slot->size = size;
-    slot->streamId = streamId;
+    slot->streamId = pkt.streamId;
     slot->sendTime = VoIPController::GetCurrentTime();
     inflightDataSize += size;
 }
 
-void CongestionControl::PacketAcknowledged(uint32_t seq, uint8_t streamId)
+void CongestionControl::PacketAcknowledged(const CongestionControlPacket &pkt)
 {
     for (auto &packet : inflightPackets)
     {
-        if (packet.seq == seq && packet.streamId == streamId && packet.sendTime > 0)
+        if (packet.seq == pkt.seq && packet.streamId == pkt.streamId && packet.sendTime > 0)
         {
             tmpRtt += (VoIPController::GetCurrentTime() - packet.sendTime);
             tmpRttCount++;
@@ -105,11 +109,11 @@ void CongestionControl::PacketAcknowledged(uint32_t seq, uint8_t streamId)
     }
 }
 
-void CongestionControl::PacketLost(uint32_t seq, uint8_t streamId)
+void CongestionControl::PacketLost(const CongestionControlPacket &pkt)
 {
     for (auto &packet : inflightPackets)
     {
-        if (packet.seq == seq && packet.streamId == streamId && packet.sendTime > 0)
+        if (packet.seq == pkt.seq && packet.streamId == pkt.streamId && packet.sendTime > 0)
         {
             packet.sendTime = 0;
             inflightDataSize -= packet.size;

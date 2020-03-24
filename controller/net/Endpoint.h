@@ -27,6 +27,16 @@ public:
         TCP_RELAY
     };
 
+    enum ID : int64_t
+    {
+        P2Pv4 = static_cast<int64_t>(FOURCC('P', '2', 'P', '4')) << 32,
+        LANv4 = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32,
+
+        P2Pv6 = static_cast<int64_t>(FOURCC('P', '2', 'P', '6')) << 32,
+
+        Any = 0
+    };
+
     Endpoint(int64_t id, uint16_t port, const IPv4Address &address, const IPv6Address &v6address, Type type, unsigned char *peerTag);
     Endpoint(int64_t id, uint16_t port, const NetworkAddress address, const NetworkAddress v6address, Type type, unsigned char *peerTag);
     Endpoint();

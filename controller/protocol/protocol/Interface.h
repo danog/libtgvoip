@@ -331,6 +331,7 @@ struct Bytes : public Serializable,
 
 struct UInt32 : public Serializable, SingleChoice<UInt32>
 {
+    UInt32(uint32_t _data) : data(_data){};
     bool parse(const BufferInputStream &in, const VersionInfo &ver)
     {
         return in.TryRead(data);

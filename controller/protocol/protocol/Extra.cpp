@@ -106,7 +106,7 @@ uint8_t Extra::chooseType(int peerVersion) const
     }
     return PKT_NOP;
 }
-Extra::std::string print() const override
+std::string Extra::print() const
 {
     switch (getID())
     {
@@ -200,12 +200,12 @@ void ExtraStreamCsd::serialize(BufferOutputStream &out, const VersionInfo &ver) 
 bool ExtraLanEndpoint::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
     return in.TryRead(address, false) &&
-           in.TryRead(port);
+           (ver.isNew() ? in.TryRead(port) : in.TryReadCompat<uint32_t>(port));
 }
 void ExtraLanEndpoint::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
     out.WriteUInt32(address.addr.ipv4);
-    out.WriteUInt16(port);
+    ver.isNew() ? out.WriteUInt16(port) : out.WriteUInt32(port);
 }
 
 bool ExtraIpv6Endpoint::parse(const BufferInputStream &in, const VersionInfo &ver)

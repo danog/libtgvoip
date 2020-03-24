@@ -3,25 +3,17 @@
 using namespace tgvoip;
 using namespace std;
 
-void VoIPController::SendPacketReliably(unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries)
+void VoIPController::SendPacketReliably(PendingOutgoingPacket &_pkt, double retryInterval, double timeout, uint8_t tries)
 {
     ENFORCE_MSG_THREAD;
 #ifdef LOG_PACKETS
     LOGV("Send reliably, type=%u, len=%u, retry=%.3f, timeout=%.3f, tries=%hhu", type, unsigned(len), retryInterval, timeout, tries);
 #endif
-    ReliableOutgoingPacket pkt;
-    if (data)
-    {
-        Buffer b(len);
-        b.CopyFrom(data, 0, len);
-        pkt.data = move(b);
-    }
-    pkt.type = type;
-    pkt.retryInterval = retryInterval;
-    pkt.timeout = timeout;
-    pkt.tries = tries;
-    pkt.firstSentTime = 0;
-    pkt.lastSentTime = 0;
+    ReliableOutgoingPacket pkt{
+        std::move(_pkt),
+        retryInterval,
+        timeout,
+        tries};
     reliablePackets.push_back(move(pkt));
     messageThread.Post(std::bind(&VoIPController::UpdateReliablePackets, this));
     if (timeout > 0.0)
@@ -33,7 +25,7 @@ void VoIPController::SendPacketReliably(unsigned char *data, size_t len, double 
 void VoIPController::UpdateReliablePackets()
 {
     vector<PendingOutgoingPacket> packetsToSend;
-    for (std::vector<ReliableOutgoingPacket>::iterator qp = reliablePackets.begin(); qp != reliablePackets.end();)
+    for (auto qp = reliablePackets.begin(); qp != reliablePackets.end();)
     {
         if (qp->timeout > 0 && qp->firstSentTime > 0 && GetCurrentTime() - qp->firstSentTime >= qp->timeout)
         {
@@ -54,45 +46,29 @@ void VoIPController::UpdateReliablePackets()
         if (GetCurrentTime() - qp->lastSentTime >= qp->retryInterval)
         {
             messageThread.Post(std::bind(&VoIPController::UpdateReliablePackets, this), qp->retryInterval);
-            uint32_t seq = packetManager.nextLocalSeq();
-            qp->seqs.Add(seq);
             qp->lastSentTime = GetCurrentTime();
 #ifdef LOG_PACKETS
-            LOGD("Sending reliable queued packet, seq=%u, type=%u, len=%lu", seq, qp->type, qp->data.Length());
+            LOGD("Sending reliable queued packet, seq=%u, len=%lu", qp->seq, qp->data->Length());
 #endif
-            Buffer buf(qp->data.Length());
             if (qp->firstSentTime == 0)
                 qp->firstSentTime = qp->lastSentTime;
-            if (qp->data.Length())
-                buf.CopyFromOtherBuffer(qp->data, qp->data.Length());
-            packetsToSend.push_back(PendingOutgoingPacket{
-                /*.seq=*/seq,
-                /*.type=*/qp->type,
-                /*.len=*/qp->data.Length(),
-                /*.data=*/move(buf),
-                /*.endpoint=*/0});
+
+            packetsToSend.push_back(qp->pkt);
         }
         ++qp;
     }
-    for (PendingOutgoingPacket &pkt : packetsToSend)
+    for (auto &pkt : packetsToSend)
     {
-        SendOrEnqueuePacket(move(pkt));
+        SendOrEnqueuePacket(pkt);
     }
 }
-void VoIPController::handleReliablePackets()
+void VoIPController::HandleReliablePackets(const PacketManager &pm)
 {
     for (auto it = reliablePackets.begin(); it != reliablePackets.end();)
     {
-        ReliableOutgoingPacket &qp = *it;
-        bool didAck = false;
-        for (uint8_t i = 0; i < qp.seqs.Size(); ++i)
+        if (pm.wasLocalAcked(it->pkt.pktInfo.seq))
         {
-            if (!qp.seqs[i] || (didAck = packetManager.wasLocalAcked(qp.seqs[i])))
-                break;
-        }
-        if (didAck)
-        {
-            LOGV("Acked queued packet with %hhu tries left", qp.tries);
+            LOGV("Acked queued packet with %hhu tries left", it->tries);
             it = reliablePackets.erase(it);
             continue;
         }

@@ -8,113 +8,8 @@ using namespace std;
 //std::mt19937 rng(dev());
 //std::uniform_int_distribution<std::mt19937::result_type> dist6(0, 9); // distribution in range [1, 6]
 
-bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &&pkt, bool enqueue)
+PendingOutgoingPacket VoIPController::PreparePacket(unsigned char *data, size_t len, Endpoint &ep, CongestionControlPacket &&pkt)
 {
-    ENFORCE_MSG_THREAD;
-
-    Endpoint *endpoint = GetEndpointForPacket(pkt);
-    if (!endpoint)
-    {
-        abort();
-        return false;
-    }
-
-    bool canSend;
-    if (endpoint->type != Endpoint::Type::TCP_RELAY)
-    {
-        canSend = realUdpSocket->IsReadyToSend();
-    }
-    else
-    {
-        if (!endpoint->socket)
-        {
-            LOGV("Connecting to %s:%u", endpoint->GetAddress().ToString().c_str(), endpoint->port);
-            if (proxyProtocol == PROXY_NONE)
-            {
-                endpoint->socket = make_shared<NetworkSocketTCPObfuscated>(NetworkSocket::Create(NetworkProtocol::TCP));
-                endpoint->socket->Connect(endpoint->GetAddress(), endpoint->port);
-            }
-            else if (proxyProtocol == PROXY_SOCKS5)
-            {
-                std::shared_ptr<NetworkSocket> tcp = NetworkSocket::Create(NetworkProtocol::TCP);
-                tcp->Connect(resolvedProxyAddress, proxyPort);
-                shared_ptr<NetworkSocketSOCKS5Proxy> proxy = make_shared<NetworkSocketSOCKS5Proxy>(tcp, nullptr, proxyUsername, proxyPassword);
-                endpoint->socket = proxy;
-                endpoint->socket->Connect(endpoint->GetAddress(), endpoint->port);
-            }
-            selectCanceller->CancelSelect();
-        }
-        canSend = endpoint->socket && endpoint->socket->IsReadyToSend();
-    }
-    if (!canSend)
-    {
-        if (enqueue)
-        {
-            LOGW("Not ready to send - enqueueing");
-            sendQueue.push_back(move(pkt));
-        }
-        return false;
-    }
-    if ((endpoint->type == Endpoint::Type::TCP_RELAY && useTCP) || (endpoint->type != Endpoint::Type::TCP_RELAY && useUDP))
-    {
-        Packet &packet = pkt.packet;
-        PacketManager &pm = outgoingStreams[ver.isNew() ? packet.streamId : StreamId::Signaling]->packetManager;
-        packet.prepare(pm, currentExtras);
-
-        if (ver.isNew())
-        {
-            //BufferOutputStream out(packet.getSize()); // Can precalc, should check if it's worth it
-            BufferOutputStream out(1500);
-            packet.serialize(out, ver);
-            SendPacket(out.GetBuffer(), out.GetLength(), *endpoint);
-            conctl.PacketSent(packet.seq, out.GetLength(), packet.streamId);
-        }
-        else
-        {
-            std::vector<std::tuple<unsigned char *, size_t, bool>> out;
-            packet.serializeLegacy(out, ver, state, callID);
-            size_t length = 0;
-            for (auto &t : out)
-            {
-                if (std::get<2>(t))
-                {
-                }
-                else
-                {
-                    SendPacket(std::get<0>(t), std::get<1>(t), *endpoint);
-                }
-                length += std::get<1>(t);
-            }
-            conctl.PacketSent(packet.seq, length, packet.streamId);
-            pm.setLocalSeq(packet.legacySeq);
-        }
-
-//LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
-#ifdef LOG_PACKETS
-        //LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, streamId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), streamId);
-#endif
-
-        //BufferOutputStream out(1500);
-        //uint8_t streamId = WritePacketHeader(pkt, out, source);
-        /*if (!dist6(rng))
-        {
-            LOGW("DROPPING");
-        }
-        else*/
-        /*if (pkt.type == PKT_STREAM_DATA)
-        {
-            unsentStreamPackets--;
-        }*/
-    }
-    return true;
-}
-
-void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep)
-{
-    if (stopping)
-        return;
-    if (ep.type == Endpoint::Type::TCP_RELAY && !useTCP)
-        return;
     BufferOutputStream out(len + 128);
     if (ep.IsReflector())
         out.WriteBytes((unsigned char *)ep.peerTag, 16);
@@ -126,72 +21,167 @@ void VoIPController::SendPacket(unsigned char *data, size_t len, Endpoint &ep)
         encryptPacket(data, len, out);
     }
 
-    rawSendQueue.Put(
-        RawPendingOutgoingPacket{
-            NetworkPacket{
-                Buffer(std::move(out)),
-                ep.GetAddress(),
-                ep.port,
-                ep.type == Endpoint::Type::TCP_RELAY ? NetworkProtocol::TCP : NetworkProtocol::UDP},
-            ep.type == Endpoint::Type::TCP_RELAY ? ep.socket : nullptr});
+    return PendingOutgoingPacket(std::make_shared<Buffer>(std::move(out)), std::move(pkt), ep.id);
+}
+void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, double timeout, uint8_t tries)
+{
+    ENFORCE_MSG_THREAD;
+    bool isReliable = tries;
+    Endpoint &endpoint = *GetEndpointForPacket(pkt);
+    Packet &packet = pkt.packet;
+    PacketManager &pm = outgoingStreams[packet.streamId]->packetManager;
+
+    if (ver.isNew())
+    {
+        packet.prepare(pm, currentExtras, endpoint.id);
+
+        //BufferOutputStream out(packet.getSize()); // Can precalc, should check if it's worth it
+        BufferOutputStream out(1500);
+        packet.serialize(out, ver);
+
+        auto res = PreparePacket(out.GetBuffer(), out.GetLength(), endpoint, CongestionControlPacket(packet));
+        if (isReliable)
+        {
+            SendPacketReliably(res, retryInterval, timeout, tries);
+        }
+        else
+        {
+            SendOrEnqueuePacket(res);
+        }
+    }
+    else
+    {
+        PacketManager &legacyPm = outgoingStreams[StreamId::Signaling]->packetManager;
+        packet.prepare(pm, currentExtras, endpoint.id, legacyPm);
+
+        uint32_t seq = legacyPm.getLocalSeq();
+
+        std::vector<std::tuple<unsigned char *, size_t, bool>> out;
+        packet.serializeLegacy(out, ver, state, callID);
+        legacyPm.setLocalSeq(packet.legacySeq);
+
+        size_t length = 0;
+        for (auto &t : out)
+        {
+            auto res = PreparePacket(std::get<0>(t), std::get<1>(t), endpoint, CongestionControlPacket(seq++, StreamId::Signaling));
+            if (std::get<2>(t) || isReliable)
+            {
+                SendPacketReliably(res, retryInterval, timeout, tries);
+            }
+            else
+            {
+                SendOrEnqueuePacket(res);
+            }
+        }
+    }
+}
+
+bool VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueue)
+{
+    Endpoint &endpoint = *GetEndpointForPacket(pkt);
+    bool canSend;
+    if (endpoint.type != Endpoint::Type::TCP_RELAY)
+    {
+        canSend = realUdpSocket->IsReadyToSend();
+    }
+    else
+    {
+        if (!endpoint.socket)
+        {
+            LOGV("Connecting to %s:%u", endpoint.GetAddress().ToString().c_str(), endpoint.port);
+            if (proxyProtocol == PROXY_NONE)
+            {
+                endpoint.socket = make_shared<NetworkSocketTCPObfuscated>(NetworkSocket::Create(NetworkProtocol::TCP));
+                endpoint.socket->Connect(endpoint.GetAddress(), endpoint.port);
+            }
+            else if (proxyProtocol == PROXY_SOCKS5)
+            {
+                std::shared_ptr<NetworkSocket> tcp = NetworkSocket::Create(NetworkProtocol::TCP);
+                tcp->Connect(resolvedProxyAddress, proxyPort);
+                shared_ptr<NetworkSocketSOCKS5Proxy> proxy = make_shared<NetworkSocketSOCKS5Proxy>(tcp, nullptr, proxyUsername, proxyPassword);
+                endpoint.socket = proxy;
+                endpoint.socket->Connect(endpoint.GetAddress(), endpoint.port);
+            }
+            selectCanceller->CancelSelect();
+        }
+        canSend = endpoint.socket && endpoint.socket->IsReadyToSend();
+    }
+    if (!canSend)
+    {
+        if (enqueue)
+        {
+            LOGW("Not ready to send - enqueueing");
+            sendQueue.push_back(move(pkt));
+        }
+        return false;
+    }
+    if ((endpoint.type == Endpoint::Type::TCP_RELAY && useTCP) || (endpoint.type != Endpoint::Type::TCP_RELAY && useUDP))
+    {
+        if (stopping)
+            return;
+        if (endpoint.type == Endpoint::Type::TCP_RELAY && !useTCP)
+            return;
+
+        conctl.PacketSent(pkt.pktInfo, pkt.packet->Length());
+
+        rawSendQueue.Put(
+            RawPendingOutgoingPacket{
+                NetworkPacket{
+                    pkt.packet,
+                    endpoint.GetAddress(),
+                    endpoint.port,
+                    endpoint.type == Endpoint::Type::TCP_RELAY ? NetworkProtocol::TCP : NetworkProtocol::UDP},
+                endpoint.type == Endpoint::Type::TCP_RELAY ? endpoint.socket : nullptr});
+
+//LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
+#ifdef LOG_PACKETS
+        //LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, streamId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), streamId);
+#endif
+    }
+    return true;
 }
 
 void VoIPController::SendInit()
 {
     ENFORCE_MSG_THREAD;
 
-    uint32_t initSeq = packetManager.nextLocalSeq();
+    auto init = std::make_shared<ExtraInit>();
+    init->peerVersion = PROTOCOL_VERSION;
+    init->minVersion = MIN_PROTOCOL_VERSION;
+    if (config.enableCallUpgrade)
+        init->flags |= ExtraInit::Flags::GroupCallSupported;
+    if (config.enableVideoReceive)
+        init->flags |= ExtraInit::Flags::VideoRecvSupported;
+    if (config.enableVideoSend)
+        init->flags |= ExtraInit::Flags::VideoSendSupported;
+    if (dataSavingMode)
+        init->flags |= ExtraInit::Flags::DataSavingEnabled;
+
+    init->audioCodecs.v.push_back(Codec::Opus);
+    if (config.enableVideoReceive)
+    {
+        for (auto &decoder : video::VideoRenderer::GetAvailableDecoders())
+        {
+            init->decoders.v.push_back(decoder);
+        }
+    }
+    init->maxResolution = ver.connectionMaxLayer >= 92 ? video::VideoRenderer::GetMaximumResolution() : 0;
+
+    SendExtra(init);
+
+    auto &pm = outgoingStreams[StreamId::Signaling]->packetManager;
+    uint32_t seq = pm.nextLocalSeq();
+
     for (pair<const int64_t, Endpoint> &_e : endpoints)
     {
         Endpoint &e = _e.second;
         if (e.type == Endpoint::Type::TCP_RELAY && !useTCP)
             continue;
-        BufferOutputStream out(1024);
-        out.WriteInt32(PROTOCOL_VERSION);
-        out.WriteInt32(MIN_PROTOCOL_VERSION);
-        uint32_t flags = 0;
-        if (config.enableCallUpgrade)
-            flags |= ExtraInit::Flags::GroupCallSupported;
-        if (config.enableVideoReceive)
-            flags |= ExtraInit::Flags::VideoRecvSupported;
-        if (config.enableVideoSend)
-            flags |= ExtraInit::Flags::VideoSendSupported;
-        if (dataSavingMode)
-            flags |= ExtraInit::Flags::DataSavingEnabled;
-        out.WriteInt32(flags);
-        if (connectionMaxLayer < 74)
-        {
-            out.WriteByte(2); // audio codecs count
-            out.WriteByte(CODEC_OPUS_OLD);
-            out.WriteByte(0);
-            out.WriteByte(0); // idk, stuff I guess
-            out.WriteByte(0);
-            out.WriteInt32(Codec::Opus);
-            out.WriteByte(0); // video codecs count (decode)
-            out.WriteByte(0); // video codecs count (encode)
-        }
-        else
-        {
-            out.WriteByte(1);
-            out.WriteInt32(Codec::Opus);
-            vector<uint32_t> decoders = config.enableVideoReceive ? video::VideoRenderer::GetAvailableDecoders() : vector<uint32_t>();
-            vector<uint32_t> encoders = config.enableVideoSend ? video::VideoSource::GetAvailableEncoders() : vector<uint32_t>();
-            out.WriteByte((unsigned char)decoders.size());
-            for (uint32_t id : decoders)
-            {
-                out.WriteInt32(id);
-            }
-            if (connectionMaxLayer >= 92)
-                out.WriteByte((unsigned char)video::VideoRenderer::GetMaximumResolution());
-            else
-                out.WriteByte(0);
-        }
-        SendOrEnqueuePacket(PendingOutgoingPacket{
-            /*.seq=*/initSeq,
-            /*.type=*/PKT_INIT,
-            /*.len=*/out.GetLength(),
-            /*.data=*/Buffer(move(out)),
-            /*.endpoint=*/e.id});
+        Packet p;
+        p.seq = seq;
+        p.ackSeq = pm.getLastRemoteSeq();
+        p.ackMask = pm.getRemoteAckMask();
+        SendPacket(OutgoingPacket(std::move(p), e.id));
     }
 
     if (state == STATE_WAIT_INIT)
@@ -293,7 +283,7 @@ void VoIPController::TrySendOutgoingPackets()
         if (canSend)
         {
             LOGI("Sending queued packet");
-            SendOrEnqueuePacket(move(*opkt), false);
+            SendOrEnqueuePacket(*opkt, false);
             opkt = sendQueue.erase(opkt);
         }
         else
@@ -325,12 +315,8 @@ void VoIPController::SendRelayPings()
             if (GetCurrentTime() - endpoint.lastPingTime >= 10)
             {
                 LOGV("Sending ping to %s", endpoint.GetAddress().ToString().c_str());
-                SendOrEnqueuePacket(PendingOutgoingPacket{
-                    /*.seq=*/(endpoint.lastPingSeq = packetManager.nextLocalSeq()),
-                    /*.type=*/PKT_PING,
-                    /*.len=*/0,
-                    /*.data=*/Buffer(),
-                    /*.endpoint=*/endpoint.id});
+                SendExtra(std::make_shared<ExtraPing>(), endpoint.id);
+                SendNopPacket(endpoint.id);
                 endpoint.lastPingTime = GetCurrentTime();
             }
             if ((useUDP && endpoint.type == Endpoint::Type::UDP_RELAY) || (useTCP && endpoint.type == Endpoint::Type::TCP_RELAY))
@@ -356,22 +342,19 @@ void VoIPController::SendRelayPings()
         }
         if (_currentEndpoint->type == Endpoint::Type::UDP_RELAY && useUDP)
         {
-            constexpr int64_t p2pID = static_cast<int64_t>(FOURCC('P', '2', 'P', '4')) << 32;
-            constexpr int64_t lanID = static_cast<int64_t>(FOURCC('L', 'A', 'N', '4')) << 32;
-
-            if (endpoints.find(p2pID) != endpoints.end())
+            if (endpoints.find(Endpoint::ID::P2Pv4) != endpoints.end())
             {
-                Endpoint &p2p = endpoints[p2pID];
-                if (endpoints.find(lanID) != endpoints.end() && endpoints[lanID].averageRTT > 0 && endpoints[lanID].averageRTT < minPing * relayToP2pSwitchThreshold)
+                Endpoint &p2p = endpoints[Endpoint::ID::P2Pv4];
+                if (endpoints.find(Endpoint::ID::LANv4) != endpoints.end() && endpoints[Endpoint::ID::LANv4].averageRTT > 0 && endpoints[Endpoint::ID::LANv4].averageRTT < minPing * relayToP2pSwitchThreshold)
                 {
-                    currentEndpoint = lanID;
+                    currentEndpoint = Endpoint::ID::LANv4;
                     LOGI("Switching to p2p (LAN)");
                 }
                 else
                 {
                     if (p2p.averageRTT > 0 && p2p.averageRTT < minPing * relayToP2pSwitchThreshold)
                     {
-                        currentEndpoint = p2pID;
+                        currentEndpoint = Endpoint::ID::P2Pv4;
                         LOGI("Switching to p2p (Inet)");
                     }
                 }
@@ -388,22 +371,11 @@ void VoIPController::SendRelayPings()
     }
 }
 
-void VoIPController::SendNopPacket(PacketManager &pm)
+void VoIPController::SendNopPacket(int64_t endpointId, double retryInterval, double timeout, uint8_t tries)
 {
     if (state != STATE_ESTABLISHED)
         return;
-    PacketSender *source = pm.getstreamId() == 0xFF ? nullptr : outgoingStreams[pm.getstreamId()]->packetSender.get();
-    SendOrEnqueuePacket(PendingOutgoingPacket(Packet(), 0), source);
-    /* {
-                            /*.seq=*/
-    (firstSentPing = pm.nextLocalSeq()),
-        /*.type=*/PKT_NOP,
-        /*.len=*/0,
-        /*.data=*/Buffer(),
-        /*.endpoint=*/0
-},
-                        source);
-* /
+    SendPacket(OutgoingPacket(Packet(), endpointId), retryInterval, timeout, tries);
 }
 
 void VoIPController::SendPublicEndpointsRequest()
@@ -445,9 +417,9 @@ void VoIPController::SendPublicEndpointsRequest(const Endpoint &relay)
     LOGD("Sending public endpoints request to %s:%d", relay.address.ToString().c_str(), relay.port);
     publicEndpointsReqTime = GetCurrentTime();
     waitingForRelayPeerInfo = true;
-    Buffer buf(32);
-    memcpy(*buf, relay.peerTag, 16);
-    memset(*buf + 16, 0xFF, 16);
+    auto buf = std::make_shared<Buffer>(32);
+    memcpy(**buf, relay.peerTag, 16);
+    memset(**buf + 16, 0xFF, 16);
     udpSocket->Send(NetworkPacket{
         std::move(buf),
         relay.address,
@@ -475,15 +447,15 @@ void VoIPController::SendDataSavingMode()
     s->flags |= dataSavingMode ? ExtraInit::Flags::DataSavingEnabled : 0;
     SendExtra(s);
 }
-void VoIPController::SendExtra(std::shared_ptr<Extra> &&_d)
+void VoIPController::SendExtra(std::shared_ptr<Extra> &&_d, int64_t endpointId)
 {
-    SendExtra(Wrapped<Extra>(_d));
+    SendExtra(Wrapped<Extra>(_d), endpointId);
 }
-void VoIPController::SendExtra(std::shared_ptr<Extra> &_d)
+void VoIPController::SendExtra(std::shared_ptr<Extra> &_d, int64_t endpointId)
 {
-    SendExtra(Wrapped<Extra>(_d));
+    SendExtra(Wrapped<Extra>(std::move(_d)), endpointId);
 }
-void VoIPController::SendExtra(Wrapped<Extra> &&extra)
+void VoIPController::SendExtra(Wrapped<Extra> &&extra, int64_t endpointId)
 {
     ENFORCE_MSG_THREAD;
 
@@ -491,14 +463,14 @@ void VoIPController::SendExtra(Wrapped<Extra> &&extra)
     LOGV("Sending extra type %hhu", type);
     for (auto &extra : currentExtras)
     {
-        if (extra.data.getID() == type)
+        if (extra.data.getID() == type && extra.endpointId == endpointId)
         {
             extra.firstContainingSeq = 0;
             extra.data = std::move(extra.data);
             return;
         }
     }
-    currentExtras.push_back(UnacknowledgedExtraData(std::move(extra)));
+    currentExtras.push_back(UnacknowledgedExtraData(std::move(extra), endpointId));
 }
 
 void VoIPController::SendUdpPing(Endpoint &endpoint)
@@ -516,7 +488,7 @@ void VoIPController::SendUdpPing(Endpoint &endpoint)
     p.WriteInt64(id);
     endpoint.udpPingTimes[id] = GetCurrentTime();
     udpSocket->Send(NetworkPacket{
-        Buffer(std::move(p)),
+        std::make_shared<Buffer>(std::move(p)),
         endpoint.GetAddress(),
         endpoint.port,
         NetworkProtocol::UDP});

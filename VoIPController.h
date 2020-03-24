@@ -405,14 +405,19 @@ protected:
     virtual void SendUdpPing(Endpoint &endpoint);
     virtual void SendRelayPings();
 
-    bool SendOrEnqueuePacket(PendingOutgoingPacket &&pkt, bool enqueue = true);
-    virtual void SendPacket(unsigned char *data, size_t len, Endpoint &ep);
-    void SendPacketReliably(unsigned char *data, size_t len, double retryInterval, double timeout, uint8_t tries = 0xFF);
+    PendingOutgoingPacket PreparePacket(unsigned char *data, size_t len, Endpoint &ep, CongestionControlPacket &&pkt);
+
+    void SendPacket(OutgoingPacket &&pkt, double retryInterval = 0.5, double timeout = 5.0, uint8_t tries = 0);
+
+    bool SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueue = true);
+    void SendPacketReliably(PendingOutgoingPacket &pkt, double retryInterval, double timeout, uint8_t tries = 0xFF);
+
+    void SendNopPacket(int64_t endpointId = 0, double retryInterval = 0.5, double timeout = 5.0, uint8_t tries = 0);
     virtual void SendInit();
     virtual void SendDataSavingMode();
-    virtual void SendExtra(Wrapped<Extra> &&extra);
-    virtual void SendExtra(std::shared_ptr<Extra> &&_d);
-    virtual void SendExtra(std::shared_ptr<Extra> &_d);
+    virtual void SendExtra(Wrapped<Extra> &&extra, int64_t endpointId = 0);
+    virtual void SendExtra(std::shared_ptr<Extra> &&_d, int64_t endpointId = 0);
+    virtual void SendExtra(std::shared_ptr<Extra> &_d, int64_t endpointId = 0);
     template <class T>
     void SendStreamFlags(const MediaStream<T> &stream)
     {
@@ -438,6 +443,7 @@ protected:
     void ResetEndpointPingStats();
     void ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool keyframe, uint16_t rotation);
     Endpoint *GetEndpointForPacket(const PendingOutgoingPacket &pkt);
+    Endpoint *GetEndpointForPacket(const OutgoingPacket &pkt);
     Endpoint *GetEndpointById(const int64_t id);
     CellularCarrierInfo GetCarrierInfo();
 
@@ -515,7 +521,6 @@ private:
     void UpdateAudioBitrate();
     void UpdateSignalBars();
     void UpdateReliablePackets();
-    void SendNopPacket(PacketManager &pm);
     void TickJitterBufferAndCongestionControl();
     void ResetUdpAvailability();
     inline static std::string NetworkTypeToString(int type)
@@ -579,7 +584,7 @@ private:
 
     bool parseRelayPacket(const BufferInputStream &in, Endpoint &srcEndpoint);
 
-    void handleReliablePackets();
+    void HandleReliablePackets(const PacketManager &pm);
 
     void SetupOutgoingVideoStream();
     void NetworkPacketReceived(std::shared_ptr<NetworkPacket> packet);

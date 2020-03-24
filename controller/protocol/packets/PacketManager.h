@@ -25,6 +25,14 @@ public:
     PacketManager() = delete;
     PacketManager(uint8_t transportId);
 
+    bool operator==(const PacketManager &other)
+    {
+        return transportId == other.transportId;
+    }
+    bool operator!=(const PacketManager &other)
+    {
+        return transportId != other.transportId;
+    }
     // Transport ID for multiplexing
     inline uint8_t getTransportId()
     {
@@ -43,7 +51,7 @@ public:
     }
 
     // Get current local seqno
-    inline uint32_t getLocalSeq()
+    inline uint32_t getLocalSeq() const
     {
         return seq;
     }
@@ -53,7 +61,7 @@ public:
         seq = _seq;
     }
 
-    inline uint32_t getLastSentSeq()
+    inline uint32_t getLastSentSeq() onst
     {
         return lastSentSeq;
     }
@@ -77,7 +85,7 @@ public:
     void ackLocal(uint32_t ackId, uint32_t mask);
 
     // Check if local seq was acked
-    bool wasLocalAcked(uint32_t seq);
+    bool wasLocalAcked(uint32_t seq) const;
 
     inline uint32_t getLastAckedSeq() const
     {
@@ -103,12 +111,12 @@ public:
     }
 
     // Get ack mask for remote packets
-    inline uint32_t getRemoteAckMask()
+    inline uint32_t getRemoteAckMask() const
     {
         return lastRemoteSeqsMask;
     }
 
-    inline uint32_t getLastRemoteSeq()
+    inline uint32_t getLastRemoteSeq() const
     {
         return lastRemoteSeq;
     }

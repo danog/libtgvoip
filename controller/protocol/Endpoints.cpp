@@ -8,6 +8,12 @@ Endpoint &VoIPController::GetRemoteEndpoint()
     return endpoints.at(currentEndpoint);
 }
 
+Endpoint *VoIPController::GetEndpointForPacket(const OutgoingPacket &pkt)
+{
+    return GetEndpointById(pkt.endpoint);
+}
+
+
 Endpoint *VoIPController::GetEndpointForPacket(const PendingOutgoingPacket &pkt)
 {
     return GetEndpointById(pkt.endpoint);

@@ -82,9 +82,9 @@ void NetworkSocketPosix::SetMaxPriority()
 #endif
 }
 
-void NetworkSocketPosix::Send(NetworkPacket packet)
+void NetworkSocketPosix::Send(NetworkPacket &&packet)
 {
-	if (packet.data.IsEmpty() || (protocol == NetworkProtocol::UDP && packet.port == 0))
+	if (packet.IsEmpty() || (protocol == NetworkProtocol::UDP && packet.port == 0))
 	{
 		LOGW("tried to send null packet");
 		return;
@@ -158,12 +158,12 @@ void NetworkSocketPosix::Send(NetworkPacket packet)
 		}
 		addr.sin6_port = htons(packet.port);
 		std::lock_guard<std::mutex> lock(m_fd);
-		res = (int)sendto(fd, *packet.data, packet.data.Length(), 0, (const sockaddr *)&addr, sizeof(addr));
+		res = (int)sendto(fd, *(packet.data.get()), packet.data->Length(), 0, (const sockaddr *)&addr, sizeof(addr));
 	}
 	else
 	{
 		std::lock_guard<std::mutex> lock(m_fd);
-		res = (int)send(fd, *packet.data, packet.data.Length(), 0);
+		res = (int)send(fd, *(packet.data.get()), packet.data->Length(), 0);
 	}
 	if (res <= 0)
 	{
@@ -191,7 +191,7 @@ void NetworkSocketPosix::Send(NetworkPacket packet)
 			}
 		}
 	}
-	else if ((size_t)res != packet.data.Length() && packet.protocol == NetworkProtocol::TCP)
+	else if ((size_t)res != packet.data->Length() && packet.protocol == NetworkProtocol::TCP)
 	{
 		if (!pendingOutgoingPacket.IsEmpty())
 		{

@@ -28,6 +28,8 @@ struct Extra : public Serializable, MultiChoice<Extra>
 struct Codec : public Serializable, SingleChoice<Codec>
 {
 public:
+    Codec(uint32_t _codec) : codec(_codec){};
+
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
@@ -163,7 +165,7 @@ struct ExtraNetworkChanged : public Extra
 
     size_t getConstructorSize(const VersionInfo &ver) const override
     {
-        return sizeof(streamId) + ver.isNew() ? sizeof(flags) : 4;
+        return sizeof(streamId) + (ver.isNew() ? sizeof(flags) : 4);
     }
 };
 
@@ -184,7 +186,7 @@ public:
 
     size_t getConstructorSize(const VersionInfo &ver) const override
     {
-        return 4 + 2;
+        return 4 + (ver.isNew() ? 2 : 4);
     }
 };
 

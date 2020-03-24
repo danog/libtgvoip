@@ -134,9 +134,9 @@ void VoIPController::RunSendThread()
             break;
 
         if (IS_MOBILE_NETWORK(networkType))
-            stats.bytesSentMobile += static_cast<uint64_t>(pkt.packet.data.Length());
+            stats.bytesSentMobile += static_cast<uint64_t>(pkt.packet.data->Length());
         else
-            stats.bytesSentWifi += static_cast<uint64_t>(pkt.packet.data.Length());
+            stats.bytesSentWifi += static_cast<uint64_t>(pkt.packet.data->Length());
 
         if (pkt.packet.protocol == NetworkProtocol::TCP)
         {

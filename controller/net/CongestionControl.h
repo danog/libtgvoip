@@ -31,15 +31,24 @@ struct tgvoip_congestionctl_packet_t
 };
 typedef struct tgvoip_congestionctl_packet_t tgvoip_congestionctl_packet_t;
 
+class Packet;
+struct CongestionControlPacket
+{
+    CongestionControlPacket(uint32_t _seq, uint8_t _streamId);
+    CongestionControlPacket(const Packet &pkt);
+    uint32_t seq;
+    uint8_t streamId;
+};
+
 class CongestionControl
 {
 public:
     CongestionControl();
     ~CongestionControl();
 
-    void PacketSent(uint32_t seq, size_t size, uint8_t streamId);
-    void PacketLost(uint32_t seq, uint8_t streamId);
-    void PacketAcknowledged(uint32_t seq, uint8_t streamId);
+    void PacketSent(const CongestionControlPacket &pkt, size_t size);
+    void PacketLost(const CongestionControlPacket &pkt);
+    void PacketAcknowledged(const CongestionControlPacket &pkt);
 
     double GetAverageRTT();
     double GetMinimumRTT();
@@ -60,7 +69,7 @@ private:
     double lastActionRtt = 0;
     double stateTransitionTime = 0;
     uint32_t tmpRttCount = 0;
-    std::vector<uint32_t> lastSentSeq;
+    std::map<uint8_t, uint32_t> lastSentSeq;
     uint32_t tickCount = 0;
     size_t inflightDataSize = 0;
 
