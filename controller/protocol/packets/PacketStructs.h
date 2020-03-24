@@ -5,6 +5,7 @@
 #include "../protocol/Extra.h"
 #include "../protocol/Interface.h"
 #include <vector>
+#include <memory>
 //#include "../net/PacketSender.h"
 
 namespace tgvoip
@@ -124,7 +125,7 @@ public:
 
     uint32_t recvTS = 0;
 
-    Buffer data;
+    std::unique_ptr<Buffer> data;
 
     Mask<Wrapped<Bytes>> extraEC;
     Array<Wrapped<Extra>> extraSignaling;
@@ -139,7 +140,7 @@ public:
     std::string print() const override
     {
         std::stringstream res;
-        res << data ? "Data packet" : extraEC ? "EC packet" : extraSignaling ? "Signaling packet" : nopPacket ? "NOP packet" : "Empty packet";
+        res << (data ? "Data packet" : extraEC ? "EC packet" : extraSignaling ? "Signaling packet" : nopPacket ? "NOP packet" : "Empty packet");
         res << "(streamId=" << streamId << ")";
         if (extraEC)
             res << "; extraEC";
@@ -157,7 +158,7 @@ public:
                sizeof(ackMask) +
                sizeof(streamId) +
                (streamId > StreamId::Extended ? sizeof(streamId) : 0) +
-               (data.Length() > 0xFF || eFlags ? 2 : 1) + // Length
+               (data->Length() > 0xFF || eFlags ? 2 : 1) + // Length
                (recvTS ? sizeof(recvTS) : 0) +
                (extraEC ? extraEC.getSize(ver) : 0) +
                (extraSignaling ? extraSignaling.getSize(ver) : 0);

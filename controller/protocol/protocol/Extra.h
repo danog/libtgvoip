@@ -20,7 +20,7 @@ struct Extra : public Serializable, MultiChoice<Extra>
     std::string print() const override;
 
     uint64_t hash;
-    
+
     size_t getSize(const VersionInfo &ver) const override
     {
         return 1 + getConstructorSize(ver);
@@ -31,7 +31,10 @@ struct Codec : public Serializable, SingleChoice<Codec>
 {
 public:
     Codec(uint32_t _codec) : codec(_codec){};
-
+    operator uint32_t() const
+    {
+        return codec;
+    }
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
@@ -56,9 +59,11 @@ public:
     uint32_t codec = 0;
 };
 
+struct MediaStreamInfo;
 struct ExtraStreamInfo : public Serializable, SingleChoice<ExtraStreamInfo>
 {
 public:
+    ExtraStreamInfo(const MediaStreamInfo &stm);
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
@@ -72,7 +77,7 @@ public:
     uint8_t streamId = 0;
     Type type = Type::Audio;
     Codec codec;
-    uint16_t frameDuration = 0;
+    uint16_t frameDuration = 60;
     bool enabled = false;
 
     std::string print() const override

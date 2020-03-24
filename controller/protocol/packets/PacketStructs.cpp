@@ -39,8 +39,8 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
             return false;
     }
 
-    data = Buffer(length);
-    if (in.TryRead(data))
+    data = std::make_unique<Buffer>(length);
+    if (in.TryRead(*data))
         return false;
 
     if ((flags & Flags::RecvTS) && !in.TryRead(recvTS))
@@ -57,7 +57,7 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
     uint8_t shortStreamId = streamId > StreamId::Extended ? StreamId::Extended : streamId;
     uint8_t flags = 0;
-    if (data.Length() > 0xFF || eFlags)
+    if (data->Length() > 0xFF || eFlags)
         flags |= Flags::Len16;
     if (recvTS)
         flags |= Flags::RecvTS;
@@ -75,11 +75,11 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
         out.WriteByte(streamId);
 
     if (flags & Flags::Len16)
-        out.WriteUInt16(data.Length() | (eFlags << 11));
+        out.WriteUInt16(data->Length() | (eFlags << 11));
     else
-        out.WriteByte(data.Length());
+        out.WriteByte(data->Length());
 
-    out.WriteBytes(data);
+    out.WriteBytes(*data);
 
     if (flags & Flags::RecvTS)
         out.WriteUInt32(recvTS);

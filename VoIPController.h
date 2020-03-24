@@ -399,7 +399,7 @@ public:
 protected:
     virtual void ProcessIncomingPacket(NetworkPacket &packet, Endpoint &srcEndpoint);
     virtual void ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint);
-    virtual void ProcessExtraData(const Wrapped<Extra> &data);
+    virtual void ProcessExtraData(const Wrapped<Extra> &data, Endpoint &srcEndpoint);
 
     //virtual uint8_t WritePacketHeader(PendingOutgoingPacket &pkt, BufferOutputStream &s, PacketSender *source);
     virtual void SendUdpPing(Endpoint &endpoint);
@@ -609,7 +609,6 @@ private:
 
     HistoricBuffer<uint32_t, 10, double> sendLossCountHistory;
     HistoricBuffer<uint32_t, 10, double> packetCountHistory;
-    uint32_t audioTimestampIn = 0;
 
     std::shared_ptr<OpusEncoder> encoder;
     std::unique_ptr<tgvoip::audio::AudioIO> audioIO;

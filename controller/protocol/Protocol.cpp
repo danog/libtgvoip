@@ -104,7 +104,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
 
     for (auto &extra : packet.extraSignaling)
     {
-        ProcessExtraData(extra);
+        ProcessExtraData(extra, srcEndpoint);
     }
 
     auto &sender = outgoingStreams[manager.transportId]->packetSender;
@@ -205,266 +205,89 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
             peerPreferredRelay = srcEndpoint.id;
         }
 
-        uint8_t count = 1;
-        switch (type)
-        {
-        case PKT_STREAM_DATA_X2:
-            count = 2;
-            break;
-        case PKT_STREAM_DATA_X3:
-            count = 3;
-            break;
-        }
-        uint8_t i;
-        for (i = 0; i < count; i++)
-        {
-            unsigned char streamID = in.ReadByte();
-            unsigned char flags = (unsigned char)(streamID & 0xC0);
-            streamID &= 0x3F;
-            uint16_t sdlen = (uint16_t)(flags & STREAM_DATA_FLAG_LEN16 ? in.ReadInt16() : in.ReadByte());
-            uint32_t pts = in.ReadUInt32();
-            unsigned char fragmentCount = 1;
-            unsigned char fragmentIndex = 0;
-            //LOGE("RECV: For pts %u = seq %u, got seq %u", pts, pts/60 + 1, pseq);
+        //LOGE("RECV: For pts %u = seq %u, got seq %u", pts, pts/60 + 1, pseq);
 
-            //LOGD("stream data, pts=%d, len=%d, rem=%d", pts, sdlen, in.Remaining());
-            audioTimestampIn = pts;
-            if (!audioOutStarted && audioOutput)
+        //LOGD("stream data, pts=%d, len=%d, rem=%d", pts, sdlen, in.Remaining());
+        auto &_stm = GetStreamByID<IncomingStream>(packet.streamId);
+        if (!_stm)
+        {
+            LOGW("received packet for unknown stream %u", (unsigned int)packet.streamId);
+            return;
+        }
+        if (!audioOutStarted && audioOutput)
+        {
+            MutexGuard m(audioIOMutex);
+            audioOutput->Start();
+            audioOutStarted = true;
+        }
+        if (_stm->type == StreamType::Audio)
+        {
+            auto stm = dynamic_pointer_cast<IncomingAudioStream>(_stm);
+            uint32_t pts = packet.seq * stm->frameDuration;
+            if (stm->jitterBuffer)
             {
-                MutexGuard m(audioIOMutex);
-                audioOutput->Start();
-                audioOutStarted = true;
-            }
-            bool fragmented = static_cast<bool>(sdlen & STREAM_DATA_XFLAG_FRAGMENTED);
-            bool extraFEC = static_cast<bool>(sdlen & STREAM_DATA_XFLAG_EXTRA_FEC);
-            bool keyframe = static_cast<bool>(sdlen & STREAM_DATA_XFLAG_KEYFRAME);
-            if (fragmented)
-            {
-                fragmentIndex = in.ReadByte();
-                fragmentCount = in.ReadByte();
-            }
-            sdlen &= 0x7FF;
-            if (in.GetOffset() + sdlen > len)
-            {
-                return;
-            }
-            shared_ptr<Stream> stm;
-            for (shared_ptr<Stream> &ss : incomingStreams)
-            {
-                if (ss->id == streamID)
-                {
-                    stm = ss;
-                    break;
-                }
-            }
-            if (stm && stm->type == StreamType::Audio)
-            {
-                if (stm->jitterBuffer)
-                {
-                    stm->jitterBuffer->HandleInput(static_cast<unsigned char *>(buffer + in.GetOffset()), sdlen, pts, false);
-                    /*if (peerVersion >= PROTOCOL_RELIABLE)
+                stm->jitterBuffer->HandleInput(std::move(packet.data), pts, false);
+                /*if (peerVersion >= PROTOCOL_RELIABLE)
                     {
                         // Technically I should be using the specific packet manager's rtt history but will separate later
                         uint32_t tooOldSeq = stm->jitterBuffer->GetSeqTooLate(rttHistory[0]) - 1;
                         LOGW("Reverse acking seqs older than %u, newest acked seq %u (transportId %hhu)", tooOldSeq, manager.getLastRemoteSeq(), transportId);
                         manager.ackRemoteSeqsOlderThan(tooOldSeq);
                     }*/
-                    if (extraFEC)
-                    {
-                        in.Seek(in.GetOffset() + sdlen);
-                        unsigned int fecCount = in.ReadByte();
-                        for (unsigned int j = 0; j < fecCount; j++)
-                        {
-                            unsigned char dlen = in.ReadByte();
-                            unsigned char data[256];
-                            in.ReadBytes(data, dlen);
-                            stm->jitterBuffer->HandleInput(data, dlen, pts - (fecCount - j) * stm->frameDuration, true);
-                        }
-                    }
-                }
-            }
-            else if (stm && stm->type == StreamType::Video)
-            {
-                if (stm->packetReassembler)
+                if (packet.extraEC)
                 {
-                    uint8_t frameSeq = in.ReadByte();
-                    Buffer pdata(sdlen);
-                    uint16_t rotation = 0;
-                    if (fragmentIndex == 0)
+                    for (uint8_t i = 0; i < 8; i++)
                     {
-                        unsigned char _rotation = in.ReadByte() & (unsigned char)VIDEO_ROTATION_MASK;
-                        switch (_rotation)
+                        if (packet.extraEC.v[i])
                         {
-                        case VIDEO_ROTATION_0:
-                            rotation = 0;
-                            break;
-                        case VIDEO_ROTATION_90:
-                            rotation = 90;
-                            break;
-                        case VIDEO_ROTATION_180:
-                            rotation = 180;
-                            break;
-                        case VIDEO_ROTATION_270:
-                            rotation = 270;
-                            break;
-                        default: // unreachable on sane CPUs
-                            abort();
+                            stm->jitterBuffer->HandleInput(std::move(packet.extraEC.v[i].get<Bytes>().data), pts - (8 - i) * stm->frameDuration, true);
                         }
-                        //if(rotation!=stm->rotation){
-                        //	stm->rotation=rotation;
-                        //	LOGI("Video rotation: %u", rotation);
-                        //}
                     }
-                    pdata.CopyFrom(buffer + in.GetOffset(), 0, sdlen);
-                    stm->packetReassembler->AddFragment(std::move(pdata), fragmentIndex, fragmentCount, pts, frameSeq, keyframe, rotation);
                 }
-                //LOGV("Received video fragment %u of %u", fragmentIndex, fragmentCount);
-            }
-            else
-            {
-                LOGW("received packet for unknown stream %u", (unsigned int)streamID);
-            }
-            if (i < count - 1)
-                in.Seek(in.GetOffset() + sdlen);
-        }
-    }
-    if (type == PKT_PING)
-    {
-        //LOGD("Received ping from %s:%d", srcEndpoint.address.ToString().c_str(), srcEndpoint.port);
-        if (srcEndpoint.type != Endpoint::Type::UDP_RELAY && srcEndpoint.type != Endpoint::Type::TCP_RELAY && !allowP2p)
-        {
-            LOGW("Received p2p ping but p2p is disabled by manual override");
-            return;
-        }
-        BufferOutputStream pkt(128);
-        pkt.WriteInt32(pseq);
-        size_t pktLength = pkt.GetLength();
-        SendOrEnqueuePacket(PendingOutgoingPacket{
-            /*.seq=*/packetManager.nextLocalSeq(),
-            /*.type=*/PKT_PONG,
-            /*.len=*/pktLength,
-            /*.data=*/Buffer(move(pkt)),
-            /*.endpoint=*/srcEndpoint.id,
-        });
-    }
-    if (type == PKT_PONG)
-    {
-        if (packetInnerLen >= 4)
-        {
-            uint32_t pingSeq = in.ReadUInt32();
-#ifdef LOG_PACKETS
-            LOGD("Received pong for ping in seq %u", pingSeq);
-#endif
-            if (pingSeq == srcEndpoint.lastPingSeq)
-            {
-                srcEndpoint.rtts.Add(GetCurrentTime() - srcEndpoint.lastPingTime);
-                srcEndpoint.averageRTT = srcEndpoint.rtts.NonZeroAverage();
-                LOGD("Current RTT via %s: %.3f, average: %.3f", packet.address.ToString().c_str(), srcEndpoint.rtts[0], srcEndpoint.averageRTT);
-                if (srcEndpoint.averageRTT > rateMaxAcceptableRTT)
-                    needRate = true;
             }
         }
-    }
-    if (type == PKT_STREAM_STATE)
-    {
-        unsigned char id = in.ReadByte();
-        unsigned char enabled = in.ReadByte();
-        LOGV("Peer stream state: id %u flags %u", (int)id, (int)enabled);
-        for (vector<shared_ptr<Stream>>::iterator s = incomingStreams.begin(); s != incomingStreams.end(); ++s)
+        else if (_stm->type == StreamType::Video)
         {
-            if ((*s)->id == id)
-            {
-                (*s)->enabled = enabled == 1;
-                UpdateAudioOutputState();
-                break;
-            }
-        }
-    }
-    if (type == PKT_LAN_ENDPOINT)
-    {
-        LOGV("received lan endpoint");
-        uint32_t peerAddr = in.ReadUInt32();
-        uint16_t peerPort = (uint16_t)in.ReadInt32();
-        unsigned char peerTag[16];
-        Endpoint lan(Endpoint::ID::LANv4, peerPort, NetworkAddress::IPv4(peerAddr), NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_LAN, peerTag);
-
-        if (currentEndpoint == Endpoint::ID::LANv4)
-            currentEndpoint = preferredRelay;
-
-        MutexGuard m(endpointsMutex);
-        endpoints[Endpoint::ID::LANv4] = lan;
-    }
-    if (type == PKT_NETWORK_CHANGED && _currentEndpoint.IsP2P())
-    {
-        currentEndpoint = preferredRelay;
-        if (allowP2p)
-            SendPublicEndpointsRequest();
-        if (peerVersion >= 2)
-        {
-            uint32_t flags = in.ReadUInt32();
-            dataSavingRequestedByPeer = flags & ExtraInit::Flags::DataSavingEnabled;
-            UpdateDataSavingState();
-            UpdateAudioBitrateLimit();
-            ResetEndpointPingStats();
-        }
-    }
-    if (type == PKT_STREAM_EC)
-    {
-        unsigned char streamID = in.ReadByte();
-        if (peerVersion < 7)
-        {
-            uint32_t lastTimestamp = in.ReadUInt32();
-            unsigned char count = in.ReadByte();
-            for (shared_ptr<Stream> &stm : incomingStreams)
-            {
-                if (stm->id == streamID)
+            auto stm = dynamic_pointer_cast<IncomingVideoStream>(_stm);
+            if (stm->packetReassembler)
+            { /*
+                uint8_t frameSeq = in.ReadByte();
+                Buffer pdata(sdlen);
+                uint16_t rotation = 0;
+                if (fragmentIndex == 0)
                 {
-                    for (unsigned int i = 0; i < count; i++)
+                    unsigned char _rotation = in.ReadByte() & (unsigned char)VIDEO_ROTATION_MASK;
+                    switch (_rotation)
                     {
-                        unsigned char dlen = in.ReadByte();
-                        unsigned char data[256];
-                        in.ReadBytes(data, dlen);
-                        if (stm->jitterBuffer)
-                        {
-                            stm->jitterBuffer->HandleInput(data, dlen, lastTimestamp - (count - i) * stm->frameDuration, true);
-                        }
+                    case VIDEO_ROTATION_0:
+                        rotation = 0;
+                        break;
+                    case VIDEO_ROTATION_90:
+                        rotation = 90;
+                        break;
+                    case VIDEO_ROTATION_180:
+                        rotation = 180;
+                        break;
+                    case VIDEO_ROTATION_270:
+                        rotation = 270;
+                        break;
+                    default: // unreachable on sane CPUs
+                        abort();
                     }
-                    break;
+                    //if(rotation!=stm->rotation){
+                    //	stm->rotation=rotation;
+                    //	LOGI("Video rotation: %u", rotation);
+                    //}
                 }
+                pdata.CopyFrom(buffer + in.GetOffset(), 0, sdlen);
+                stm->packetReassembler->AddFragment(std::move(pdata), fragmentIndex, fragmentCount, pts, frameSeq, keyframe, rotation);*/
             }
-        }
-        else
-        {
-            shared_ptr<Stream> stm = GetStreamByID(streamID, false);
-            if (!stm)
-            {
-                LOGW("Received FEC packet for unknown stream %u", streamID);
-                return;
-            }
-            if (stm->type != StreamType::Video)
-            {
-                LOGW("Received FEC packet for non-video stream %u", streamID);
-                return;
-            }
-            if (!stm->packetReassembler)
-                return;
-
-            uint8_t fseq = in.ReadByte();
-            unsigned char fecScheme = in.ReadByte();
-            unsigned char prevFrameCount = in.ReadByte();
-            uint16_t fecLen = in.ReadUInt16();
-            if (fecLen > in.Remaining())
-                return;
-
-            Buffer fecData(fecLen);
-            in.ReadBytes(fecData);
-
-            stm->packetReassembler->AddFEC(std::move(fecData), fseq, prevFrameCount, fecScheme);
+            //LOGV("Received video fragment %u of %u", fragmentIndex, fragmentCount);
         }
     }
 }
 
-void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
+void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &srcEndpoint)
 {
     auto type = _data.getID();
     if (lastReceivedExtrasByType[type] == _data.d->hash)
@@ -516,62 +339,50 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
         if (!receivedInit && ((data.flags & ExtraInit::Flags::VideoSendSupported && config.enableVideoReceive) || (data.flags & ExtraInit::Flags::VideoRecvSupported && config.enableVideoSend)))
         {
             LOGD("Peer video decoders:");
-            uint8_t numSupportedVideoDecoders = in.ReadByte();
-            for (auto i = 0; i < numSupportedVideoDecoders; i++)
+            for (const auto &decoder : data.decoders)
             {
-                uint32_t id = in.ReadUInt32();
-                peerVideoDecoders.push_back(id);
-                char *_id = reinterpret_cast<char *>(&id);
-                LOGD("%c%c%c%c", _id[3], _id[2], _id[1], _id[0]);
+                {
+                    peerVideoDecoders.push_back(decoder);
+                    LOGD("%c%c%c%c", PRINT_FOURCC(decoder.data))
+                }
+                ver.maxVideoResolution = data.maxResolution;
+
+                SetupOutgoingVideoStream();
             }
-            protocolInfo.maxVideoResolution = in.ReadByte();
 
-            SetupOutgoingVideoStream();
-        }
+            auto ack = std::make_shared<ExtraInitAck>();
+            ack->peerVersion = PROTOCOL_VERSION;
+            ack->minVersion = MIN_PROTOCOL_VERSION;
 
-        BufferOutputStream out(1024);
-
-        out.WriteInt32(PROTOCOL_VERSION);
-        out.WriteInt32(MIN_PROTOCOL_VERSION);
-
-        out.WriteByte((unsigned char)outgoingStreams.size());
-        for (const auto &stream : outgoingStreams)
-        {
-            out.WriteByte(stream->id);
-            out.WriteByte(stream->type);
-            if (ver.peerVersion < 5)
-                out.WriteByte((unsigned char)(stream->codec == Codec::Opus ? CODEC_OPUS_OLD : 0));
-            else
-                out.WriteInt32(stream->codec);
-            out.WriteInt16(stream->frameDuration);
-            out.WriteByte((unsigned char)(stream->enabled ? 1 : 0));
-        }
-        LOGI("Sending init ack");
-        size_t outLength = out.GetOffset();
-        SendOrEnqueuePacket(PendingOutgoingPacket{
-            /*.seq=*/packetManager.nextLocalSeq(),
-            /*.type=*/PKT_INIT_ACK,
-            /*.len=*/outLength,
-            /*.data=*/Buffer(move(out)),
-            /*.endpoint=*/0});
-        if (!receivedInit)
-        {
-            receivedInit = true;
-            if ((srcEndpoint.type == Endpoint::Type::UDP_RELAY && udpConnectivityState != UDP_BAD && udpConnectivityState != UDP_NOT_AVAILABLE) || srcEndpoint.type == Endpoint::Type::TCP_RELAY)
+            for (const auto &stream : outgoingStreams)
             {
-                currentEndpoint = srcEndpoint.id;
-                if (srcEndpoint.type == Endpoint::Type::UDP_RELAY || (useTCP && srcEndpoint.type == Endpoint::Type::TCP_RELAY))
-                    preferredRelay = srcEndpoint.id;
+                ack->streams.v.push_back(*dynamic_pointer_cast<MediaStreamInfo>(stream));
             }
-        }
-        if (!audioStarted && receivedInitAck)
-        {
-            StartAudio();
-            audioStarted = true;
+
+            LOGI("Sending init ack");
+            SendExtra(ack);
+            SendNopPacket();
+
+            if (!receivedInit)
+            {
+                receivedInit = true;
+                if ((srcEndpoint.type == Endpoint::Type::UDP_RELAY && udpConnectivityState != UDP_BAD && udpConnectivityState != UDP_NOT_AVAILABLE) || srcEndpoint.type == Endpoint::Type::TCP_RELAY)
+                {
+                    currentEndpoint = srcEndpoint.id;
+                    if (srcEndpoint.type == Endpoint::Type::UDP_RELAY || (useTCP && srcEndpoint.type == Endpoint::Type::TCP_RELAY))
+                        preferredRelay = srcEndpoint.id;
+                }
+            }
+            if (!audioStarted && receivedInitAck)
+            {
+                StartAudio();
+                audioStarted = true;
+            }
         }
     }
-    if (type == PKT_INIT_ACK)
+    else if (type == ExtraInitAck::ID)
     {
+        auto &data = _data.get<ExtraInitAck>();
         LOGD("Received init ack");
 
         if (!receivedInitAck)
@@ -581,81 +392,74 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
             messageThread.Cancel(initTimeoutID);
             initTimeoutID = MessageThread::INVALID_ID;
 
-            if (packetInnerLen > 10)
+            ver.peerVersion = data.peerVersion;
+            if (data.minVersion > PROTOCOL_VERSION || data.peerVersion < MIN_PROTOCOL_VERSION)
             {
-                ver.peerVersion = in.ReadInt32();
-                uint32_t minVer = in.ReadUInt32();
-                if (minVer > PROTOCOL_VERSION || ver.peerVersion < MIN_PROTOCOL_VERSION)
-                {
-                    lastError = ERROR_INCOMPATIBLE;
+                lastError = ERROR_INCOMPATIBLE;
 
-                    SetState(STATE_FAILED);
-                    return;
-                }
-            }
-            else
-            {
-                ver.peerVersion = 1;
+                SetState(STATE_FAILED);
+                return;
             }
 
             LOGI("peer version from init ack %d", ver.peerVersion);
 
-            unsigned char streamCount = in.ReadByte();
-            if (streamCount == 0)
-                return;
-
-            int i;
-            shared_ptr<Stream> incomingAudioStream = nullptr;
-            for (i = 0; i < streamCount; i++)
+            shared_ptr<IncomingAudioStream> incomingAudioStream;
+            for (const auto &stm : data.streams)
             {
-                shared_ptr<Stream> stm = make_shared<Stream>();
-                stm->id = in.ReadByte();
-                stm->type = static_cast<StreamType>(in.ReadByte());
-                if (ver.peerVersion < 5)
+                if (stm.type == StreamType::Video)
                 {
-                    unsigned char codec = in.ReadByte();
-                    if (codec == CODEC_OPUS_OLD)
-                        stm->codec = Codec::Opus;
-                }
-                else
-                {
-                    stm->codec = in.ReadUInt32();
-                }
-                in.ReadInt16();
-                stm->frameDuration = 60;
-                stm->enabled = in.ReadByte() == 1;
-                if (stm->type == StreamType::Video && ver.peerVersion < 9)
-                {
-                    LOGV("Skipping video stream for old protocol version");
-                    continue;
-                }
-                if (stm->type == StreamType::Audio)
-                {
-                    stm->jitterBuffer = make_shared<JitterBuffer>(stm->frameDuration);
-                    if (stm->frameDuration > 50)
-                        stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_60", 2));
-                    else if (stm->frameDuration > 30)
-                        stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_40", 4));
-                    else
-                        stm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_20", 6));
-                    stm->decoder = nullptr;
-                }
-                else if (stm->type == StreamType::Video)
-                {
-                    if (!stm->packetReassembler)
+                    if (ver.peerVersion < 9)
                     {
-                        stm->packetReassembler = make_shared<PacketReassembler>();
-                        stm->packetReassembler->SetCallback(bind(&VoIPController::ProcessIncomingVideoFrame, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
+                        LOGV("Skipping video stream for old protocol version");
+                        continue;
                     }
+                    auto vStm = std::make_shared<IncomingVideoStream>();
+                    vStm->id = stm.streamId;
+                    vStm->type = stm.type;
+                    vStm->codec = stm.codec;
+                    vStm->enabled = stm.enabled;
+
+                    vStm->packetReassembler = std::make_shared<PacketReassembler>();
+                    vStm->packetReassembler->SetCallback(bind(&VoIPController::ProcessIncomingVideoFrame, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
+
+                    incomingStreams.push_back(dynamic_pointer_cast<IncomingStream>(vStm));
+                }
+                else if (stm.type == StreamType::Audio)
+                {
+                    auto aStm = std::make_shared<IncomingAudioStream>();
+                    aStm->id = stm.streamId;
+                    aStm->type = stm.type;
+                    aStm->codec = stm.codec;
+                    aStm->enabled = stm.enabled;
+                    aStm->frameDuration = 60;
+
+                    aStm->jitterBuffer = make_shared<JitterBuffer>(aStm->frameDuration);
+                    if (aStm->frameDuration > 50)
+                        aStm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_60", 2));
+                    else if (aStm->frameDuration > 30)
+                        aStm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_40", 4));
+                    else
+                        aStm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_20", 6));
+                    aStm->decoder = nullptr;
+
+                    if (!incomingAudioStream)
+                        incomingAudioStream = aStm;
+
+                    incomingStreams.push_back(dynamic_pointer_cast<IncomingStream>(aStm));
+                }
+                else if (stm.type == StreamType::Signaling)
+                {
+                    auto sStm = std::make_shared<IncomingStream>();
+                    sStm->id = stm.streamId;
+                    sStm->type = stm.type;
+                    sStm->enabled = stm.enabled;
+                    incomingStreams.push_back(std::move(sStm));
                 }
                 else
                 {
-                    LOGW("Unknown incoming stream type: %d", stm->type);
+                    LOGW("Unknown incoming stream type: %hhu", stm.type);
                     continue;
                 }
-                incomingStreams.push_back(stm);
-                if (stm->type == StreamType::Audio && !incomingAudioStream)
-                    incomingAudioStream = stm;
             }
             if (!incomingAudioStream)
                 return;
@@ -683,35 +487,38 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
                 SendPublicEndpointsRequest();
         }
     }
-    if (type == ExtraStreamFlags::ID)
+    else if (type == ExtraStreamFlags::ID)
     {
-        unsigned char id = in.ReadByte();
-        uint32_t flags = in.ReadUInt32();
-        LOGV("Peer stream state: id %u flags %u", (unsigned int)id, (unsigned int)flags);
-        for (shared_ptr<Stream> &s : incomingStreams)
+        auto &data = _data.get<ExtraStreamFlags>();
+        LOGV("Peer stream state: id %u flags %u", (unsigned int)data.streamId, (unsigned int)data.flags);
+        for (auto &s : incomingStreams)
         {
-            if (s->id == id)
+            if (s->id == data.streamId)
             {
                 bool prevEnabled = s->enabled;
                 bool prevPaused = s->paused;
-                s->enabled = flags & ExtraStreamFlags::Flags::Enabled;
-                s->paused = flags & ExtraStreamFlags::Flags::Paused;
-                if (flags & ExtraStreamFlags::Flags::ExtraEC)
+                s->enabled = data.flags & ExtraStreamFlags::Flags::Enabled;
+                s->paused = data.flags & ExtraStreamFlags::Flags::Paused;
+                if (s->type == StreamType::Audio)
                 {
-                    if (!s->extraECEnabled)
+                    auto astm = dynamic_pointer_cast<IncomingAudioStream>(s);
+                    if (data.flags & ExtraStreamFlags::Flags::ExtraEC)
                     {
-                        s->extraECEnabled = true;
-                        if (s->jitterBuffer)
-                            s->jitterBuffer->SetMinPacketCount(4);
+                        if (!astm->extraECEnabled)
+                        {
+                            astm->extraECEnabled = true;
+                            if (astm->jitterBuffer)
+                                astm->jitterBuffer->SetMinPacketCount(4);
+                        }
                     }
-                }
-                else
-                {
-                    if (s->extraECEnabled)
+                    else
                     {
-                        s->extraECEnabled = false;
-                        if (s->jitterBuffer)
-                            s->jitterBuffer->SetMinPacketCount(2);
+                        if (astm->extraECEnabled)
+                        {
+                            astm->extraECEnabled = false;
+                            if (astm->jitterBuffer)
+                                astm->jitterBuffer->SetMinPacketCount(2);
+                        }
                     }
                 }
                 if (prevEnabled != s->enabled && s->type == StreamType::Video && videoRenderer)
@@ -725,25 +532,18 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
     }
     else if (type == ExtraStreamCsd::ID)
     {
+        auto &data = _data.get<ExtraStreamCsd>();
         LOGI("Received codec specific data");
-        unsigned char streamID = in.ReadByte();
-        for (shared_ptr<Stream> &stm : incomingStreams)
+        auto &stm = GetStreamByID<IncomingVideoStream>(data.streamId);
+        if (stm)
         {
-            if (stm->id == streamID)
+            stm->codecSpecificData.clear();
+            stm->csdIsValid = false;
+            stm->width = data.width;
+            stm->height = data.height;
+            for (auto &v : data.data)
             {
-                stm->codecSpecificData.clear();
-                stm->csdIsValid = false;
-                stm->width = static_cast<unsigned int>(in.ReadInt16());
-                stm->height = static_cast<unsigned int>(in.ReadInt16());
-                uint8_t count = in.ReadByte();
-                for (uint8_t i = 0; i < count; i++)
-                {
-                    size_t len = (size_t)in.ReadByte();
-                    Buffer csd(len);
-                    in.ReadBytes(*csd, len);
-                    stm->codecSpecificData.push_back(move(csd));
-                }
-                break;
+                stm->codecSpecificData.push_back(std::move(v.data));
             }
         }
     }
@@ -751,28 +551,32 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
     {
         if (!allowP2p)
             return;
+        auto &data = _data.get<ExtraLanEndpoint>();
         LOGV("received lan endpoint (extra)");
-        uint32_t peerAddr = in.ReadUInt32();
-        uint16_t peerPort = static_cast<uint16_t>(in.ReadInt32());
         if (currentEndpoint == Endpoint::ID::LANv4)
             currentEndpoint = preferredRelay;
 
         unsigned char peerTag[16];
-        Endpoint lan(Endpoint::ID::LANv4, peerPort, NetworkAddress::IPv4(peerAddr), NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_LAN, peerTag);
+        Endpoint lan(Endpoint::ID::LANv4, data.port, data.address, NetworkAddress::Empty(), Endpoint::Type::UDP_P2P_LAN, peerTag);
         MutexGuard m(endpointsMutex);
         endpoints[Endpoint::ID::LANv4] = lan;
     }
     else if (type == ExtraNetworkChanged::ID)
     {
         LOGI("Peer network changed");
+        auto &data = _data.get<ExtraNetworkChanged>();
         wasNetworkHandover = true;
         const Endpoint &_currentEndpoint = endpoints.at(currentEndpoint);
         if (_currentEndpoint.type != Endpoint::Type::UDP_RELAY && _currentEndpoint.type != Endpoint::Type::TCP_RELAY)
             currentEndpoint = preferredRelay;
         if (allowP2p)
             SendPublicEndpointsRequest();
-        uint32_t flags = in.ReadUInt32();
-        dataSavingRequestedByPeer = flags & ExtraInit::Flags::DataSavingEnabled;
+
+        if (ver.peerVersion < 2)
+        {
+            return;
+        }
+        dataSavingRequestedByPeer = data.flags & ExtraInit::Flags::DataSavingEnabled;
         UpdateDataSavingState();
         UpdateAudioBitrateLimit();
         ResetEndpointPingStats();
@@ -781,11 +585,10 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
     {
         if (!didReceiveGroupCallKey && !didSendGroupCallKey)
         {
-            unsigned char groupKey[256];
-            in.ReadBytes(groupKey, 256);
-            messageThread.Post([this, &groupKey] {
+            auto &data = _data.get<ExtraGroupCallKey>();
+            messageThread.Post([this, &data] {
                 if (callbacks.groupCallKeyReceived)
-                    callbacks.groupCallKeyReceived(this, groupKey);
+                    callbacks.groupCallKeyReceived(this, *data.key);
             });
             didReceiveGroupCallKey = true;
         }
@@ -805,22 +608,82 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
     {
         if (!allowP2p)
             return;
-        NetworkAddress addr = NetworkAddress::IPv6(in);
-        uint16_t port = in.ReadUInt16();
+
+        auto &data = _data.get<ExtraIpv6Endpoint>();
         peerIPv6Available = true;
-        LOGV("Received peer IPv6 endpoint [%s]:%u", addr.ToString().c_str(), port);
+        LOGV("Received peer IPv6 endpoint [%s]:%u", data.address.ToString().c_str(), data.port);
 
         Endpoint ep;
         ep.type = Endpoint::Type::UDP_P2P_INET;
-        ep.port = port;
-        ep.v6address = addr;
+        ep.port = data.port;
+        ep.v6address = data.address;
         ep.id = Endpoint::ID::P2Pv6;
         endpoints[Endpoint::ID::P2Pv6] = ep;
         if (!myIPv6.IsEmpty())
             currentEndpoint = Endpoint::ID::P2Pv6;
     }
-}
+    else if (type == ExtraPing::ID)
+    {
+        //LOGD("Received ping from %s:%d", srcEndpoint.address.ToString().c_str(), srcEndpoint.port);
+        if (srcEndpoint.type != Endpoint::Type::UDP_RELAY && srcEndpoint.type != Endpoint::Type::TCP_RELAY && !allowP2p)
+        {
+            LOGW("Received p2p ping but p2p is disabled by manual override");
+            return;
+        }
+        auto pong = std::make_shared<ExtraPong>();
+        SendExtra(pong);
+        SendNopPacket();
+    }
+    else if (type == ExtraPong::ID)
+    {
+        auto &data = _data.get<ExtraPong>();
+        if (data.seq)
+        {
+#ifdef LOG_PACKETS
+            LOGD("Received pong for ping in seq %u", data.seq);
+#endif
+            if (data.seq == srcEndpoint.lastPingSeq)
+            {
+                srcEndpoint.rtts.Add(GetCurrentTime() - srcEndpoint.lastPingTime);
+                srcEndpoint.averageRTT = srcEndpoint.rtts.NonZeroAverage();
+                LOGD("Current RTT via %s: %.3f, average: %.3f", srcEndpoint.address.ToString().c_str(), srcEndpoint.rtts[0], srcEndpoint.averageRTT);
+                if (srcEndpoint.averageRTT > rateMaxAcceptableRTT)
+                    needRate = true;
+            }
+        }
+    }
+    /*
+    else if (type == PKT_STREAM_EC)
+    {
+        {
+            shared_ptr<Stream> stm = GetStreamByID(streamID, false);
+            if (!stm)
+            {
+                LOGW("Received FEC packet for unknown stream %u", streamID);
+                return;
+            }
+            if (stm->type != StreamType::Video)
+            {
+                LOGW("Received FEC packet for non-video stream %u", streamID);
+                return;
+            }
+            if (!stm->packetReassembler)
+                return;
 
+            uint8_t fseq = in.ReadByte();
+            unsigned char fecScheme = in.ReadByte();
+            unsigned char prevFrameCount = in.ReadByte();
+            uint16_t fecLen = in.ReadUInt16();
+            if (fecLen > in.Remaining())
+                return;
+
+            Buffer fecData(fecLen);
+            in.ReadBytes(fecData);
+
+            stm->packetReassembler->AddFEC(std::move(fecData), fseq, prevFrameCount, fecScheme);
+        }
+    }*/
+}
 void VoIPController::ProcessAcknowledgedOutgoingExtra(UnacknowledgedExtraData &extra)
 {
     if (extra.data.getID() == ExtraGroupCallKey::ID)

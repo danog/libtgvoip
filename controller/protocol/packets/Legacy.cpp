@@ -119,8 +119,8 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
                 packet->eFlags |= EFlags::Keyframe;
             }
 
-            packet->data = Buffer(len & 0x7FF);
-            if (!in.TryRead(packet->data))
+            packet->data = std::make_unique<Buffer>(len & 0x7FF);
+            if (!in.TryRead(*packet->data))
                 return false;
 
             if (extraFEC)
@@ -225,7 +225,7 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
         }
 
         bool hasExtraFEC = ver.peerVersion >= 7 && extraEC;
-        uint8_t flags = static_cast<uint8_t>(data.Length() > 255 || hasExtraFEC ? STREAM_DATA_FLAG_LEN16 : 0);
+        uint8_t flags = static_cast<uint8_t>(data->Length() > 255 || hasExtraFEC ? STREAM_DATA_FLAG_LEN16 : 0);
         out.WriteByte(flags | 1); // flags + streamID
 
         if (flags & STREAM_DATA_FLAG_LEN16)
@@ -237,11 +237,11 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
         }
         else
         {
-            out.WriteByte(static_cast<uint8_t>(data.Length()));
+            out.WriteByte(static_cast<uint8_t>(data->Length()));
         }
 
         out.WriteInt32(seq * 60);
-        out.WriteBytes(data);
+        out.WriteBytes(*data);
 
         //LOGE("SEND: For pts %u = seq %u, using seq %u", audioTimestampOut, audioTimestampOut/60 + 1, packetManager.getLocalSeq());
 

@@ -305,18 +305,20 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
 struct Bytes : public Serializable,
                SingleChoice<Bytes>
 {
+    Bytes() = default;
+    Bytes(Buffer &&_data) : data(std::make_unique<Buffer>(std::move(_data))){};
     bool parse(const BufferInputStream &in, const VersionInfo &ver)
     {
-        data = Buffer(in.GetLength());
-        return in.TryRead(data);
+        data = std::make_unique<Buffer>(in.GetLength());
+        return in.TryRead(*data);
     }
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
     {
-        out.WriteBytes(data);
+        out.WriteBytes(*data);
     }
     operator bool()
     {
-        return !data.IsEmpty();
+        return data && !data->IsEmpty();
     }
     std::string print() const override
     {
@@ -324,14 +326,18 @@ struct Bytes : public Serializable,
     }
     size_t getSize(const VersionInfo &ver) const override
     {
-        return data.Length();
+        return data->Length();
     }
-    Buffer data;
+    std::unique_ptr<Buffer> data;
 };
 
 struct UInt32 : public Serializable, SingleChoice<UInt32>
 {
     UInt32(uint32_t _data) : data(_data){};
+    operator uint32_t() const
+    {
+        return data;
+    }
     bool parse(const BufferInputStream &in, const VersionInfo &ver)
     {
         return in.TryRead(data);

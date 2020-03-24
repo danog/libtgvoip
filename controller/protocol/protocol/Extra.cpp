@@ -1,6 +1,7 @@
 #include "Extra.h"
 #include "../../../VoIPController.h"
 #include "../../PrivateDefines.h"
+#include "../Stream.h"
 
 using namespace tgvoip;
 
@@ -163,6 +164,13 @@ std::string Extra::print() const
     return "???";
 }
 
+ExtraStreamInfo::ExtraStreamInfo(const MediaStreamInfo &stm) : streamId(stm.id),
+                                                               type(stm.type),
+                                                               codec(stm.codec),
+                                                               enabled(stm.enabled)
+{
+}
+
 bool ExtraStreamInfo::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
     return in.TryRead(streamId) &&
@@ -306,7 +314,7 @@ void ExtraInitAck::serialize(BufferOutputStream &out, const VersionInfo &ver) co
 
 bool ExtraPong::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
-    return in.TryRead(seq);
+    return in.Remaining() >= 4 ? in.TryRead(seq) : true;
 }
 
 void ExtraPong::serialize(BufferOutputStream &out, const VersionInfo &ver) const

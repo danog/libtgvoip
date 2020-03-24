@@ -14,7 +14,7 @@ void AudioPacketSender::SetSource(const std::shared_ptr<OpusEncoder> &encoder)
         return;
     this->encoder = encoder;
 
-    encoder->SetCallback(bind(&AudioPacketSender::SendFrame, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
+    encoder->SetCallback(std::bind(&AudioPacketSender::SendFrame, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
 }
 
 void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char *secondaryData, size_t secondaryLen)
