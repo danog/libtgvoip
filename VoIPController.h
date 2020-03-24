@@ -428,7 +428,7 @@ protected:
         flags->streamId = stream.id;
         if (stream.enabled)
             flags->flags |= ExtraStreamFlags::Flags::Enabled;
-        if constexpr (std::is_same_v<AudioPacketSender, V> && stream.extraECEnabled)
+        if constexpr (std::is_same_v<AudioPacketSender, T> && stream.extraECEnabled)
             flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
         if (stream.paused)
             flags->flags |= ExtraStreamFlags::Flags::Paused;
@@ -455,10 +455,21 @@ protected:
     template <class T>
     std::shared_ptr<T> &GetStreamByType(StreamType type, bool outgoing)
     {
-        for (auto &ss : (outgoing ? outgoingStreams : incomingStreams))
+        if (outgoing)
         {
-            if (ss->type == type)
-                return dynamic_pointer_cast<T>(ss);
+            for (auto &ss : outgoingStreams)
+            {
+                if (ss->type == type)
+                    return dynamic_pointer_cast<T>(ss);
+            }
+        }
+        else
+        {
+            for (auto &ss : incomingStreams)
+            {
+                if (ss->type == type)
+                    return dynamic_pointer_cast<T>(ss);
+            }
         }
         return nullptr;
     }

@@ -1,5 +1,6 @@
 #include "PacketManager.h"
 #include "../../../tools/logging.h"
+#include "../../../VoIPController.h"
 
 using namespace tgvoip;
 using namespace std;
@@ -82,7 +83,7 @@ std::vector<RecentOutgoingPacket> &PacketManager::getRecentOutgoingPackets()
 }
 void PacketManager::addRecentOutgoingPacket(const PendingOutgoingPacket &pkt)
 {
-    addRecentOutgoingPacket(PendingOutgoingPacket(pkt));
+    addRecentOutgoingPacket(PendingOutgoingPacket(pkt, VoIPController::GetCurrentTime()));
 }
 void PacketManager::addRecentOutgoingPacket(RecentOutgoingPacket &&pkt)
 {

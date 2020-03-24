@@ -11,18 +11,6 @@ namespace tgvoip
 {
 class PacketSender;
 class PacketManager;
-struct OutgoingPacket
-{
-    OutgoingPacket(Packet &&packet_, int64_t endpoint_ = 0)
-        : packet(std::move(packet_)),
-          endpoint(endpoint_)
-    {
-    }
-    TGVOIP_MOVE_ONLY(OutgoingPacket);
-    TGVOIP_DISALLOW_COPY_AND_ASSIGN(OutgoingPacket);
-    Packet packet;
-    int64_t endpoint = 0;
-};
 struct PendingOutgoingPacket
 {
     PendingOutgoingPacket(std::shared_ptr<Buffer> &&_packet, CongestionControlPacket &&_pktInfo, int64_t _endpoint) : packet(std::move(_packet)),
@@ -46,10 +34,9 @@ struct ReliableOutgoingPacket
 
 struct RecentOutgoingPacket
 {
-    RecentOutgoingPacket(const PendingOutgoingPacket &_pkt) : pkt(_pkt.pktInfo),
-                                                              size(_pkt.packet->Length()),
-                                                              endpoint(_pkt.endpoint),
-                                                              sendTime(VoIPController::GetCurrentTime()){};
+    RecentOutgoingPacket(const PendingOutgoingPacket &_pkt, double sendTime) : pkt(_pkt.pktInfo),
+                                                                               size(_pkt.packet->Length()),
+                                                                               endpoint(_pkt.endpoint){};
     CongestionControlPacket pkt;
     size_t size;
 
@@ -178,6 +165,17 @@ public:
 };
 
 using StreamId = Packet::StreamId;
+struct OutgoingPacket
+{
+    OutgoingPacket(Packet &&packet_, int64_t endpoint_ = 0)
+        : packet(std::move(packet_)),
+          endpoint(endpoint_)
+    {
+    }
+    TGVOIP_DISALLOW_COPY_AND_ASSIGN(OutgoingPacket);
+    Packet packet;
+    int64_t endpoint = 0;
+};
 
 /*
 struct DebugLoggedPacket

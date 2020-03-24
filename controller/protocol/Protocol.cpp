@@ -17,9 +17,9 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
 
     // Initial packet decryption and recognition
 
-    unsigned char *buffer = *npacket.data;
-    size_t len = npacket.data.Length();
-    BufferInputStream in(npacket.data);
+    unsigned char *buffer = **npacket.data;
+    size_t len = npacket.data->Length();
+    BufferInputStream in(*npacket.data);
     if (ver.peerVersion < 9 || srcEndpoint.IsReflector())
     {
         if (in.Remaining() < 16)
@@ -185,7 +185,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
     //LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", getLastRemoteSeq(), recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
     //LOGI("RTT = %.3lf", GetAverageRTT());
     //LOGV("Packet %u type is %d", pseq, type);
-    if (type == PKT_STREAM_DATA || type == PKT_STREAM_DATA_X2 || type == PKT_STREAM_DATA_X3)
+    if (packet.data)
     {
         if (!receivedFirstStreamPacket)
         {
@@ -474,54 +474,46 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data)
     lastReceivedExtrasByType[type] = _data.d->hash;
     LOGE("ProcessExtraData=%s", _data.print().c_str());
 
-    if (type == ExtraInit)
+    if (type == ExtraInit::ID)
     {
-        ExtraInit &data = _data;
+        auto &data = _data.get<ExtraInit>();
 
         LOGD("Received init");
         if (!receivedInit)
             ver.peerVersion = data.peerVersion;
-        LOGI("Peer version is %d", peerVersion);
-        uint32_t minVer = in.ReadUInt32();
-        if (minVer > PROTOCOL_VERSION || ver.peerVersion < MIN_PROTOCOL_VERSION)
+        LOGI("Peer version is %d", ver.peerVersion);
+
+        if (data.minVersion > PROTOCOL_VERSION || data.minVersion < MIN_PROTOCOL_VERSION)
         {
             lastError = ERROR_INCOMPATIBLE;
 
             SetState(STATE_FAILED);
             return;
         }
-        uint32_t flags = in.ReadUInt32();
+
         if (!receivedInit)
         {
-            if (flags & ExtraInit::Flags::DataSavingEnabled)
+            if (data.flags & ExtraInit::Flags::DataSavingEnabled)
             {
                 dataSavingRequestedByPeer = true;
                 UpdateDataSavingState();
                 UpdateAudioBitrateLimit();
             }
-            if (flags & ExtraInit::Flags::GroupCallSupported)
+            if (data.flags & ExtraInit::Flags::GroupCallSupported)
             {
                 peerCapabilities |= TGVOIP_PEER_CAP_GROUP_CALLS;
             }
-            if (flags & ExtraInit::Flags::VideoRecvSupported)
+            if (data.flags & ExtraInit::Flags::VideoRecvSupported)
             {
                 peerCapabilities |= TGVOIP_PEER_CAP_VIDEO_DISPLAY;
             }
-            if (flags & ExtraInit::Flags::VideoSendSupported)
+            if (data.flags & ExtraInit::Flags::VideoSendSupported)
             {
                 peerCapabilities |= TGVOIP_PEER_CAP_VIDEO_CAPTURE;
             }
         }
 
-        unsigned char numSupportedAudioCodecs = in.ReadByte();
-        for (auto i = 0; i < numSupportedAudioCodecs; i++)
-        {
-            if (ver.peerVersion < 5)
-                in.ReadByte(); // ignore for now
-            else
-                in.ReadInt32();
-        }
-        if (!receivedInit && ((flags & ExtraInit::Flags::VideoSendSupported && config.enableVideoReceive) || (flags & ExtraInit::Flags::VideoRecvSupported && config.enableVideoSend)))
+        if (!receivedInit && ((data.flags & ExtraInit::Flags::VideoSendSupported && config.enableVideoReceive) || (data.flags & ExtraInit::Flags::VideoRecvSupported && config.enableVideoSend)))
         {
             LOGD("Peer video decoders:");
             uint8_t numSupportedVideoDecoders = in.ReadByte();
