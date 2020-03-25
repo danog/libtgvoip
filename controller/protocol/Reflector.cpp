@@ -1,8 +1,8 @@
 
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
-using namespace std;
+
 
 bool VoIPController::parseRelayPacket(const BufferInputStream &in, Endpoint &srcEndpoint)
 {

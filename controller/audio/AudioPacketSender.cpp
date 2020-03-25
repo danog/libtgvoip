@@ -1,9 +1,9 @@
 #include "AudioPacketSender.h"
-#include "../PrivateDefines.h"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
 
-AudioPacketSender::AudioPacketSender(VoIPController *controller, const std::shared_ptr<OutgoingAudioStream> &stream, const std::shared_ptr<OpusEncoder> &encoder) : PacketSender(controller, stream)
+AudioPacketSender::AudioPacketSender(VoIPController *controller, const std::shared_ptr<OutgoingAudioStream> &_stream, const std::shared_ptr<OpusEncoder> &encoder) : PacketSender(controller, dynamic_pointer_cast<OutgoingStream<>>(_stream)), stream(_stream)
 {
     SetSource(encoder);
 }
@@ -19,20 +19,35 @@ void AudioPacketSender::SetSource(const std::shared_ptr<OpusEncoder> &encoder)
 
 void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char *secondaryData, size_t secondaryLen)
 {
-    if (IsStopping())
+    if (controller->stopping)
         return;
 
-    Buffer dataBuf = outgoingAudioBufferPool.Get();
-    Buffer secondaryDataBuf = secondaryLen && secondaryData ? outgoingAudioBufferPool.Get() : Buffer();
-    dataBuf.CopyFrom(data, 0, len);
-    if (secondaryLen && secondaryData)
-    {
-        secondaryDataBuf.CopyFrom(secondaryData, 0, secondaryLen);
-    }
-    shared_ptr<Buffer> dataBufPtr = make_shared<Buffer>(move(dataBuf));
-    shared_ptr<Buffer> secondaryDataBufPtr = make_shared<Buffer>(move(secondaryDataBuf));
+    std::shared_ptr<Packet> pkt = std::make_shared<Packet>();
+    pkt->prepare(packetManager); // Populate seqno (aka PTS), ack mask if viable
+    pkt->data = std::make_unique<Buffer>(len);
+    pkt->data->CopyFrom(data, 0, len);
 
-    GetMessageThread().Post([this, dataBufPtr, secondaryDataBufPtr, len, secondaryLen]() {
+    if (secondaryLen)
+    {
+        std::shared_ptr<Buffer> secondaryPtr = std::make_shared<Buffer>(secondaryLen);
+        secondaryPtr->CopyFrom(secondaryData, 0, secondaryLen);
+        ecAudioPackets.push_back(std::move(secondaryPtr));
+        if (ecAudioPackets.size() == 9)
+        {
+            ecAudioPackets.pop_front();
+        }
+        /*
+        uint8_t fecCount = std::min(static_cast<uint8_t>(ecAudioPackets.size()), extraEcLevel);
+        pkt.WriteByte(fecCount);
+        for (auto ecData = ecAudioPackets.end() - fecCount; ecData != ecAudioPackets.end(); ++ecData)
+        {
+            pkt.WriteByte(static_cast<uint8_t>(ecData->Length()));
+            pkt.WriteBytes(*ecData);
+        }*/
+    }
+    //LOGE("SEND: For pts %u = seq %u, using seq %u", audioTimestampOut, audioTimestampOut/60 + 1, packetManager.getLocalSeq());
+
+    controller->messageThread.Post([this, pkt]() {
         /*
         unsentStreamPacketsHistory.Add(static_cast<unsigned int>(unsentStreamPackets));
         if (unsentStreamPacketsHistory.Average() >= maxUnsentStreamPackets && !videoPacketSender)
@@ -48,119 +63,19 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
             return;
         }*/
         //LOGV("Audio packet size %u", (unsigned int)len);
-        if (!ReceivedInitAck())
+        if (!controller->receivedInitAck)
             return;
 
-        BufferOutputStream pkt(1500);
-
-        bool hasExtraFEC = PeerVersion() >= 7 && secondaryLen && shittyInternetMode;
-        uint8_t flags = static_cast<uint8_t>(len > 255 || hasExtraFEC ? STREAM_DATA_FLAG_LEN16 : 0);
-        pkt.WriteByte(flags | 1); // flags + streamID
-
-        if (flags & STREAM_DATA_FLAG_LEN16)
+        if (!packetLoss)
         {
-            int16_t lenAndFlags = static_cast<int16_t>(len);
-            if (hasExtraFEC)
-                lenAndFlags |= STREAM_DATA_XFLAG_EXTRA_FEC;
-            pkt.WriteInt16(lenAndFlags);
+            controller->SendPacket(std::move(*pkt));
         }
         else
         {
-            pkt.WriteByte(static_cast<uint8_t>(len));
+            double retry = stream->frameDuration / (resendCount * 4.0);
+
+            controller->SendPacket(std::move(*pkt), retry / 1000.0, (stream->frameDuration * 4) / 1000.0, resendCount);
         }
-
-        pkt.WriteInt32(audioTimestampOut);
-        pkt.WriteBytes(*dataBufPtr, 0, len);
-
-        //LOGE("SEND: For pts %u = seq %u, using seq %u", audioTimestampOut, audioTimestampOut/60 + 1, packetManager.getLocalSeq());
-
-        if (hasExtraFEC)
-        {
-            Buffer ecBuf(secondaryLen);
-            ecBuf.CopyFromOtherBuffer(*secondaryDataBufPtr, secondaryLen);
-            ecAudioPackets.push_back(move(ecBuf));
-            if (ecAudioPackets.size() > 4)
-            {
-                ecAudioPackets.pop_front();
-            }
-
-            uint8_t fecCount = std::min(static_cast<uint8_t>(ecAudioPackets.size()), extraEcLevel);
-            pkt.WriteByte(fecCount);
-            for (auto ecData = ecAudioPackets.end() - fecCount; ecData != ecAudioPackets.end(); ++ecData)
-            {
-                pkt.WriteByte(static_cast<uint8_t>(ecData->Length()));
-                pkt.WriteBytes(*ecData);
-            }
-        }
-
-        //unsentStreamPackets++;
-
-        if (PeerVersion() < PROTOCOL_RELIABLE)
-        {
-            // Need to increase this anyway to go hand in hand with timestamp
-            // packetManager.nextLocalSeq();
-
-            if (!packetLoss)
-            {
-                PendingOutgoingPacket p{
-                    0,
-                    PKT_STREAM_DATA,
-                    pkt.GetLength(),
-                    Buffer(move(pkt)),
-                    0,
-                };
-
-                SendPacket(std::move(p));
-            }
-            else
-            {
-                double retry = stream->frameDuration / (resendCount * 4.0);
-
-                SendPacketReliably(PKT_STREAM_DATA, pkt.GetBuffer(), pkt.GetLength(), retry / 1000.0, (stream->frameDuration * 4) / 1000.0, resendCount); // Todo Optimize RTT
-            }
-        }
-        else
-        {
-            PendingOutgoingPacket p{
-                /*.seq=*/0,
-                /*.type=*/PKT_STREAM_DATA,
-                /*.len=*/pkt.GetLength(),
-                /*.data=*/Buffer(move(pkt)),
-                /*.endpoint=*/0,
-            };
-
-            SendPacket(move(p));
-        }
-        if (PeerVersion() < 7 && secondaryLen && shittyInternetMode)
-        {
-            Buffer ecBuf(secondaryLen);
-            ecBuf.CopyFromOtherBuffer(*secondaryDataBufPtr, secondaryLen);
-            if (ecAudioPackets.size() == 4)
-            {
-                ecAudioPackets.pop_front();
-            }
-            ecAudioPackets.push_back(move(ecBuf));
-            pkt = BufferOutputStream(1500);
-            pkt.WriteByte(stream->id);
-            pkt.WriteInt32(audioTimestampOut);
-            uint8_t fecCount = std::min(static_cast<uint8_t>(ecAudioPackets.size()), extraEcLevel);
-            pkt.WriteByte(fecCount);
-            for (auto ecData = ecAudioPackets.end() - fecCount; ecData != ecAudioPackets.end(); ++ecData)
-            {
-                pkt.WriteByte((unsigned char)ecData->Length());
-                pkt.WriteBytes(*ecData);
-            }
-
-            PendingOutgoingPacket p{
-                0,
-                PKT_STREAM_EC,
-                pkt.GetLength(),
-                Buffer(move(pkt)),
-                0};
-            SendPacket(std::move(p));
-        }
-
-        audioTimestampOut += stream->frameDuration;
     });
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)

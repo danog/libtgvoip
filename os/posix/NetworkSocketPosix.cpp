@@ -158,12 +158,12 @@ void NetworkSocketPosix::Send(NetworkPacket &&packet)
 		}
 		addr.sin6_port = htons(packet.port);
 		std::lock_guard<std::mutex> lock(m_fd);
-		res = (int)sendto(fd, *(packet.data.get()), packet.data->Length(), 0, (const sockaddr *)&addr, sizeof(addr));
+		res = (int)sendto(fd, **packet.data, packet.data->Length(), 0, (const sockaddr *)&addr, sizeof(addr));
 	}
 	else
 	{
 		std::lock_guard<std::mutex> lock(m_fd);
-		res = (int)send(fd, *(packet.data.get()), packet.data->Length(), 0);
+		res = (int)send(fd, **packet.data, packet.data->Length(), 0);
 	}
 	if (res <= 0)
 	{
@@ -249,8 +249,10 @@ NetworkPacket NetworkSocketPosix::Receive(size_t maxLen)
 			{
 				addr = NetworkAddress::IPv6(srcAddr.sin6_addr.s6_addr);
 			}
+			auto buf = std::make_shared<Buffer>(len);
+			buf->CopyFromOtherBuffer(recvBuffer, len);
 			return NetworkPacket{
-				Buffer::CopyOf(recvBuffer, 0, (size_t)len),
+				std::move(buf),
 				addr,
 				ntohs(srcAddr.sin6_port),
 				NetworkProtocol::UDP};
@@ -273,8 +275,10 @@ NetworkPacket NetworkSocketPosix::Receive(size_t maxLen)
 		}
 		else
 		{
+			auto buf = std::make_shared<Buffer>(res);
+			buf->CopyFromOtherBuffer(recvBuffer, res);
 			return NetworkPacket{
-				Buffer::CopyOf(recvBuffer, 0, (size_t)res),
+				std::move(buf),
 				tcpConnectedAddress,
 				tcpConnectedPort,
 				NetworkProtocol::TCP};

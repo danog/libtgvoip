@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "../controller/PrivateDefines.h"
+#include "VoIPController.h"
 #include "AudioIO.h"
 #include "AudioInput.h"
 

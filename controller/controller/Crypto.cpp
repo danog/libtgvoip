@@ -1,7 +1,7 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
-using namespace std;
+
 
 size_t VoIPController::decryptPacket(unsigned char *buffer, BufferInputStream &in)
 {

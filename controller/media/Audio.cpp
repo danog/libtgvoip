@@ -1,7 +1,7 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
-using namespace std;
+
 
 #pragma mark - Audio I/O
 
@@ -86,7 +86,7 @@ void VoIPController::OnAudioOutputReady()
 {
     LOGI("Audio I/O ready");
     auto *stm = GetStreamByID<IncomingAudioStream>(StreamId::Audio);
-    stm->decoder = make_shared<OpusDecoder>(audioOutput, true, ver.peerVersion >= 6);
+    stm->decoder = std::make_shared<OpusDecoder>(audioOutput, true, ver.peerVersion >= 6);
     stm->decoder->SetEchoCanceller(echoCanceller);
     if (config.enableVolumeControl)
     {

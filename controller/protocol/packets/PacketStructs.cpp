@@ -1,5 +1,5 @@
 #include "PacketStructs.h"
-#include "../../PrivateDefines.cpp"
+#include "../../../VoIPController.h"
 #include "PacketManager.h"
 
 using namespace tgvoip;

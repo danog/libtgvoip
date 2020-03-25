@@ -4,7 +4,7 @@
 
 #include "PacketReassembler.h"
 #include "tools/logging.h"
-#include "controller/PrivateDefines.h"
+#include "VoIPController.h"
 #include "video/VideoFEC.h"
 
 #include <assert.h>

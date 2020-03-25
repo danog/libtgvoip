@@ -1,8 +1,8 @@
 #pragma once
-#include <vector>
-#include <cstdint>
 #include "../../tools/Buffers.h"
 #include "protocol/Index.h"
+#include <cstdint>
+#include <vector>
 
 namespace tgvoip
 {
@@ -30,7 +30,7 @@ struct MediaStreamInfo
 struct AudioStreamInfo
 {
     virtual ~AudioStreamInfo() = default;
-    
+
     bool extraECEnabled;
     uint16_t frameDuration;
 };

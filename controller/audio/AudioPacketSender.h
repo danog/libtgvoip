@@ -1,5 +1,8 @@
 #pragma once
+#include "../../VoIPController.h"
+#include "../audio/OpusEncoder.h"
 #include "../protocol/packets/PacketSender.h"
+#include <deque>
 #include <list>
 
 namespace tgvoip
@@ -48,8 +51,6 @@ private:
 
     std::shared_ptr<OpusEncoder> encoder;
 
-    uint32_t audioTimestampOut = 0;
-
     bool shittyInternetMode = false;
     uint8_t extraEcLevel = 0;
 
@@ -57,9 +58,11 @@ private:
 
     double resendCount = 1.0;
 
-    std::deque<Buffer> ecAudioPackets;
+    std::deque<std::shared_ptr<Buffer>> ecAudioPackets;
 
     BufferPool<1024, 32> outgoingAudioBufferPool;
+
+    const std::shared_ptr<OutgoingAudioStream> &stream;
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
     std::function<void(int16_t *, size_t)> audioPreprocDataCallback;

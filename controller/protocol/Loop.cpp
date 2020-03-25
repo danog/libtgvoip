@@ -1,7 +1,7 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
-using namespace std;
+
 
 void VoIPController::RunRecvThread()
 {
@@ -110,7 +110,7 @@ void VoIPController::RunRecvThread()
                 continue;
             }
             //LOGV("Received %d bytes from %s:%d at %.5lf", len, packet.address->ToString().c_str(), packet.port, GetCurrentTime());
-            messageThread.Post(bind(&VoIPController::NetworkPacketReceived, this, make_shared<NetworkPacket>(move(packet))));
+            messageThread.Post(bind(&VoIPController::NetworkPacketReceived, this, std::make_shared<NetworkPacket>(move(packet))));
         }
 
         if (!writeSockets.empty())

@@ -1,7 +1,7 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
-using namespace std;
+
 
 #pragma mark - Bandwidth management
 

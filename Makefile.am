@@ -22,9 +22,8 @@ controller/net/PacketReassembler.cpp \
 controller/protocol/packets/PacketManager.cpp \
 controller/protocol/packets/PacketSender.cpp \
 controller/protocol/packets/PacketStructs.cpp \
-controller/protocol/Streams.cpp \
+controller/protocol/Stream.cpp \
 controller/protocol/protocol/Extra.cpp \
-VoIPGroupController.cpp \
 VoIPServerConfig.cpp \
 audio/AudioIO.cpp \
 audio/AudioInput.cpp \
@@ -44,7 +43,6 @@ TgVoip.h \
 VoIPController.h \
 tools/Buffers.h \
 tools/BlockingQueue.h \
-controller/PrivateDefines.h \
 controller/net/CongestionControl.h \
 controller/audio/EchoCanceller.h \
 controller/net/JitterBuffer.h \

@@ -1,7 +1,14 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
+#include "../../VoIPServerConfig.h"
+#include "../../tools/logging.h"
+#include "../../tools/threading.h"
+#include "../../video/VideoPacketSender.h"
+#include "../audio/AudioPacketSender.h"
+#include "../net/Endpoint.h"
+#include <cinttypes>
+#include <memory>
 
 using namespace tgvoip;
-using namespace std;
 
 extern FILE *tgvoipLogFile;
 
@@ -484,7 +491,7 @@ uint32_t VoIPController::GetPeerCapabilities()
 
 void VoIPController::SendGroupCallKey(unsigned char *key)
 {
-    shared_ptr<Buffer> keyPtr = make_shared<Buffer>(256);
+    std::shared_ptr<Buffer> keyPtr = std::make_shared<Buffer>(256);
     keyPtr->CopyFrom(key, 0, 256);
     messageThread.Post([this, keyPtr] {
         if (!(peerCapabilities & TGVOIP_PEER_CAP_GROUP_CALLS))

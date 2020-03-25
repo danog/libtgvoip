@@ -1,8 +1,7 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
 #include "packets/PacketManager.h"
 
 using namespace tgvoip;
-using namespace std;
 
 #pragma mark - Networking & crypto
 
@@ -223,7 +222,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
         if (_stm->type == StreamType::Audio)
         {
             auto *stm = dynamic_cast<IncomingAudioStream *>(_stm);
-            uint32_t pts = packet.seq * stm->frameDuration;
+            uint32_t pts = (packet.seq - 1) * stm->frameDuration; // Account for seq starting at 1
             if (stm->jitterBuffer)
             {
                 stm->jitterBuffer->HandleInput(std::move(packet.data), pts, false);
@@ -356,7 +355,7 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
 
             for (const auto &stream : outgoingStreams)
             {
-                ack->streams.v.push_back(*dynamic_pointer_cast<MediaStreamInfo>(stream));
+                ack->streams.v.push_back(stream->getStreamInfo());
             }
 
             LOGI("Sending init ack");
@@ -427,7 +426,7 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
                     aStm->codec = stmInfo.codec;
                     aStm->frameDuration = 60;
 
-                    aStm->jitterBuffer = make_shared<JitterBuffer>(aStm->frameDuration);
+                    aStm->jitterBuffer = std::make_shared<JitterBuffer>(aStm->frameDuration);
                     if (aStm->frameDuration > 50)
                         aStm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_60", 2));
                     else if (aStm->frameDuration > 30)

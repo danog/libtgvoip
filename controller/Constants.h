@@ -5,6 +5,13 @@
 #define CHECK_ENDPOINT_PROTOCOL(endpointType, packetProtocol) ((endpointType != Endpoint::Type::TCP_RELAY && packetProtocol == NetworkProtocol::UDP) || (endpointType == Endpoint::Type::TCP_RELAY && packetProtocol == NetworkProtocol::TCP))
 #define PAD4(x) (4 - (x + (x <= 253 ? 1 : 0)) % 4)
 
+inline int pad4(int x)
+{
+    int r = PAD4(x);
+    if (r == 4)
+        return 0;
+    return r;
+}
 // Max recent packets
 #define MAX_RECENT_PACKETS 128
 
@@ -21,8 +28,8 @@
 #define PKT_STREAM_DATA_X2 8 // Deprecated
 #define PKT_STREAM_DATA_X3 9 // Deprecated
 
-#define PKT_STREAM_STATE 3 // Deprecated, use extra
-#define PKT_LAN_ENDPOINT 10 // Deprecated, use extra
+#define PKT_STREAM_STATE 3     // Deprecated, use extra
+#define PKT_LAN_ENDPOINT 10    // Deprecated, use extra
 #define PKT_NETWORK_CHANGED 11 // Deprecated, use extra
 
 // #define PKT_UPDATE_STREAMS 5 // Not used anymore
@@ -30,8 +37,6 @@
 // #define PKT_SWITCH_TO_P2P 13 // Not used anymore
 // #define PKT_GROUP_CALL_KEY 15		// replaced with 'extra' in 2.1 (protocol v6)
 // #define PKT_REQUEST_GROUP 16
-
-
 
 // Stream data flags
 #define STREAM_DATA_FLAG_LEN16 0x40
@@ -90,7 +95,6 @@
 #define NEED_RATE_FLAG_UDP_BAD 4
 #define NEED_RATE_FLAG_RECONNECTING 8
 
-
 // Crypto stuff
 #define SHA1_LENGTH 20
 #define SHA256_LENGTH 32
@@ -100,8 +104,6 @@
 #else
 #define MSC_STACK_FALLBACK(a, b) (a)
 #endif
-
-
 
 // Legacy flags
 /*flags:# voice_call_id:flags.2?int128 in_seq_no:flags.4?int out_seq_no:flags.4?int

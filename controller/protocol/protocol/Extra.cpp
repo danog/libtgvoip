@@ -1,7 +1,7 @@
 #include "Extra.h"
 #include "../../../VoIPController.h"
-#include "../../PrivateDefines.h"
 #include "../Stream.h"
+#include "../Stream.tcc"
 
 using namespace tgvoip;
 
@@ -35,56 +35,47 @@ std::shared_ptr<Extra> Extra::choose(const BufferInputStream &in, const VersionI
     }
     unsigned char fullHash[SHA1_LENGTH];
     VoIPController::crypto.sha1(const_cast<uint8_t *>(in.GetRawBuffer() + in.GetOffset()), in.Remaining(), fullHash);
-    uint64_t hash = *reinterpret_cast<uint64_t *>(fullHash);
 
+    std::shared_ptr<Extra> res;
     switch (id)
     {
     case ExtraStreamFlags::ID:
-        auto res = std::make_shared<ExtraStreamFlags>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraStreamFlags>();
+        break;
     case ExtraStreamCsd::ID:
-        auto res = std::make_shared<ExtraStreamCsd>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraStreamCsd>();
+        break;
     case ExtraLanEndpoint::ID:
-        auto res = std::make_shared<ExtraLanEndpoint>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraLanEndpoint>();
+        break;
     case ExtraIpv6Endpoint::ID:
-        auto res = std::make_shared<ExtraIpv6Endpoint>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraIpv6Endpoint>();
+        break;
     case ExtraNetworkChanged::ID:
-        auto res = std::make_shared<ExtraNetworkChanged>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraNetworkChanged>();
+        break;
     case ExtraGroupCallKey::ID:
-        auto res = std::make_shared<ExtraGroupCallKey>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraGroupCallKey>();
+        break;
     case ExtraGroupCallUpgrade::ID:
-        auto res = std::make_shared<ExtraGroupCallUpgrade>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraGroupCallUpgrade>();
+        break;
     case ExtraInit::ID:
-        auto res = std::make_shared<ExtraInit>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraInit>();
+        break;
     case ExtraInitAck::ID:
-        auto res = std::make_shared<ExtraInitAck>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraInitAck>();
+        break;
     case ExtraPing::ID:
-        auto res = std::make_shared<ExtraPing>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraPing>();
+        break;
     case ExtraPong::ID:
-        auto res = std::make_shared<ExtraPong>();
-        res->hash = hash;
-        return res;
+        res = std::make_shared<ExtraPong>();
+        break;
     }
-    return nullptr;
+    if (res)
+        res->hash = *reinterpret_cast<uint64_t *>(fullHash);
+    return res;
 }
 std::shared_ptr<Extra> Extra::chooseFromType(uint8_t type)
 {
@@ -162,13 +153,6 @@ std::string Extra::print() const
         return "ExtraPong";
     }
     return "???";
-}
-
-ExtraStreamInfo::ExtraStreamInfo(const MediaStreamInfo &stm) : streamId(stm.id),
-                                                               type(stm.type),
-                                                               codec(stm.codec),
-                                                               enabled(stm.enabled)
-{
 }
 
 bool ExtraStreamInfo::parse(const BufferInputStream &in, const VersionInfo &ver)

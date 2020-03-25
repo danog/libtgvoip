@@ -3,7 +3,7 @@
 //
 
 #include "VideoPacketSender.h"
-#include "../controller/PrivateDefines.h"
+#include "../VoIPController.h"
 #include "../tools/logging.h"
 #include "VideoFEC.h"
 #include <algorithm>
@@ -11,7 +11,7 @@
 using namespace tgvoip;
 using namespace tgvoip::video;
 
-VideoPacketSender::VideoPacketSender(VoIPController *controller, const std::shared_ptr<OutgoingVideoStream> &stream, VideoSource *videoSource) : PacketSender(controller, stream)
+VideoPacketSender::VideoPacketSender(VoIPController *controller, const std::shared_ptr<OutgoingVideoStream> &_stream, VideoSource *videoSource) : PacketSender(controller, dynamic_pointer_cast<OutgoingStream<>>(_stream)), stream(_stream)
 {
     SetSource(videoSource);
 }
@@ -27,7 +27,7 @@ void VideoPacketSender::PacketAcknowledged(const RecentOutgoingPacket &packet)
     {
         for (vector<uint32_t>::iterator s = f.unacknowledgedPackets.begin(); s != f.unacknowledgedPackets.end();)
         {
-            if (*s == seq)
+            if (*s == packet.pkt.seq)
             {
                 s = f.unacknowledgedPackets.erase(s);
                 bytesNewlyAcked = packet.size;
@@ -50,11 +50,11 @@ void VideoPacketSender::PacketAcknowledged(const RecentOutgoingPacket &packet)
     }
     if (bytesNewlyAcked)
     {
-        float _sendTime = (float)(packet.sendTime - GetConnectionInitTime());
+        float _sendTime = (float)(packet.sendTime - controller->connectionInitTime);
         float recvTime = (float)packet.ackTime;
         float oneWayDelay = recvTime - _sendTime;
         //LOGV("one-way delay: %f", oneWayDelay);
-        videoCongestionControl.ProcessAcks(oneWayDelay, bytesNewlyAcked, videoPacketLossCount, RTTHistory().Average(5));
+        videoCongestionControl.ProcessAcks(oneWayDelay, bytesNewlyAcked, videoPacketLossCount, controller->rttHistory.Average(5));
     }
     //videoCongestionControl.GetPacingInterval();
 }
@@ -63,11 +63,11 @@ void VideoPacketSender::PacketLost(const RecentOutgoingPacket &packet)
 {
     /*if (!packet. == PKT_STREAM_EC)
 		return;*/
-    LOGW("VideoPacketSender::PacketLost: %u (size %u)", packet.seq, packet.size);
+    LOGW("VideoPacketSender::PacketLost: %u (size %lu)", packet.pkt.seq, packet.size);
     //LOGI("frame count %u", (unsigned int)sentVideoFrames.size());
     for (std::vector<SentVideoFrame>::iterator f = sentVideoFrames.begin(); f != sentVideoFrames.end(); ++f)
     {
-        std::vector<uint32_t>::iterator pkt = std::find(f->unacknowledgedPackets.begin(), f->unacknowledgedPackets.end(), packet.seq);
+        std::vector<uint32_t>::iterator pkt = std::find(f->unacknowledgedPackets.begin(), f->unacknowledgedPackets.end(), packet.pkt.seq);
         if (pkt != f->unacknowledgedPackets.end())
         {
             LOGW("Lost packet belongs to frame %u", f->seq);
@@ -115,8 +115,8 @@ void VideoPacketSender::SetSource(VideoSource *source)
     source->SetCallback(std::bind(&VideoPacketSender::SendFrame, this, placeholders::_1, placeholders::_2, placeholders::_3));
     source->SetStreamStateCallback([this](bool paused) {
         stream->paused = paused;
-        GetMessageThread().Post([this] {
-            SendStreamFlags(*stream);
+        controller->messageThread.Post([this] {
+            controller->SendStreamFlags(*stream);
         });
     });
 }
@@ -124,7 +124,8 @@ void VideoPacketSender::SetSource(VideoSource *source)
 void VideoPacketSender::SendFrame(const Buffer &_frame, uint32_t flags, uint32_t rotation)
 {
     std::shared_ptr<Buffer> framePtr = std::make_shared<Buffer>(Buffer::CopyOf(_frame));
-    GetMessageThread().Post([this, framePtr, flags, rotation] {
+    controller->messageThread.Post([this, framePtr, flags, rotation] {
+        /*
         const Buffer &frame = *framePtr;
 
         double currentTime = VoIPController::GetCurrentTime();
@@ -145,7 +146,7 @@ void VideoPacketSender::SendFrame(const Buffer &_frame, uint32_t flags, uint32_t
         {
             LOGI("Changing video resolution: %d -> %d", stream->resolution, resolutionFromBitrate);
             stream->resolution = resolutionFromBitrate;
-            GetMessageThread().Post([this, resolutionFromBitrate] {
+            controller->messageThread.Post([this, resolutionFromBitrate] {
                 source->Reset(stream->codec, resolutionFromBitrate);
                 stream->csdIsValid = false;
             });
@@ -280,14 +281,7 @@ void VideoPacketSender::SendFrame(const Buffer &_frame, uint32_t flags, uint32_t
 
             Buffer packetData(std::move(pkt));
 
-            PendingOutgoingPacket p{
-                /*.seq=*/0,
-                /*.type=*/PKT_STREAM_DATA,
-                /*.len=*/packetData.Length(),
-                /*.data=*/std::move(packetData),
-                /*.endpoint=*/0,
-            };
-            IncrementUnsentStreamPackets();
+            controller->unsentStreamPackets++;
             uint32_t seq = SendPacket(std::move(p));
             videoCongestionControl.ProcessPacketSent(static_cast<unsigned int>(pkt.GetLength()));
             sentFrame.unacknowledgedPackets.push_back(seq);
@@ -318,13 +312,14 @@ void VideoPacketSender::SendFrame(const Buffer &_frame, uint32_t flags, uint32_t
             SendPacket(std::move(p));
         }
         sentVideoFrames.push_back(sentFrame);
+        */
     });
 }
 
 int VideoPacketSender::GetVideoResolutionForCurrentBitrate()
 {
-
-    int peerMaxVideoResolution = GetProtocolInfo().maxVideoResolution;
+    
+    int peerMaxVideoResolution = controller->ver.maxVideoResolution;
     int resolutionFromBitrate = INIT_VIDEO_RES_1080;
     if (VoIPController::GetCurrentTime() - sourceChangeTime > 10.0)
     {

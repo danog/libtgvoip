@@ -1,7 +1,7 @@
 #pragma once
-#include "PacketStructs.h"
 #include <atomic>
 #include <bitset>
+#include <vector>
 
 namespace tgvoip
 {
@@ -18,6 +18,9 @@ inline bool seqgte(uint32_t s1, uint32_t s2)
     return s1 == s2 || seqgt(s1, s2);
 }
 
+class RecentOutgoingPacket;
+class PendingOutgoingPacket;
+class Packet;
 // Local and remote packet history management
 class PacketManager final
 {
@@ -131,6 +134,7 @@ public: // Recent outgoing packet list
     std::vector<RecentOutgoingPacket> &getRecentOutgoingPackets();
     void addRecentOutgoingPacket(const PendingOutgoingPacket &pkt);
     void addRecentOutgoingPacket(RecentOutgoingPacket &&pkt);
+
 private:
     // Recent ougoing packets
     std::vector<RecentOutgoingPacket> recentOutgoingPackets;

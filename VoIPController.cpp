@@ -4,6 +4,7 @@
 // you should have received with this source code distribution.
 //
 
+#include "../VoIPController.h"
 #include "controller/controller/PublicAPI.cpp"
 #include "controller/controller/Init.cpp"
 #include "controller/controller/Crypto.cpp"

@@ -1,7 +1,7 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
-using namespace std;
+
 
 void VoIPController::SendPacketReliably(PendingOutgoingPacket &_pkt, double retryInterval, double timeout, uint8_t tries)
 {

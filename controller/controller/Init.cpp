@@ -1,7 +1,8 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
+#include "../../VoIPServerConfig.h"
 
 using namespace tgvoip;
-using namespace std;
+
 
 #pragma mark - Internal intialization
 

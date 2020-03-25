@@ -1,8 +1,8 @@
 #pragma once
 #include "../../../tools/Buffers.h"
 #include "../../net/NetworkSocket.h"
-#include "Interface.h"
 #include "../VersionInfo.h"
+#include "Interface.h"
 #include <sstream>
 
 #define FOURCC(a, b, c, d) ((uint32_t)d | ((uint32_t)c << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24))
@@ -15,7 +15,7 @@ struct VersionInfo;
 struct Extra : public Serializable, MultiChoice<Extra>
 {
     virtual ~Extra() = default;
-    
+
     static std::shared_ptr<Extra> choose(const BufferInputStream &in, const VersionInfo &ver);
     static std::shared_ptr<Extra> chooseFromType(uint8_t type);
     uint8_t chooseType(int peerVersion) const;
@@ -68,10 +68,8 @@ struct MediaStreamInfo;
 struct ExtraStreamInfo : public Serializable, SingleChoice<ExtraStreamInfo>
 {
 public:
-    ExtraStreamInfo() = default;
-    ExtraStreamInfo(const MediaStreamInfo &stm);
     virtual ~ExtraStreamInfo() = default;
-    
+
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
@@ -232,6 +230,7 @@ struct ExtraIpv6Endpoint : public Extra
 
 struct ExtraGroupCallKey : public Extra
 {
+    ExtraGroupCallKey() = default;
     ExtraGroupCallKey(Buffer &&_buf) : key(std::move(_buf)){};
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;

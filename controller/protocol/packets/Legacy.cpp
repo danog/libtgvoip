@@ -1,4 +1,4 @@
-#include "../../PrivateDefines.cpp"
+#include "../../../VoIPController.h"
 #include "PacketStructs.h"
 
 using namespace tgvoip;
@@ -6,7 +6,7 @@ using namespace tgvoip;
 bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
 {
     legacy = true;
-    
+
     // Version-specific extraction of legacy packet fields ackId (last received packet seq on remote), (incoming packet seq) pseq, (ack mask) acks, (packet type) type, (flags) pflags, packet length
     uint32_t ackId;             // Last received packet seqno on remote
     uint32_t pseq;              // Incoming packet seqno
@@ -61,6 +61,7 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
                 return false;
 
             seq /= 60; // Constant frame duration
+            seq += 1;  // Account for seq starting at 1
 
             for (uint8_t i = 0; i < std::min(count, uint8_t{8}); i++)
             {
@@ -187,7 +188,7 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
         extraECArray.v.push_back(std::move(ecPacket));
     }
 
-    if (ver.peerVersion < 7 && extraEC)
+    if (ver.peerVersion < 7 && extraECArray)
     {
         BufferOutputStream out(1500);
 
@@ -196,7 +197,7 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
             writePacketHeaderLegacy(out, ver, legacySeq, ackSeq, ackMask, PKT_STREAM_EC, allowedExtras);
         }
         out.WriteByte(streamId);
-        out.WriteUInt32(seq * 60);
+        out.WriteUInt32((seq - 1) * 60); // Account for seq starting at 1
         out.Write(extraECArray, ver);
 
         if (ver.isLegacyLegacy())
@@ -224,13 +225,13 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
             writePacketHeaderLegacy(out, ver, legacySeq, ackSeq, ackMask, PKT_STREAM_DATA, allowedExtras);
         }
 
-        bool hasExtraFEC = ver.peerVersion >= 7 && extraEC;
+        bool hasExtraFEC = ver.peerVersion >= 7 && extraECArray;
         uint8_t flags = static_cast<uint8_t>(data->Length() > 255 || hasExtraFEC ? STREAM_DATA_FLAG_LEN16 : 0);
         out.WriteByte(flags | 1); // flags + streamID
 
         if (flags & STREAM_DATA_FLAG_LEN16)
         {
-            int16_t lenAndFlags = static_cast<int16_t>(data.Length());
+            int16_t lenAndFlags = static_cast<int16_t>(data->Length());
             if (hasExtraFEC)
                 lenAndFlags |= STREAM_DATA_XFLAG_EXTRA_FEC;
             out.WriteInt16(lenAndFlags);

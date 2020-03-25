@@ -1,7 +1,7 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
-using namespace std;
+
 
 #pragma mark - Video
 
@@ -133,7 +133,7 @@ void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool 
 void VoIPController::SetupOutgoingVideoStream()
 {
     vector<uint32_t> myEncoders = video::VideoSource::GetAvailableEncoders();
-    auto vstm = make_shared<OutgoingVideoStream>();
+    auto vstm = std::make_shared<OutgoingVideoStream>();
 
     if (find(myEncoders.begin(), myEncoders.end(), Codec::Hevc) != myEncoders.end() && find(peerVideoDecoders.begin(), peerVideoDecoders.end(), Codec::Hevc) != peerVideoDecoders.end())
     {

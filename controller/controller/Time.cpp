@@ -1,8 +1,11 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
-using namespace std;
 
+#ifndef _WIN32
+#include <sys/time.h>
+#include <unistd.h>
+#endif
 #ifdef __APPLE__
 #include "os/darwin/AudioUnitIO.h"
 #include <mach/mach_time.h>

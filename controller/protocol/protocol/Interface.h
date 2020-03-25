@@ -84,7 +84,7 @@ template <typename T>
 struct Mask : public Serializable, SingleChoice<Mask<T>>
 {
     virtual ~Mask() = default;
-    
+
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override
     {
         uint8_t mask;
@@ -171,7 +171,7 @@ template <typename T>
 struct Array : public Serializable, SingleChoice<Array<T>>
 {
     virtual ~Array() = default;
-    
+
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override
     {
         uint8_t extraCount;
@@ -182,12 +182,12 @@ struct Array : public Serializable, SingleChoice<Array<T>>
         v.reserve(extraCount);
         for (auto i = 0; i < extraCount; i++)
         {
-            T data;
-            if (!data.parse(in, ver))
+            auto data = T::choose(in, ver);
+            if (!data->parse(in, ver))
             {
                 return false;
             }
-            v.push_back(std::move(data));
+            v.push_back(std::move(*data));
         }
         return true;
     }
@@ -245,7 +245,7 @@ template <class T>
 struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
 {
     virtual ~Wrapped() = default;
-    
+
     Wrapped(std::shared_ptr<T> &&_d) : d(_d){};
     Wrapped(std::shared_ptr<T> &_d) : d(_d){};
     Wrapped() = default;
@@ -262,7 +262,8 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
     {
         out.Advance(1);
         size_t len = out.GetOffset();
-        d->serialize(out, ver);
+        if (d)
+            d->serialize(out, ver);
         len = out.GetOffset() - len;
         out.Rewind(len + 1);
         out.WriteByte(len);
@@ -317,9 +318,9 @@ struct Bytes : public Serializable,
                SingleChoice<Bytes>
 {
     virtual ~Bytes() = default;
-    
     Bytes() = default;
     Bytes(Buffer &&_data) : data(std::make_unique<Buffer>(std::move(_data))){};
+    Bytes(Bytes &&_data) : data(std::move(_data.data)){};
     bool parse(const BufferInputStream &in, const VersionInfo &ver)
     {
         data = std::make_unique<Buffer>(in.GetLength());

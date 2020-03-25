@@ -4,11 +4,11 @@
 #pragma once
 
 //#include "../../../VoIPController.h"
+#include "../../audio/OpusDecoder.h"
+#include "../../net/JitterBuffer.h"
 #include "../Stream.h"
 #include "PacketManager.h"
 #include "PacketStructs.h"
-#include "../../net/JitterBuffer.h"
-#include "../../audio/OpusDecoder.h"
 #include <functional>
 #include <stdint.h>
 
@@ -16,10 +16,13 @@ namespace tgvoip
 {
 class VoIPController;
 class AudioPacketSender;
+class PacketReassembler;
 namespace video
 {
 class VideoPacketSender;
 }
+class PacketManager;
+class PacketSender;
 
 template <class T = PacketSender>
 struct OutgoingStream : public StreamInfo
@@ -28,6 +31,8 @@ struct OutgoingStream : public StreamInfo
     OutgoingStream(uint8_t _id, StreamType _type);
     virtual ~OutgoingStream();
 
+    virtual ExtraStreamInfo getStreamInfo() const;
+    
     PacketManager packetManager;
 
     std::unique_ptr<T> packetSender;
@@ -47,8 +52,10 @@ template <class T>
 struct OutgoingMediaStream : public MediaStreamInfo, public OutgoingStream<T>
 {
     OutgoingMediaStream() = delete;
-    OutgoingMediaStream(uint8_t id, StreamType type) : OutgoingStream<T>(id, type){};
-    virtual ~OutgoingMediaStream() = default;
+    OutgoingMediaStream(uint8_t id, StreamType type);
+    virtual ~OutgoingMediaStream();
+
+    virtual ExtraStreamInfo getStreamInfo() const override;
 
     static const bool OUTGOING = true;
 };
@@ -65,15 +72,17 @@ struct IncomingMediaStream : public MediaStreamInfo, public IncomingStream
 struct OutgoingAudioStream : public AudioStreamInfo,
                              public OutgoingMediaStream<AudioPacketSender>
 {
-    OutgoingAudioStream(uint8_t _id = Packet::StreamId::Audio) : OutgoingMediaStream(_id, TYPE){};
-    virtual ~OutgoingAudioStream() = default;
+    OutgoingAudioStream(uint8_t _id = StreamId::Audio);
+    virtual ~OutgoingAudioStream();
+
+    virtual ExtraStreamInfo getStreamInfo() const override;
 
     static const StreamType TYPE = StreamType::Audio;
     static const bool OUTGOING = true;
 };
 struct IncomingAudioStream : public AudioStreamInfo, public IncomingMediaStream
 {
-    IncomingAudioStream(uint8_t _id = Packet::StreamId::Audio) : IncomingMediaStream(_id, TYPE){};
+    IncomingAudioStream(uint8_t _id = StreamId::Audio) : IncomingMediaStream(_id, TYPE){};
     virtual ~IncomingAudioStream() = default;
 
     std::shared_ptr<JitterBuffer> jitterBuffer;
@@ -87,15 +96,15 @@ struct IncomingAudioStream : public AudioStreamInfo, public IncomingMediaStream
 
 struct OutgoingVideoStream : public VideoStreamInfo, public OutgoingMediaStream<video::VideoPacketSender>
 {
-    OutgoingVideoStream(uint8_t _id = Packet::StreamId::Video) : OutgoingMediaStream(_id, TYPE){};
-    virtual ~OutgoingVideoStream() = default;
+    OutgoingVideoStream(uint8_t _id = StreamId::Video);
+    virtual ~OutgoingVideoStream();
 
     static const StreamType TYPE = StreamType::Video;
     static const bool OUTGOING = true;
 };
 struct IncomingVideoStream : public VideoStreamInfo, public IncomingMediaStream
 {
-    IncomingVideoStream(uint8_t _id = Packet::StreamId::Video) : IncomingMediaStream(_id, TYPE){};
+    IncomingVideoStream(uint8_t _id = StreamId::Video) : IncomingMediaStream(_id, TYPE){};
     virtual ~IncomingVideoStream() = default;
 
     std::shared_ptr<PacketReassembler> packetReassembler;

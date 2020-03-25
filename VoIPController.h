@@ -6,10 +6,28 @@
 
 #pragma once
 
+#include <array>
+
+#include "controller/Constants.h"
+#include "controller/protocol/VersionInfo.h"
+#include "controller/protocol/protocol/Index.h"
+
 #if defined HAVE_CONFIG_H || defined TGVOIP_USE_INSTALLED_OPUS
 #include <opus/opus.h>
 #else
 #include <opus/opus.h>
+#endif
+
+#ifdef __ANDROID__
+#include "controller/net/NetworkSocket.h"
+#include "os/android/AudioInputAndroid.h"
+#include "os/android/JNIUtilities.h"
+
+extern jclass jniUtilitiesClass;
+#endif
+
+#if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
+#include "audio/AudioIOCallback.h"
 #endif
 
 #ifndef _WIN32
@@ -24,7 +42,6 @@
 #include "audio/AudioInput.h"
 #include "audio/AudioOutput.h"
 #include "audio/Device.h"
-#include "controller/PrivateDefines.h"
 #include "controller/audio/EchoCanceller.h"
 #include "controller/audio/OpusDecoder.h"
 #include "controller/audio/OpusEncoder.h"
@@ -33,6 +50,7 @@
 #include "controller/net/JitterBuffer.h"
 #include "controller/net/PacketReassembler.h"
 #include "controller/protocol/Stream.h"
+#include "controller/protocol/Stream.tcc"
 #include "controller/protocol/packets/PacketManager.h"
 #include "controller/protocol/packets/PacketStructs.h"
 #include "controller/protocol/protocol/Extra.h"
@@ -144,6 +162,8 @@ class VoIPController
 {
     friend class VoIPGroupController;
     friend class PacketSender;
+    friend class AudioPacketSender;
+    friend class video::VideoPacketSender;
 
 public:
     TGVOIP_DISALLOW_COPY_AND_ASSIGN(VoIPController);

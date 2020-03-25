@@ -5,7 +5,7 @@
 //
 
 #include "CongestionControl.h"
-#include "../PrivateDefines.h"
+#include "../../VoIPController.h"
 #include "../protocol/packets/PacketStructs.h"
 #include "VoIPController.h"
 #include "VoIPServerConfig.h"

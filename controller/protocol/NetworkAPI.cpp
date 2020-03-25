@@ -1,8 +1,9 @@
-#include "../PrivateDefines.cpp"
+#include "../../VoIPController.h"
+#include <cfloat>
 //#include <random>
 
 using namespace tgvoip;
-using namespace std;
+
 
 //std::random_device dev;
 //std::mt19937 rng(dev());
@@ -90,14 +91,14 @@ void VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueu
             LOGV("Connecting to %s:%u", endpoint.GetAddress().ToString().c_str(), endpoint.port);
             if (proxyProtocol == PROXY_NONE)
             {
-                endpoint.socket = make_shared<NetworkSocketTCPObfuscated>(NetworkSocket::Create(NetworkProtocol::TCP));
+                endpoint.socket = std::make_shared<NetworkSocketTCPObfuscated>(NetworkSocket::Create(NetworkProtocol::TCP));
                 endpoint.socket->Connect(endpoint.GetAddress(), endpoint.port);
             }
             else if (proxyProtocol == PROXY_SOCKS5)
             {
                 std::shared_ptr<NetworkSocket> tcp = NetworkSocket::Create(NetworkProtocol::TCP);
                 tcp->Connect(resolvedProxyAddress, proxyPort);
-                shared_ptr<NetworkSocketSOCKS5Proxy> proxy = make_shared<NetworkSocketSOCKS5Proxy>(tcp, nullptr, proxyUsername, proxyPassword);
+                std::shared_ptr<NetworkSocketSOCKS5Proxy> proxy = std::make_shared<NetworkSocketSOCKS5Proxy>(tcp, nullptr, proxyUsername, proxyPassword);
                 endpoint.socket = proxy;
                 endpoint.socket->Connect(endpoint.GetAddress(), endpoint.port);
             }
