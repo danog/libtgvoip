@@ -7,7 +7,7 @@ using namespace std;
 
 void VoIPController::SetVideoSource(video::VideoSource *source)
 {
-    auto &stm = GetStreamByType<OutgoingVideoStream>();
+    std::shared_ptr<OutgoingVideoStream> stm = GetStreamByTypeShared<OutgoingVideoStream>();
     if (!stm)
     {
         LOGE("Can't set video source when there is no outgoing video stream");
@@ -23,7 +23,7 @@ void VoIPController::SetVideoSource(video::VideoSource *source)
         }
 
         if (!stm->packetSender)
-            stm->packetSender = std::make_unique<video::VideoPacketSender>(this, source, stm);
+            stm->packetSender = std::make_unique<video::VideoPacketSender>(this, stm, source);
         else
             dynamic_cast<video::VideoPacketSender *>(stm->packetSender.get())->SetSource(source);
     }
@@ -48,7 +48,7 @@ void VoIPController::SetVideoRenderer(video::VideoRenderer *renderer)
 
 void VoIPController::SetVideoCodecSpecificData(const std::vector<Buffer> &data)
 {
-    auto &stm = GetStreamByType<OutgoingVideoStream>();
+    auto *stm = GetStreamByType<OutgoingVideoStream>();
     stm->codecSpecificData.clear();
     for (const Buffer &csd : data)
     {
@@ -66,7 +66,7 @@ void VoIPController::ProcessIncomingVideoFrame(Buffer frame, uint32_t pts, bool 
     }
     if (videoRenderer)
     {
-        auto &stm = GetStreamByType<IncomingVideoStream>();
+        auto *stm = GetStreamByType<IncomingVideoStream>();
         size_t offset = 0;
         if (keyframe)
         {

@@ -2,6 +2,7 @@
 #include "../../../tools/Buffers.h"
 #include "../../net/NetworkSocket.h"
 #include "Interface.h"
+#include "../VersionInfo.h"
 #include <sstream>
 
 #define FOURCC(a, b, c, d) ((uint32_t)d | ((uint32_t)c << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24))
@@ -13,6 +14,8 @@ namespace tgvoip
 struct VersionInfo;
 struct Extra : public Serializable, MultiChoice<Extra>
 {
+    virtual ~Extra() = default;
+    
     static std::shared_ptr<Extra> choose(const BufferInputStream &in, const VersionInfo &ver);
     static std::shared_ptr<Extra> chooseFromType(uint8_t type);
     uint8_t chooseType(int peerVersion) const;
@@ -30,7 +33,9 @@ struct Extra : public Serializable, MultiChoice<Extra>
 struct Codec : public Serializable, SingleChoice<Codec>
 {
 public:
+    Codec() = default;
     Codec(uint32_t _codec) : codec(_codec){};
+    virtual ~Codec() = default;
     operator uint32_t() const
     {
         return codec;
@@ -63,7 +68,10 @@ struct MediaStreamInfo;
 struct ExtraStreamInfo : public Serializable, SingleChoice<ExtraStreamInfo>
 {
 public:
+    ExtraStreamInfo() = default;
     ExtraStreamInfo(const MediaStreamInfo &stm);
+    virtual ~ExtraStreamInfo() = default;
+    
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
@@ -125,6 +133,7 @@ public:
         else
             return 1 + 1;
     }
+    virtual ~ExtraStreamFlags() = default;
 };
 
 struct ExtraStreamCsd : public Extra
@@ -149,6 +158,7 @@ public:
     {
         return sizeof(streamId) + sizeof(width) + sizeof(height) + data.getSize(ver);
     }
+    virtual ~ExtraStreamCsd() = default;
 };
 
 struct ExtraNetworkChanged : public Extra
@@ -174,6 +184,7 @@ struct ExtraNetworkChanged : public Extra
     {
         return sizeof(streamId) + (ver.isNew() ? sizeof(flags) : 4);
     }
+    virtual ~ExtraNetworkChanged() = default;
 };
 
 struct ExtraLanEndpoint : public Extra
@@ -195,6 +206,7 @@ public:
     {
         return 4 + (ver.isNew() ? 2 : 4);
     }
+    virtual ~ExtraLanEndpoint() = default;
 };
 
 struct ExtraIpv6Endpoint : public Extra
@@ -215,12 +227,12 @@ struct ExtraIpv6Endpoint : public Extra
     {
         return 16 + 2;
     }
+    virtual ~ExtraIpv6Endpoint() = default;
 };
 
 struct ExtraGroupCallKey : public Extra
 {
     ExtraGroupCallKey(Buffer &&_buf) : key(std::move(_buf)){};
-    ExtraGroupCallKey(std::shared_ptr<Buffer> &_buf) : key(std::move(*_buf)){};
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override;
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override;
 
@@ -236,6 +248,7 @@ struct ExtraGroupCallKey : public Extra
     {
         return key.Length();
     }
+    virtual ~ExtraGroupCallKey() = default;
 };
 
 struct ExtraGroupCallUpgrade : public Extra
@@ -253,6 +266,7 @@ struct ExtraGroupCallUpgrade : public Extra
     {
         return 0;
     }
+    virtual ~ExtraGroupCallUpgrade() = default;
 };
 
 struct ExtraInit : public Extra
@@ -291,6 +305,7 @@ struct ExtraInit : public Extra
                (ver.connectionMaxLayer < 74 ? 11
                                             : (audioCodecs.getSize(ver) + decoders.getSize(ver) + sizeof(maxResolution)));
     }
+    virtual ~ExtraInit() = default;
 };
 
 struct ExtraInitAck : public Extra
@@ -313,6 +328,7 @@ struct ExtraInitAck : public Extra
     {
         return sizeof(peerVersion) + sizeof(minVersion) + streams.getSize(ver);
     }
+    virtual ~ExtraInitAck() = default;
 };
 
 struct ExtraPing : public Extra
@@ -330,6 +346,7 @@ struct ExtraPing : public Extra
     {
         return 0;
     }
+    virtual ~ExtraPing() = default;
 };
 struct ExtraPong : public Extra
 {
@@ -348,5 +365,6 @@ struct ExtraPong : public Extra
     {
         return sizeof(seq);
     }
+    virtual ~ExtraPong() = default;
 };
 } // namespace tgvoip

@@ -152,7 +152,7 @@ void VoIPController::SetMicMute(bool mute)
     if (state == STATE_ESTABLISHED)
     {
         messageThread.Post([this] {
-            auto &s = GetStreamByType<OutgoingAudioStream>();
+            auto *s = GetStreamByType<OutgoingAudioStream>();
             if (s)
             {
                 s->enabled = !micMuted;
@@ -200,7 +200,7 @@ string VoIPController::GetDebugString()
         r += buffer;
     }
     double avgLate[3];
-    auto &stm = GetStreamByType<IncomingAudioStream>();
+    auto *stm = GetStreamByType<IncomingAudioStream>();
     shared_ptr<JitterBuffer> jitterBuffer;
     if (stm)
         jitterBuffer = stm->jitterBuffer;
@@ -233,14 +233,14 @@ string VoIPController::GetDebugString()
              encoder ? (encoder->GetBitrate() / 1000) : 0,
              static_cast<unsigned int>(unsentStreamPackets),
              //			 audioPacketGrouping,
-             GetStreamByID<OutgoingAudioStream>(StreamId::Audio)->frameDuration, incomingStreams.size() > 0 ? GetStreamByID<IncomingAudioStream>(StreamId::Audio)->frameDuration : 0,
+             GetStreamByID<OutgoingAudioStream>(StreamId::Audio)->frameDuration, incomingStreams.size() > 1 ? GetStreamByID<IncomingAudioStream>(StreamId::Audio)->frameDuration : 0,
              (long long unsigned int)(stats.bytesSentMobile + stats.bytesSentWifi),
              (long long unsigned int)(stats.bytesRecvdMobile + stats.bytesRecvdWifi));
     r += buffer;
 
     if (config.enableVideoSend)
     {
-        auto &vstm = GetStreamByType<OutgoingVideoStream>();
+        auto *vstm = GetStreamByType<OutgoingVideoStream>();
         if (vstm && vstm->enabled && vstm->packetSender)
         {
             snprintf(buffer, sizeof(buffer), "\nVideo out: %ux%u '%c%c%c%c' %u kbit", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec), vstm->packetSender->GetBitrate());
@@ -258,7 +258,7 @@ string VoIPController::GetDebugString()
     }
     if (config.enableVideoReceive)
     {
-        auto &vstm = GetStreamByType<OutgoingVideoStream>();
+        auto *vstm = GetStreamByType<OutgoingVideoStream>();
         if (vstm && vstm->enabled)
         {
             snprintf(buffer, sizeof(buffer), "\nVideo in: %ux%u '%c%c%c%c'", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec));
@@ -484,9 +484,8 @@ uint32_t VoIPController::GetPeerCapabilities()
 
 void VoIPController::SendGroupCallKey(unsigned char *key)
 {
-    Buffer buf(256);
-    buf.CopyFrom(key, 0, 256);
-    shared_ptr<Buffer> keyPtr = make_shared<Buffer>(move(buf));
+    shared_ptr<Buffer> keyPtr = make_shared<Buffer>(256);
+    keyPtr->CopyFrom(key, 0, 256);
     messageThread.Post([this, keyPtr] {
         if (!(peerCapabilities & TGVOIP_PEER_CAP_GROUP_CALLS))
         {
@@ -504,7 +503,7 @@ void VoIPController::SendGroupCallKey(unsigned char *key)
             return;
         }
         didSendGroupCallKey = true;
-        SendExtra(std::make_shared<ExtraGroupCallKey>(keyPtr));
+        SendExtra(std::make_shared<ExtraGroupCallKey>(std::move(*keyPtr)));
     });
 }
 

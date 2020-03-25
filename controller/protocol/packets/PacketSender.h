@@ -7,6 +7,8 @@
 #include "../Stream.h"
 #include "PacketManager.h"
 #include "PacketStructs.h"
+#include "../../net/JitterBuffer.h"
+#include "../../audio/OpusDecoder.h"
 #include <functional>
 #include <stdint.h>
 
@@ -24,22 +26,55 @@ struct OutgoingStream : public StreamInfo
 {
     OutgoingStream() = delete;
     OutgoingStream(uint8_t _id, StreamType _type);
+    virtual ~OutgoingStream();
 
     PacketManager packetManager;
 
-    std::shared_ptr<T> packetSender;
+    std::unique_ptr<T> packetSender;
+
+    static const bool OUTGOING = true;
+};
+struct IncomingStream : public StreamInfo
+{
+    IncomingStream() = delete;
+    IncomingStream(uint8_t id, StreamType type) : StreamInfo(id, type){};
+    virtual ~IncomingStream() = default;
+
+    static const bool OUTGOING = false;
 };
 
-struct OutgoingAudioStream : public AudioStreamInfo, public OutgoingStream<AudioPacketSender>
+template <class T>
+struct OutgoingMediaStream : public MediaStreamInfo, public OutgoingStream<T>
 {
-    OutgoingAudioStream(uint8_t _id = Packet::StreamId::Audio) : OutgoingStream(_id, TYPE){};
+    OutgoingMediaStream() = delete;
+    OutgoingMediaStream(uint8_t id, StreamType type) : OutgoingStream<T>(id, type){};
+    virtual ~OutgoingMediaStream() = default;
+
+    static const bool OUTGOING = true;
+};
+
+struct IncomingMediaStream : public MediaStreamInfo, public IncomingStream
+{
+    IncomingMediaStream() = delete;
+    IncomingMediaStream(uint8_t id, StreamType type) : IncomingStream(id, type){};
+    virtual ~IncomingMediaStream() = default;
+
+    static const bool OUTGOING = false;
+};
+
+struct OutgoingAudioStream : public AudioStreamInfo,
+                             public OutgoingMediaStream<AudioPacketSender>
+{
+    OutgoingAudioStream(uint8_t _id = Packet::StreamId::Audio) : OutgoingMediaStream(_id, TYPE){};
+    virtual ~OutgoingAudioStream() = default;
 
     static const StreamType TYPE = StreamType::Audio;
     static const bool OUTGOING = true;
 };
-struct IncomingAudioStream : public AudioStreamInfo, public IncomingStream
+struct IncomingAudioStream : public AudioStreamInfo, public IncomingMediaStream
 {
-    IncomingAudioStream(uint8_t _id = Packet::StreamId::Audio) : IncomingStream(_id, TYPE){};
+    IncomingAudioStream(uint8_t _id = Packet::StreamId::Audio) : IncomingMediaStream(_id, TYPE){};
+    virtual ~IncomingAudioStream() = default;
 
     std::shared_ptr<JitterBuffer> jitterBuffer;
     std::shared_ptr<tgvoip::OpusDecoder> decoder;
@@ -50,16 +85,18 @@ struct IncomingAudioStream : public AudioStreamInfo, public IncomingStream
     static const bool OUTGOING = false;
 };
 
-struct OutgoingVideoStream : public VideoStreamInfo, public OutgoingStream<video::VideoPacketSender>
+struct OutgoingVideoStream : public VideoStreamInfo, public OutgoingMediaStream<video::VideoPacketSender>
 {
-    OutgoingVideoStream(uint8_t _id = Packet::StreamId::Video) : OutgoingStream(_id, TYPE){};
+    OutgoingVideoStream(uint8_t _id = Packet::StreamId::Video) : OutgoingMediaStream(_id, TYPE){};
+    virtual ~OutgoingVideoStream() = default;
 
     static const StreamType TYPE = StreamType::Video;
     static const bool OUTGOING = true;
 };
-struct IncomingVideoStream : public VideoStreamInfo, public IncomingStream
+struct IncomingVideoStream : public VideoStreamInfo, public IncomingMediaStream
 {
-    IncomingVideoStream(uint8_t _id = Packet::StreamId::Video) : IncomingStream(_id, TYPE){};
+    IncomingVideoStream(uint8_t _id = Packet::StreamId::Video) : IncomingMediaStream(_id, TYPE){};
+    virtual ~IncomingVideoStream() = default;
 
     std::shared_ptr<PacketReassembler> packetReassembler;
 
@@ -73,8 +110,8 @@ public:
     PacketSender(VoIPController *_controller, const std::shared_ptr<OutgoingStream<>> &_stream);
     virtual ~PacketSender() = default;
 
-    virtual void PacketAcknowledged(const RecentOutgoingPacket &packet) = 0;
-    virtual void PacketLost(const RecentOutgoingPacket &packet) = 0;
+    virtual void PacketAcknowledged(const RecentOutgoingPacket &packet){};
+    virtual void PacketLost(const RecentOutgoingPacket &packet){};
 
 protected:
     /*

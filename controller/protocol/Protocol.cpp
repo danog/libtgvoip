@@ -208,7 +208,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
         //LOGE("RECV: For pts %u = seq %u, got seq %u", pts, pts/60 + 1, pseq);
 
         //LOGD("stream data, pts=%d, len=%d, rem=%d", pts, sdlen, in.Remaining());
-        auto &_stm = GetStreamByID<IncomingStream>(packet.streamId);
+        auto *_stm = GetStreamByID<IncomingStream>(packet.streamId);
         if (!_stm)
         {
             LOGW("received packet for unknown stream %u", (unsigned int)packet.streamId);
@@ -222,7 +222,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
         }
         if (_stm->type == StreamType::Audio)
         {
-            auto stm = dynamic_pointer_cast<IncomingAudioStream>(_stm);
+            auto *stm = dynamic_cast<IncomingAudioStream *>(_stm);
             uint32_t pts = packet.seq * stm->frameDuration;
             if (stm->jitterBuffer)
             {
@@ -248,7 +248,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
         }
         else if (_stm->type == StreamType::Video)
         {
-            auto stm = dynamic_pointer_cast<IncomingVideoStream>(_stm);
+            auto *stm = dynamic_cast<IncomingVideoStream *>(_stm);
             if (stm->packetReassembler)
             { /*
                 uint8_t frameSeq = in.ReadByte();
@@ -404,9 +404,10 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
             LOGI("peer version from init ack %d", ver.peerVersion);
 
             shared_ptr<IncomingAudioStream> incomingAudioStream;
-            for (const auto &stm : data.streams)
+            for (const auto &stmInfo : data.streams)
             {
-                if (stm.type == StreamType::Video)
+                std::shared_ptr<IncomingStream> stm;
+                if (stmInfo.type == StreamType::Video)
                 {
                     if (ver.peerVersion < 9)
                     {
@@ -414,23 +415,16 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
                         continue;
                     }
                     auto vStm = std::make_shared<IncomingVideoStream>();
-                    vStm->id = stm.streamId;
-                    vStm->type = stm.type;
-                    vStm->codec = stm.codec;
-                    vStm->enabled = stm.enabled;
-
+                    vStm->codec = stmInfo.codec;
                     vStm->packetReassembler = std::make_shared<PacketReassembler>();
                     vStm->packetReassembler->SetCallback(bind(&VoIPController::ProcessIncomingVideoFrame, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4));
 
-                    incomingStreams.push_back(dynamic_pointer_cast<IncomingStream>(vStm));
+                    stm = dynamic_pointer_cast<IncomingStream>(vStm);
                 }
-                else if (stm.type == StreamType::Audio)
+                else if (stmInfo.type == StreamType::Audio)
                 {
                     auto aStm = std::make_shared<IncomingAudioStream>();
-                    aStm->id = stm.streamId;
-                    aStm->type = stm.type;
-                    aStm->codec = stm.codec;
-                    aStm->enabled = stm.enabled;
+                    aStm->codec = stmInfo.codec;
                     aStm->frameDuration = 60;
 
                     aStm->jitterBuffer = make_shared<JitterBuffer>(aStm->frameDuration);
@@ -440,26 +434,25 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
                         aStm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_40", 4));
                     else
                         aStm->jitterBuffer->SetMinPacketCount(ServerConfig::GetSharedInstance()->GetUInt("jitter_initial_delay_20", 6));
-                    aStm->decoder = nullptr;
 
                     if (!incomingAudioStream)
                         incomingAudioStream = aStm;
 
-                    incomingStreams.push_back(dynamic_pointer_cast<IncomingStream>(aStm));
+                    stm = dynamic_pointer_cast<IncomingStream>(aStm);
                 }
-                else if (stm.type == StreamType::Signaling)
+                else if (stmInfo.type == StreamType::Signaling)
                 {
-                    auto sStm = std::make_shared<IncomingStream>();
-                    sStm->id = stm.streamId;
-                    sStm->type = stm.type;
-                    sStm->enabled = stm.enabled;
-                    incomingStreams.push_back(std::move(sStm));
+                    stm = std::make_shared<IncomingStream>(stmInfo.streamId, stmInfo.type);
                 }
                 else
                 {
-                    LOGW("Unknown incoming stream type: %hhu", stm.type);
+                    LOGW("Unknown incoming stream type: %hhu", stmInfo.type);
                     continue;
                 }
+                stm->id = stmInfo.streamId;
+                stm->type = stmInfo.type;
+                stm->enabled = stmInfo.enabled;
+                incomingStreams.push_back(std::move(stm));
             }
             if (!incomingAudioStream)
                 return;
@@ -534,7 +527,7 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
     {
         auto &data = _data.get<ExtraStreamCsd>();
         LOGI("Received codec specific data");
-        auto &stm = GetStreamByID<IncomingVideoStream>(data.streamId);
+        auto *stm = GetStreamByID<IncomingVideoStream>(data.streamId);
         if (stm)
         {
             stm->codecSpecificData.clear();
@@ -543,7 +536,7 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
             stm->height = data.height;
             for (auto &v : data.data)
             {
-                stm->codecSpecificData.push_back(std::move(v.data));
+                stm->codecSpecificData.push_back(std::move(*v.data));
             }
         }
     }

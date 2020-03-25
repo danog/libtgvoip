@@ -6,6 +6,7 @@
 
 #pragma once
 #include "NetworkSocket.h"
+#include "../protocol/protocol/Extra.h"
 #include <map>
 #include <memory>
 

@@ -472,7 +472,8 @@ void VoIPController::SendExtra(Wrapped<Extra> &&extra, int64_t endpointId)
             return;
         }
     }
-    currentExtras.push_back(UnacknowledgedExtraData(std::move(extra), endpointId));
+    UnacknowledgedExtraData data(std::move(extra), endpointId);
+    currentExtras.push_back(std::move(data));
 }
 
 void VoIPController::SendUdpPing(Endpoint &endpoint)

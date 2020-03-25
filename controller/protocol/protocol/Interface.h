@@ -10,6 +10,7 @@ struct VersionInfo;
 template <typename T>
 struct SingleChoice
 {
+    virtual ~SingleChoice() = default;
     static std::shared_ptr<T> choose(const BufferInputStream &in, const VersionInfo &ver)
     {
         return std::make_shared<T>();
@@ -33,11 +34,13 @@ private:
     }
 
 public:
+    virtual ~MultiChoice() = default;
+
     virtual uint8_t getID() const = 0;
 
     virtual size_t getConstructorSize(const VersionInfo &ver) const = 0;
 };
-
+/*
 template <class T, class = void>
 struct has_flags : std::false_type
 {
@@ -64,10 +67,12 @@ struct Constructor // : public T
     }
     using Flags = typename std::conditional<tgvoip::has_flags<T>::value, T, Empty>::type::Flags;
 };
-
+*/
 struct Serializable
 {
 public:
+    virtual ~Serializable() = default;
+
     virtual bool parse(const BufferInputStream &in, const VersionInfo &ver) = 0;
     virtual void serialize(BufferOutputStream &out, const VersionInfo &ver) const = 0;
 
@@ -78,6 +83,8 @@ public:
 template <typename T>
 struct Mask : public Serializable, SingleChoice<Mask<T>>
 {
+    virtual ~Mask() = default;
+    
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override
     {
         uint8_t mask;
@@ -163,6 +170,8 @@ struct Mask : public Serializable, SingleChoice<Mask<T>>
 template <typename T>
 struct Array : public Serializable, SingleChoice<Array<T>>
 {
+    virtual ~Array() = default;
+    
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override
     {
         uint8_t extraCount;
@@ -235,6 +244,8 @@ struct Array : public Serializable, SingleChoice<Array<T>>
 template <class T>
 struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
 {
+    virtual ~Wrapped() = default;
+    
     Wrapped(std::shared_ptr<T> &&_d) : d(_d){};
     Wrapped(std::shared_ptr<T> &_d) : d(_d){};
     Wrapped() = default;
@@ -270,25 +281,25 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
     template <typename X>
     X &get()
     {
-        return *dynamic_cast<X>(d.get());
+        return *dynamic_cast<X *>(d.get());
     }
 
     template <typename X>
     const X &get() const
     {
-        return *dynamic_cast<X>(d.get());
+        return *dynamic_cast<X *>(d.get());
     }
 
-    template <typename X>
+    template <typename X, typename = typename std::enable_if<!std::is_same_v<X, bool>>::type>
     operator X &()
     {
-        return *dynamic_cast<X>(d.get());
+        return *dynamic_cast<X *>(d.get());
     }
 
-    template <typename X>
+    template <typename X, typename = typename std::enable_if<!std::is_same_v<X, bool>>::type>
     operator const X &() const
     {
-        return *dynamic_cast<X>(d.get());
+        return *dynamic_cast<X *>(d.get());
     }
 
     std::string print() const override
@@ -305,6 +316,8 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
 struct Bytes : public Serializable,
                SingleChoice<Bytes>
 {
+    virtual ~Bytes() = default;
+    
     Bytes() = default;
     Bytes(Buffer &&_data) : data(std::make_unique<Buffer>(std::move(_data))){};
     bool parse(const BufferInputStream &in, const VersionInfo &ver)
@@ -333,6 +346,8 @@ struct Bytes : public Serializable,
 
 struct UInt32 : public Serializable, SingleChoice<UInt32>
 {
+    virtual ~UInt32() = default;
+    UInt32() = default;
     UInt32(uint32_t _data) : data(_data){};
     operator uint32_t() const
     {
@@ -358,6 +373,7 @@ struct UInt32 : public Serializable, SingleChoice<UInt32>
     uint32_t data;
 };
 
+/*
 namespace Template
 {
 template <class T>
@@ -365,4 +381,5 @@ struct Constructor : public T, tgvoip::Constructor<T>
 {
 };
 }; // namespace Template
+*/
 } // namespace tgvoip

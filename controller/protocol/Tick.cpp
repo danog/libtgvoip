@@ -201,7 +201,7 @@ void VoIPController::UpdateCongestion()
         double avgSendLossCount = sendLossCountHistory.Average() / packetCountHistory.Average();
         LOGE("avg send loss: %.3f%%", avgSendLossCount * 100);
 
-        auto &s = GetStreamByType<OutgoingAudioStream>();
+        auto *s = GetStreamByType<OutgoingAudioStream>();
         auto &sender = s->packetSender;
         //avgSendLossCount = sender->setPacketLoss(avgSendLossCount * 100.0) / 100.0;
         sender->setPacketLoss(avgSendLossCount * 100.0);
@@ -248,7 +248,7 @@ void VoIPController::UpdateCongestion()
         {
             sender->setShittyInternetMode(false);
 
-            auto &s = GetStreamByType<OutgoingAudioStream>();
+            auto *s = GetStreamByType<OutgoingAudioStream>();
             if (s)
             {
                 s->extraECEnabled = false;

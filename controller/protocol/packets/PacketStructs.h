@@ -26,11 +26,12 @@ struct PendingOutgoingPacket
 struct ReliableOutgoingPacket
 {
     PendingOutgoingPacket pkt;
-    double firstSentTime;
-    double lastSentTime;
     double retryInterval;
     double timeout;
     uint8_t tries;
+
+    double firstSentTime;
+    double lastSentTime;
 };
 
 struct RecentOutgoingPacket
@@ -57,8 +58,7 @@ struct UnacknowledgedExtraData
           endpointId(_endpointId)
     {
     }
-
-    TGVOIP_DISALLOW_COPY_AND_ASSIGN(UnacknowledgedExtraData);
+    TGVOIP_MOVE_ONLY(UnacknowledgedExtraData);
 
     Wrapped<Extra> data;
     HistoricBuffer<uint32_t, 16> seqs{};

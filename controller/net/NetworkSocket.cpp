@@ -114,8 +114,8 @@ size_t NetworkSocket::Receive(unsigned char *buffer, size_t len)
     NetworkPacket pkt = Receive(len);
     if (pkt.IsEmpty())
         return 0;
-    size_t actualLen = std::min(len, pkt.data.Length());
-    memcpy(buffer, *pkt.data, actualLen);
+    size_t actualLen = std::min(len, pkt.data->Length());
+    memcpy(buffer, **pkt.data, actualLen);
     return actualLen;
 }
 
@@ -277,8 +277,8 @@ std::shared_ptr<NetworkSocket> NetworkSocketTCPObfuscated::GetWrapped()
 
 void NetworkSocketTCPObfuscated::InitConnection()
 {
-    Buffer buf(64);
-    GenerateTCPO2States(*buf, &recvState, &sendState);
+    auto buf = std::make_shared<Buffer>(64);
+    GenerateTCPO2States(**buf, &recvState, &sendState);
     wrapped->Send(NetworkPacket{
         std::move(buf),
         NetworkAddress::Empty(),
@@ -359,18 +359,18 @@ NetworkPacket NetworkSocketTCPObfuscated::Receive(size_t maxLen)
         LOGW("packet too big to fit into buffer (%u vs %u)", (unsigned int)packetLen, (unsigned int)1500);
         return NetworkPacket::Empty();
     }
-    Buffer buf(packetLen);
+    auto buf = std::make_shared<Buffer>(packetLen);
 
     while (offset < packetLen)
     {
-        len = wrapped->Receive(*buf, packetLen - offset);
+        len = wrapped->Receive(**buf, packetLen - offset);
         if (len <= 0)
         {
             return NetworkPacket::Empty();
         }
         offset += len;
     }
-    EncryptForTCPO2(*buf, packetLen, &recvState);
+    EncryptForTCPO2(**buf, packetLen, &recvState);
     return NetworkPacket{
         std::move(buf),
         wrapped->GetConnectedAddress(),
@@ -454,7 +454,7 @@ NetworkPacket NetworkSocketSOCKS5Proxy::Receive(size_t maxLen)
         NetworkPacket p = udp->Receive();
         if (!p.IsEmpty() && p.address == connectedAddress && p.port == connectedPort)
         {
-            BufferInputStream in(p.data);
+            BufferInputStream in(*p.data);
             in.ReadInt16(); // RSV
             in.ReadByte();  // FRAG
             unsigned char atyp = in.ReadByte();
@@ -469,8 +469,11 @@ NetworkPacket NetworkSocketSOCKS5Proxy::Receive(size_t maxLen)
                 in.ReadBytes(addr, 16);
                 address = NetworkAddress::IPv6(addr);
             }
+
+            auto copy = std::make_shared<Buffer>(in.Remaining());
+            copy->CopyFromOtherBuffer(*p.data, in.Remaining(), in.GetOffset());
             return NetworkPacket{
-                Buffer::CopyOf(p.data, in.GetOffset(), in.Remaining()),
+                std::move(copy),
                 address,
                 htons(in.ReadInt16()),
                 protocol};
@@ -537,7 +540,7 @@ bool NetworkSocketSOCKS5Proxy::OnReadyToSend()
             p.WriteByte(0); // no auth
         }
         tcp->Send(NetworkPacket{
-            Buffer(std::move(p)),
+            std::make_shared<Buffer>(std::move(p)),
             NetworkAddress::Empty(),
             0,
             NetworkProtocol::TCP});
@@ -583,7 +586,7 @@ bool NetworkSocketSOCKS5Proxy::OnReadyToReceive()
             p.WriteByte((unsigned char)(password.length() > 255 ? 255 : password.length()));                    // PLEN
             p.WriteBytes((unsigned char *)password.c_str(), password.length() > 255 ? 255 : password.length()); // PASSWD
             tcp->Send(NetworkPacket{
-                Buffer(std::move(p)),
+                std::make_shared<Buffer>(std::move(p)),
                 NetworkAddress::Empty(),
                 0,
                 NetworkProtocol::TCP});
@@ -762,7 +765,7 @@ void NetworkSocketSOCKS5Proxy::SendConnectionCommand()
         out.WriteInt16(0); // DST.PORT
     }
     tcp->Send(NetworkPacket{
-        Buffer(std::move(out)),
+        std::make_shared<Buffer>(std::move(out)),
         NetworkAddress::Empty(),
         0,
         NetworkProtocol::TCP});

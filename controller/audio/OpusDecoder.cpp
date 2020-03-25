@@ -226,19 +226,19 @@ int tgvoip::OpusDecoder::DecodeNextFrame()
 {
 	int playbackDuration = 0;
 	bool isEC = false;
-	size_t len = jitterBuffer->HandleOutput(buffer, 8192, true, playbackDuration, isEC);
+	auto ptr = jitterBuffer->HandleOutput(true, playbackDuration, isEC);
 	bool fec = false;
-	if (!len)
+	if (!ptr)
 	{
 		fec = true;
-		len = jitterBuffer->HandleOutput(buffer, 8192, false, playbackDuration, isEC);
+		ptr = jitterBuffer->HandleOutput( false, playbackDuration, isEC);
 		/*if (len)
 			LOGV("Trying FEC...");*/
 	}
 	int size;
-	if (len)
+	if (ptr)
 	{
-		size = opus_decode(isEC ? ecDec : dec, buffer, len, (opus_int16 *)decodeBuffer, packetsPerFrame * 960, fec ? 1 : 0);
+		size = opus_decode(isEC ? ecDec : dec, **ptr, ptr->Length(), (opus_int16 *)decodeBuffer, packetsPerFrame * 960, fec ? 1 : 0);
 		consecutiveLostPackets = 0;
 		if (prevWasEC != isEC && size)
 		{

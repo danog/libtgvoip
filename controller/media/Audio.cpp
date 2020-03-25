@@ -8,7 +8,7 @@ using namespace std;
 void VoIPController::InitializeAudio()
 {
     double t = GetCurrentTime();
-    auto &outgoingAudioStream = GetStreamByType<OutgoingAudioStream>();
+    auto *outgoingAudioStream = GetStreamByType<OutgoingAudioStream>();
     LOGI("before create audio io");
     audioIO = audio::AudioIO::Create(currentAudioInput, currentAudioOutput);
     audioInput = audioIO->GetInput();
@@ -85,7 +85,7 @@ void VoIPController::StartAudio()
 void VoIPController::OnAudioOutputReady()
 {
     LOGI("Audio I/O ready");
-    auto &stm = GetStreamByID<IncomingAudioStream>(StreamId::Audio);
+    auto *stm = GetStreamByID<IncomingAudioStream>(StreamId::Audio);
     stm->decoder = make_shared<OpusDecoder>(audioOutput, true, ver.peerVersion >= 6);
     stm->decoder->SetEchoCanceller(echoCanceller);
     if (config.enableVolumeControl)

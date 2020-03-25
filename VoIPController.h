@@ -419,7 +419,7 @@ protected:
     virtual void SendExtra(std::shared_ptr<Extra> &&_d, int64_t endpointId = 0);
     virtual void SendExtra(std::shared_ptr<Extra> &_d, int64_t endpointId = 0);
     template <class T>
-    void SendStreamFlags(const OutgoingStream<T> &stream)
+    void SendStreamFlags(const T &stream)
     {
         ENFORCE_MSG_THREAD;
 
@@ -428,8 +428,9 @@ protected:
         flags->streamId = stream.id;
         if (stream.enabled)
             flags->flags |= ExtraStreamFlags::Flags::Enabled;
-        if constexpr (std::is_same_v<AudioPacketSender, T> && stream.extraECEnabled)
-            flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
+        if constexpr (std::is_same_v<OutgoingAudioStream, T>)
+            if (stream.extraECEnabled)
+                flags->flags |= ExtraStreamFlags::Flags::ExtraEC;
         if (stream.paused)
             flags->flags |= ExtraStreamFlags::Flags::Paused;
 
@@ -448,18 +449,13 @@ protected:
     CellularCarrierInfo GetCarrierInfo();
 
     template <class T>
-    std::shared_ptr<T> &GetStreamByType()
+    std::shared_ptr<T> GetStreamByTypeShared()
     {
-        return GetStreamByType<T>(T::TYPE, T::OUTGOING);
-    }
-    template <class T>
-    std::shared_ptr<T> &GetStreamByType(StreamType type, bool outgoing)
-    {
-        if (outgoing)
+        if constexpr (T::OUTGOING)
         {
             for (auto &ss : outgoingStreams)
             {
-                if (ss->type == type)
+                if (ss->type == T::TYPE)
                     return dynamic_pointer_cast<T>(ss);
             }
         }
@@ -467,19 +463,49 @@ protected:
         {
             for (auto &ss : incomingStreams)
             {
-                if (ss->type == type)
+                if (ss->type == T::TYPE)
                     return dynamic_pointer_cast<T>(ss);
             }
         }
         return nullptr;
     }
     template <class T>
-    std::shared_ptr<T> &GetStreamByID(uint8_t id)
+    T *GetStreamByType()
     {
-        auto &vec = T::OUTGOING ? outgoingStreams : incomingStreams;
-        if (id < vec.size())
+        if constexpr (T::OUTGOING)
         {
-            return dynamic_pointer_cast<T>(vec[id]);
+            for (auto &ss : outgoingStreams)
+            {
+                if (ss->type == T::TYPE)
+                    return dynamic_cast<T *>(ss.get());
+            }
+        }
+        else
+        {
+            for (auto &ss : incomingStreams)
+            {
+                if (ss->type == T::TYPE)
+                    return dynamic_cast<T *>(ss.get());
+            }
+        }
+        return nullptr;
+    }
+    template <class T>
+    T *GetStreamByID(uint8_t id)
+    {
+        if constexpr (T::OUTGOING)
+        {
+            if (id < outgoingStreams.size())
+            {
+                return dynamic_cast<T *>(outgoingStreams[id].get());
+            }
+        }
+        else
+        {
+            if (id < incomingStreams.size())
+            {
+                return dynamic_cast<T *>(incomingStreams[id].get());
+            }
         }
         return nullptr;
     }

@@ -83,7 +83,7 @@ void VoIPController::HandleReliablePackets(const PacketManager &pm)
             if (seq && pm.wasLocalAcked(seq))
             {
 
-                LOGV("Peer acknowledged extra type %u", it->data.print().c_str());
+                LOGV("Peer acknowledged extra type %s", it->data.print().c_str());
                 ProcessAcknowledgedOutgoingExtra(*it);
                 it = currentExtras.erase(it);
                 acked = true;

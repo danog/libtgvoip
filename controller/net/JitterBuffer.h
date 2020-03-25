@@ -37,7 +37,7 @@ public:
     double GetAverageDelay();
     void Reset();
     void HandleInput(std::unique_ptr<Buffer> &&buf, uint32_t timestamp, bool isEC);
-    size_t HandleOutput(unsigned char *buffer, size_t len, bool advance, int &playbackScaledDuration, bool &isEC);
+    std::unique_ptr<Buffer> HandleOutput(bool advance, int &playbackScaledDuration, bool &isEC);
     void Tick();
     void GetAverageLateCount(double *out);
     int GetAndResetLostPacketCount();
@@ -69,7 +69,7 @@ private:
     int GetInternal(jitter_packet_t &pkt, bool advance);
     void Advance();
 
-    BufferPool<JITTER_SLOT_SIZE, JITTER_SLOT_COUNT> bufferPool;
+    //BufferPool<JITTER_SLOT_SIZE, JITTER_SLOT_COUNT> bufferPool;
     Mutex mutex;
     uint32_t step;
     std::array<jitter_packet_t, JITTER_SLOT_COUNT> slots{0};
