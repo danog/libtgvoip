@@ -154,5 +154,5 @@ void VoIPController::SetupOutgoingVideoStream()
     }
 
     vstm->enabled = false;
-    outgoingStreams.push_back(dynamic_pointer_cast<OutgoingStream<>>(vstm));
+    outgoingStreams.push_back(dynamic_pointer_cast<OutgoingStream>(vstm));
 }

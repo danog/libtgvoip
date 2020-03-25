@@ -74,6 +74,7 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
     if (!packet.parse(in, ver))
     {
         LOGW("Failure parsing incoming packet!");
+        return;
     }
     packetsReceived++;
     ProcessIncomingPacket(packet, srcEndpoint);
@@ -94,10 +95,12 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
 
     if (!manager.ackRemoteSeq(packet))
     {
+        LOGE("Failure acking remote seq!");
         return;
     }
 
-#ifdef LOG_PACKETSackId
+    LOGE("Received packet!");
+#ifdef LOG_PACKETS
     LOGV("Received: from=%s:%u, seq=%u, length=%u, type=%s, transportId=%hhu", srcEndpoint.GetAddress().ToString().c_str(), srcEndpoint.port, pseq, (unsigned int)packet.data.Length(), GetPacketTypeString(type).c_str(), transportId);
 #endif
 
@@ -184,7 +187,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
     //LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", getLastRemoteSeq(), recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
     //LOGI("RTT = %.3lf", GetAverageRTT());
     //LOGV("Packet %u type is %d", pseq, type);
-    if (packet.data)
+    if (packet.data && packet.data->Length())
     {
         if (!receivedFirstStreamPacket)
         {
@@ -226,13 +229,6 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
             if (stm->jitterBuffer)
             {
                 stm->jitterBuffer->HandleInput(std::move(packet.data), pts, false);
-                /*if (peerVersion >= PROTOCOL_RELIABLE)
-                    {
-                        // Technically I should be using the specific packet manager's rtt history but will separate later
-                        uint32_t tooOldSeq = stm->jitterBuffer->GetSeqTooLate(rttHistory[0]) - 1;
-                        LOGW("Reverse acking seqs older than %u, newest acked seq %u (transportId %hhu)", tooOldSeq, manager.getLastRemoteSeq(), transportId);
-                        manager.ackRemoteSeqsOlderThan(tooOldSeq);
-                    }*/
                 if (packet.extraEC)
                 {
                     for (uint8_t i = 0; i < 8; i++)
@@ -289,8 +285,9 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
 void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &srcEndpoint)
 {
     auto type = _data.getID();
-    if (lastReceivedExtrasByType[type] == _data.d->hash)
+    if (_data.d->hash && lastReceivedExtrasByType[type] == _data.d->hash)
     {
+        LOGE("Received duplicate hash!");
         return;
     }
     lastReceivedExtrasByType[type] = _data.d->hash;
@@ -348,35 +345,34 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
 
                 SetupOutgoingVideoStream();
             }
+        }
+        auto ack = std::make_shared<ExtraInitAck>();
+        ack->peerVersion = PROTOCOL_VERSION;
+        ack->minVersion = MIN_PROTOCOL_VERSION;
 
-            auto ack = std::make_shared<ExtraInitAck>();
-            ack->peerVersion = PROTOCOL_VERSION;
-            ack->minVersion = MIN_PROTOCOL_VERSION;
+        for (const auto &stream : outgoingStreams)
+        {
+            ack->streams.v.push_back(stream->getStreamInfo());
+        }
 
-            for (const auto &stream : outgoingStreams)
+        LOGI("Sending init ack");
+        SendExtra(ack);
+        SendNopPacket();
+
+        if (!receivedInit)
+        {
+            receivedInit = true;
+            if ((srcEndpoint.type == Endpoint::Type::UDP_RELAY && udpConnectivityState != UDP_BAD && udpConnectivityState != UDP_NOT_AVAILABLE) || srcEndpoint.type == Endpoint::Type::TCP_RELAY)
             {
-                ack->streams.v.push_back(stream->getStreamInfo());
+                currentEndpoint = srcEndpoint.id;
+                if (srcEndpoint.type == Endpoint::Type::UDP_RELAY || (useTCP && srcEndpoint.type == Endpoint::Type::TCP_RELAY))
+                    preferredRelay = srcEndpoint.id;
             }
-
-            LOGI("Sending init ack");
-            SendExtra(ack);
-            SendNopPacket();
-
-            if (!receivedInit)
-            {
-                receivedInit = true;
-                if ((srcEndpoint.type == Endpoint::Type::UDP_RELAY && udpConnectivityState != UDP_BAD && udpConnectivityState != UDP_NOT_AVAILABLE) || srcEndpoint.type == Endpoint::Type::TCP_RELAY)
-                {
-                    currentEndpoint = srcEndpoint.id;
-                    if (srcEndpoint.type == Endpoint::Type::UDP_RELAY || (useTCP && srcEndpoint.type == Endpoint::Type::TCP_RELAY))
-                        preferredRelay = srcEndpoint.id;
-                }
-            }
-            if (!audioStarted && receivedInitAck)
-            {
-                StartAudio();
-                audioStarted = true;
-            }
+        }
+        if (!audioStarted && receivedInitAck)
+        {
+            StartAudio();
+            audioStarted = true;
         }
     }
     else if (type == ExtraInitAck::ID)

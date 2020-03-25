@@ -2,19 +2,16 @@
 
 using namespace tgvoip;
 
-
-void VoIPController::SendPacketReliably(PendingOutgoingPacket &_pkt, double retryInterval, double timeout, uint8_t tries)
+void VoIPController::SendPacketReliably(PendingOutgoingPacket &pkt, double retryInterval, double timeout, uint8_t tries)
 {
     ENFORCE_MSG_THREAD;
 #ifdef LOG_PACKETS
     LOGV("Send reliably, type=%u, len=%u, retry=%.3f, timeout=%.3f, tries=%hhu", type, unsigned(len), retryInterval, timeout, tries);
 #endif
-    ReliableOutgoingPacket pkt{
-        std::move(_pkt),
-        retryInterval,
-        timeout,
-        tries};
-    reliablePackets.push_back(move(pkt));
+    reliablePackets.push_back(ReliableOutgoingPacket{std::move(pkt),
+                                                     retryInterval,
+                                                     timeout,
+                                                     tries});
     messageThread.Post(std::bind(&VoIPController::UpdateReliablePackets, this));
     if (timeout > 0.0)
     {

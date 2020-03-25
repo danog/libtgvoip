@@ -1,7 +1,6 @@
 #include "Extra.h"
 #include "../../../VoIPController.h"
 #include "../Stream.h"
-#include "../Stream.tcc"
 
 using namespace tgvoip;
 
@@ -34,7 +33,7 @@ std::shared_ptr<Extra> Extra::choose(const BufferInputStream &in, const VersionI
         return nullptr;
     }
     unsigned char fullHash[SHA1_LENGTH];
-    VoIPController::crypto.sha1(const_cast<uint8_t *>(in.GetRawBuffer() + in.GetOffset()), in.Remaining(), fullHash);
+    VoIPController::crypto.sha1(const_cast<uint8_t *>(in.GetRawBuffer()), in.Remaining(), fullHash);
 
     std::shared_ptr<Extra> res;
     switch (id)
@@ -249,6 +248,11 @@ void ExtraGroupCallKey::serialize(BufferOutputStream &out, const VersionInfo &ve
 
 bool ExtraInit::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
+    /*
+    LOGW("Init: ")
+    for (auto i = 0; i < in.Remaining(); i++) {
+        LOGW("%hhu", in.GetRawBuffer()[i]);
+    }*/
     return in.TryRead(peerVersion) &&
            in.TryRead(minVersion) &&
            (ver.isNew() ? in.TryRead(flags) : in.TryReadCompat<uint32_t>(flags)) &&

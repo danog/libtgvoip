@@ -13,7 +13,7 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
     uint32_t acks;              // Ack mask
     unsigned char type, pflags; // Packet type, flags
     size_t packetInnerLen = 0;
-    if (ver.peerVersion >= 8)
+    if (ver.isLegacy())
     {
         if (!(
                 in.TryRead(type) &&
@@ -146,7 +146,7 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
     return true;
 }
 
-void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, bool>> &outArray, const VersionInfo &ver, const int state, const unsigned char *callID)
+void Packet::serializeLegacy(std::vector<std::pair<Buffer, bool>> &outArray, const VersionInfo &ver, const int state, const unsigned char *callID)
 {
     auto originalLegacySeq = legacySeq;
 
@@ -166,30 +166,37 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
         BufferOutputStream out(1500);
 
         uint8_t type = extra.d->chooseType(ver.peerVersion);
+
+        LOGW("Serializing separate legacy packet of type %s", VoIPController::GetPacketTypeString(type).c_str());
+
         if (ver.peerVersion >= 8 || (!ver.peerVersion && ver.connectionMaxLayer >= 92))
         {
             writePacketHeaderLegacy(out, ver, legacySeq, ackSeq, ackMask, type, allowedExtras);
-            out.Write(extra, ver);
+            out.Write(*extra.d, ver);
         }
         else
         {
             BufferOutputStream accumulator(1500);
-            accumulator.Write(extra, ver);
+            accumulator.Write(*extra.d, ver);
             writePacketHeaderLegacyLegacy(out, ver, legacySeq, ackSeq, ackMask, type, accumulator.GetLength(), allowedExtras, state, callID);
             out.WriteBytes(accumulator.GetBuffer(), accumulator.GetLength());
         }
-        outArray.push_back(std::make_tuple(out.GetBuffer(), out.GetLength(), true));
+        outArray.push_back(std::make_pair(Buffer(std::move(out)), true));
         legacySeq++;
     }
     // Convert from mask to array
     Array<Wrapped<Bytes>> extraECArray;
-    for (auto &ecPacket : extraEC.v)
+    if (extraEC)
     {
-        extraECArray.v.push_back(std::move(ecPacket));
+        for (auto &ecPacket : extraEC.v)
+        {
+            extraECArray.v.push_back(std::move(ecPacket));
+        }
     }
 
     if (ver.peerVersion < 7 && extraECArray)
     {
+        LOGW("Serializing legacylegacy EC");
         BufferOutputStream out(1500);
 
         if (!ver.isLegacyLegacy())
@@ -207,17 +214,19 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
             writePacketHeaderLegacyLegacy(accumulator, ver, legacySeq, ackSeq, ackMask, PKT_STREAM_EC, out.GetLength(), allowedExtras, state, callID);
             accumulator.WriteBytes(out.GetBuffer(), out.GetLength());
 
-            outArray.push_back(std::make_tuple(accumulator.GetBuffer(), accumulator.GetLength(), false));
+            outArray.push_back(std::make_pair(Buffer(std::move(accumulator)), false));
         }
         else
         {
-            outArray.push_back(std::make_tuple(out.GetBuffer(), out.GetLength(), false));
+            outArray.push_back(std::make_pair(Buffer(std::move(out)), false));
         }
 
         legacySeq++;
     }
     if (data)
     {
+        LOGW("Serializing legacy data len %u", (unsigned int)data->Length());
+
         BufferOutputStream out(1500);
 
         if (!ver.isLegacyLegacy())
@@ -258,18 +267,18 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
             writePacketHeaderLegacyLegacy(accumulator, ver, legacySeq, ackSeq, ackMask, PKT_STREAM_DATA, out.GetLength(), allowedExtras, state, callID);
             accumulator.WriteBytes(out.GetBuffer(), out.GetLength());
 
-            outArray.push_back(std::make_tuple(accumulator.GetBuffer(), accumulator.GetLength(), false));
+            outArray.push_back(std::make_pair(Buffer(std::move(accumulator)), false));
         }
         else
         {
-            outArray.push_back(std::make_tuple(out.GetBuffer(), out.GetLength(), false));
+            outArray.push_back(std::make_pair(Buffer(std::move(out)), false));
         }
 
         legacySeq++;
     }
-    if (legacySeq == originalLegacySeq && nopPacket) // No data was serialized
+    if (legacySeq == originalLegacySeq) // No data was serialized
     {
-        LOGW("Serializing NOP packet");
+        LOGW("Serializing legacy NOP packet");
         BufferOutputStream out(1500);
 
         if (ver.peerVersion >= 8 || (!ver.peerVersion && ver.connectionMaxLayer >= 92))
@@ -280,7 +289,8 @@ void Packet::serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, boo
         {
             writePacketHeaderLegacyLegacy(out, ver, legacySeq, ackSeq, ackMask, PKT_NOP, 0, allowedExtras, state, callID);
         }
-        outArray.push_back(std::make_tuple(out.GetBuffer(), out.GetLength(), false));
+        outArray.push_back(std::make_pair(Buffer(std::move(out)), false));
+        legacySeq++;
     }
 }
 void Packet::writePacketHeaderLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t seq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const std::vector<Wrapped<Extra>> &extras)

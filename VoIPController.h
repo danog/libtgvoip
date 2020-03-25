@@ -50,7 +50,6 @@ extern jclass jniUtilitiesClass;
 #include "controller/net/JitterBuffer.h"
 #include "controller/net/PacketReassembler.h"
 #include "controller/protocol/Stream.h"
-#include "controller/protocol/Stream.tcc"
 #include "controller/protocol/packets/PacketManager.h"
 #include "controller/protocol/packets/PacketStructs.h"
 #include "controller/protocol/protocol/Extra.h"
@@ -609,7 +608,7 @@ private:
             return "unknown";
         }
     }
-
+public:
     inline static std::string GetPacketTypeString(unsigned char type)
     {
         switch (type)
@@ -637,6 +636,7 @@ private:
         }
         return string("unknown(") + std::to_string(type) + ')';
     }
+private:
 
     bool parseRelayPacket(const BufferInputStream &in, Endpoint &srcEndpoint);
 
@@ -686,7 +686,7 @@ private:
     uint32_t maxBitrate;
 
     //
-    std::vector<std::shared_ptr<OutgoingStream<>>> outgoingStreams;
+    std::vector<std::shared_ptr<OutgoingStream>> outgoingStreams;
     std::vector<std::shared_ptr<IncomingStream>> incomingStreams;
 
     PacketManager &getBestPacketManager();

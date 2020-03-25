@@ -2,7 +2,6 @@
 
 using namespace tgvoip;
 
-
 #pragma mark - Audio I/O
 
 void VoIPController::InitializeAudio()
@@ -43,7 +42,7 @@ void VoIPController::InitializeAudio()
         encoder->AddAudioEffect(inputVolume);
     }
 
-    outgoingAudioStream->packetSender->SetSource(encoder);
+    dynamic_cast<AudioPacketSender *>(outgoingAudioStream->packetSender.get())->SetSource(encoder);
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
     dynamic_cast<audio::AudioInputCallback *>(audioInput.get())->SetDataCallback(audioInputDataCallback);

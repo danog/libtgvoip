@@ -200,7 +200,7 @@ string VoIPController::GetDebugString()
         snprintf(buffer, sizeof(buffer), "%s:%u %dms %d 0x%" PRIx64 " [%s%s]\n", endpoint.address.IsEmpty() ? ("[" + endpoint.v6address.ToString() + "]").c_str() : endpoint.address.ToString().c_str(), endpoint.port, (int)(endpoint.averageRTT * 1000), endpoint.udpPongCount, (uint64_t)endpoint.id, type, currentEndpoint == endpoint.id ? ", IN_USE" : "");
         r += buffer;
     }
-    auto &sender = GetStreamByType<OutgoingAudioStream>()->packetSender;
+    auto *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType<OutgoingAudioStream>()->packetSender.get());
     if (sender->getShittyInternetMode())
     {
         snprintf(buffer, sizeof(buffer), "ShittyInternetMode: level %u\n", sender->getExtraEcLevel());
@@ -250,7 +250,7 @@ string VoIPController::GetDebugString()
         auto *vstm = GetStreamByType<OutgoingVideoStream>();
         if (vstm && vstm->enabled && vstm->packetSender)
         {
-            snprintf(buffer, sizeof(buffer), "\nVideo out: %ux%u '%c%c%c%c' %u kbit", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec), vstm->packetSender->GetBitrate());
+            snprintf(buffer, sizeof(buffer), "\nVideo out: %ux%u '%c%c%c%c' %u kbit", vstm->width, vstm->height, PRINT_FOURCC(vstm->codec), dynamic_cast<video::VideoPacketSender *>(vstm->packetSender.get())->GetBitrate());
             r += buffer;
         }
     }
@@ -660,7 +660,7 @@ void VoIPController::SetAudioDataCallbacks(std::function<void(int16_t *, size_t)
 {
     audioInputDataCallback = input;
     audioOutputDataCallback = output;
-    GetStreamByType<OutgoingAudioStream>()->packetSender->setAudioPreprocDataCallback(preproc);
+    dynamic_cast<AudioPacketSender *>(GetStreamByType<OutgoingAudioStream>()->packetSender.get())->setAudioPreprocDataCallback(preproc);
 }
 #endif
 

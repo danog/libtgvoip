@@ -24,7 +24,6 @@ class VideoPacketSender;
 class PacketManager;
 class PacketSender;
 
-template <class T = PacketSender>
 struct OutgoingStream : public StreamInfo
 {
     OutgoingStream() = delete;
@@ -35,7 +34,7 @@ struct OutgoingStream : public StreamInfo
     
     PacketManager packetManager;
 
-    std::unique_ptr<T> packetSender;
+    std::unique_ptr<PacketSender> packetSender;
 
     static const bool OUTGOING = true;
 };
@@ -48,8 +47,7 @@ struct IncomingStream : public StreamInfo
     static const bool OUTGOING = false;
 };
 
-template <class T>
-struct OutgoingMediaStream : public MediaStreamInfo, public OutgoingStream<T>
+struct OutgoingMediaStream : public MediaStreamInfo, public OutgoingStream
 {
     OutgoingMediaStream() = delete;
     OutgoingMediaStream(uint8_t id, StreamType type);
@@ -70,7 +68,7 @@ struct IncomingMediaStream : public MediaStreamInfo, public IncomingStream
 };
 
 struct OutgoingAudioStream : public AudioStreamInfo,
-                             public OutgoingMediaStream<AudioPacketSender>
+                             public OutgoingMediaStream
 {
     OutgoingAudioStream(uint8_t _id = StreamId::Audio);
     virtual ~OutgoingAudioStream();
@@ -94,7 +92,7 @@ struct IncomingAudioStream : public AudioStreamInfo, public IncomingMediaStream
     static const bool OUTGOING = false;
 };
 
-struct OutgoingVideoStream : public VideoStreamInfo, public OutgoingMediaStream<video::VideoPacketSender>
+struct OutgoingVideoStream : public VideoStreamInfo, public OutgoingMediaStream
 {
     OutgoingVideoStream(uint8_t _id = StreamId::Video);
     virtual ~OutgoingVideoStream();
@@ -116,7 +114,7 @@ struct IncomingVideoStream : public VideoStreamInfo, public IncomingMediaStream
 class PacketSender
 {
 public:
-    PacketSender(VoIPController *_controller, const std::shared_ptr<OutgoingStream<>> &_stream);
+    PacketSender(VoIPController *_controller, const std::shared_ptr<OutgoingStream> &_stream);
     virtual ~PacketSender() = default;
 
     virtual void PacketAcknowledged(const RecentOutgoingPacket &packet){};
@@ -196,7 +194,7 @@ protected:
     }*/
 
     VoIPController *controller;
-    std::shared_ptr<OutgoingStream<>> stream;
+    std::shared_ptr<OutgoingStream> stream;
     PacketManager &packetManager;
 
     //std::vector<PendingOutgoingPacket> reliableQueue;

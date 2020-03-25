@@ -1,4 +1,5 @@
 #include "../../VoIPController.h"
+#include "../audio/AudioPacketSender.h"
 
 using namespace tgvoip;
 
@@ -140,7 +141,7 @@ void VoIPController::TickJitterBufferAndCongestionControl()
     double packetLossTimeout = std::max(rtt * 2.0, 0.1);
     for (auto &stm : outgoingStreams)
     {
-        auto &sender = stm->packetSender;
+        auto *sender = dynamic_cast<AudioPacketSender *>(stm->packetSender.get());
         for (RecentOutgoingPacket &pkt : stm->packetManager.getRecentOutgoingPackets())
         {
             if (pkt.ackTime || pkt.lost)
@@ -202,7 +203,7 @@ void VoIPController::UpdateCongestion()
         LOGE("avg send loss: %.3f%%", avgSendLossCount * 100);
 
         auto *s = GetStreamByType<OutgoingAudioStream>();
-        auto &sender = s->packetSender;
+        auto *sender = dynamic_cast<AudioPacketSender *>(s->packetSender.get());
         //avgSendLossCount = sender->setPacketLoss(avgSendLossCount * 100.0) / 100.0;
         sender->setPacketLoss(avgSendLossCount * 100.0);
         if (avgSendLossCount > packetLossToEnableExtraEC && networkType != NET_TYPE_GPRS && networkType != NET_TYPE_EDGE)
@@ -276,7 +277,7 @@ void VoIPController::UpdateAudioBitrate()
         }
 
         int act = conctl.GetBandwidthControlAction();
-        if (GetStreamByType<OutgoingAudioStream>()->packetSender->getShittyInternetMode())
+        if (dynamic_cast<AudioPacketSender *>(GetStreamByType<OutgoingAudioStream>()->packetSender.get())->getShittyInternetMode())
         {
             encoder->SetBitrate(8000);
         }

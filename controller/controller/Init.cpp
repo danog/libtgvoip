@@ -40,8 +40,8 @@ VoIPController::VoIPController() : rawSendQueue(64)
     stm->frameDuration = 60;
     stm->packetSender = std::make_unique<AudioPacketSender>(this, stm, nullptr);
 
-    outgoingStreams.push_back(dynamic_pointer_cast<OutgoingStream<>>(stm));
-    outgoingStreams.push_back(std::make_shared<OutgoingStream<>>(StreamId::Signaling, StreamType::Signaling));
+    outgoingStreams.push_back(std::make_shared<OutgoingStream>(StreamId::Signaling, StreamType::Signaling));
+    outgoingStreams.push_back(dynamic_pointer_cast<OutgoingStream>(stm));
 }
 
 void VoIPController::InitializeTimers()

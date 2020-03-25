@@ -235,16 +235,6 @@ bool BufferInputStream::TryRead(Serializable &to, const VersionInfo &ver) const
 	return to.parse(*this, ver);
 }
 
-template <typename X, typename Y>
-bool BufferInputStream::TryReadCompat(Y &data) const
-{
-	X temp;
-	if (!TryRead(temp))
-		return false;
-	data = static_cast<Y>(temp);
-	return true;
-}
-
 bool BufferInputStream::Has(size_t len) const
 {
 	return offset + len > length;

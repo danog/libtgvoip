@@ -57,16 +57,16 @@ void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, doub
 
         uint32_t seq = legacyPm.getLocalSeq();
 
-        std::vector<std::tuple<unsigned char *, size_t, bool>> out;
+        std::vector<std::pair<Buffer, bool>> out;
         packet.serializeLegacy(out, ver, state, callID);
         legacyPm.setLocalSeq(packet.legacySeq);
 
         for (auto &t : out)
         {
-            auto res = PreparePacket(std::get<0>(t), std::get<1>(t), endpoint, CongestionControlPacket(seq++, StreamId::Signaling));
-            if (std::get<2>(t) || isReliable)
+            auto res = PreparePacket(*std::get<0>(t), std::get<0>(t).Length(), endpoint, CongestionControlPacket(seq++, StreamId::Signaling));
+            if (std::get<1>(t) || isReliable)
             {
-                SendPacketReliably(res, retryInterval, timeout, tries);
+                SendPacketReliably(res, retryInterval, timeout, tries ? tries : 0xFF);
             }
             else
             {
@@ -146,6 +146,8 @@ void VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueu
 void VoIPController::SendInit()
 {
     ENFORCE_MSG_THREAD;
+
+    //LOGE("Send init!");
 
     auto init = std::make_shared<ExtraInit>();
     init->peerVersion = PROTOCOL_VERSION;
@@ -463,7 +465,7 @@ void VoIPController::SendExtra(Wrapped<Extra> &&extra, int64_t endpointId)
     ENFORCE_MSG_THREAD;
 
     auto type = extra.getID();
-    LOGV("Sending extra type %hhu", type);
+    LOGV("Sending extra type %s", extra.print().c_str());
     for (auto &extra : currentExtras)
     {
         if (extra.data.getID() == type && extra.endpointId == endpointId)

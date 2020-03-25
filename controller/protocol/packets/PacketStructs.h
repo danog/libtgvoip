@@ -14,7 +14,7 @@ class PacketManager;
 struct PendingOutgoingPacket
 {
     PendingOutgoingPacket(std::shared_ptr<Buffer> &&_packet, CongestionControlPacket &&_pktInfo, int64_t _endpoint) : packet(std::move(_packet)),
-                                                                                                                      pktInfo(std::move(pktInfo)),
+                                                                                                                      pktInfo(std::move(_pktInfo)),
                                                                                                                       endpoint(_endpoint){};
     //TGVOIP_MOVE_ONLY(PendingOutgoingPacket);
     //TGVOIP_DISALLOW_COPY_AND_ASSIGN(PendingOutgoingPacket);
@@ -35,9 +35,10 @@ struct ReliableOutgoingPacket
 
 struct RecentOutgoingPacket
 {
-    RecentOutgoingPacket(const PendingOutgoingPacket &_pkt, double sendTime) : pkt(_pkt.pktInfo),
+    RecentOutgoingPacket(const PendingOutgoingPacket &_pkt, double _sendTime) : pkt(_pkt.pktInfo),
                                                                                size(_pkt.packet->Length()),
-                                                                               endpoint(_pkt.endpoint){};
+                                                                               endpoint(_pkt.endpoint),
+                                                                               sendTime(_sendTime){};
     CongestionControlPacket pkt;
     size_t size;
 
@@ -52,8 +53,8 @@ struct RecentOutgoingPacket
 };
 struct UnacknowledgedExtraData
 {
-    UnacknowledgedExtraData(Wrapped<Extra> &&data_, int64_t _endpointId = 0)
-        : data(std::move(data_)),
+    UnacknowledgedExtraData(Wrapped<Extra> &&_data, int64_t _endpointId = 0)
+        : data(std::move(_data)),
           endpointId(_endpointId)
     {
     }
@@ -74,7 +75,7 @@ private:
     bool parseLegacyLegacy(const BufferInputStream &in, unsigned char &type, uint32_t &ackId, uint32_t &pseq, uint32_t &acks, unsigned char &pflags, size_t &packetInnerLen, int peerVersion);
 
 public:
-    void serializeLegacy(std::vector<std::tuple<unsigned char *, size_t, bool>> &out, const VersionInfo &ver, const int state, const unsigned char *callID);
+    void serializeLegacy(std::vector<std::pair<Buffer, bool>> &out, const VersionInfo &ver, const int state, const unsigned char *callID);
 
 private:
     void writePacketHeaderLegacy(BufferOutputStream &out, const VersionInfo &ver, const uint32_t seq, const uint32_t ackSeq, const uint32_t ackMask, const unsigned char type, const std::vector<Wrapped<Extra>> &extras);

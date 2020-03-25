@@ -56,7 +56,7 @@ public:
 
     inline void setLocalSeq(uint32_t _seq)
     {
-        seq = _seq;
+        seq.store(_seq);
     }
 
     inline uint32_t getLastSentSeq() const

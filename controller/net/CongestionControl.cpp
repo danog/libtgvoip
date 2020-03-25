@@ -61,7 +61,7 @@ void CongestionControl::PacketSent(const CongestionControlPacket &pkt, size_t si
     }
     if (!seqgt(pkt.seq, lastSentSeq[pkt.streamId]) || pkt.seq == lastSentSeq[pkt.streamId])
     {
-        LOGW("Duplicate outgoing seq %u", pkt.seq);
+        //LOGW("Duplicate outgoing seq %u", pkt.seq);
         return;
     }
     lastSentSeq[pkt.streamId] = pkt.seq;

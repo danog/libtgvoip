@@ -57,7 +57,9 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
     uint8_t shortStreamId = streamId > StreamId::Extended ? StreamId::Extended : streamId;
     uint8_t flags = 0;
-    if (data->Length() > 0xFF || eFlags)
+    size_t length = data ? data->Length() : 0;
+
+    if (length > 0xFF || eFlags)
         flags |= Flags::Len16;
     if (recvTS)
         flags |= Flags::RecvTS;
@@ -75,11 +77,12 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
         out.WriteByte(streamId);
 
     if (flags & Flags::Len16)
-        out.WriteUInt16(data->Length() | (eFlags << 11));
+        out.WriteUInt16(length | (eFlags << 11));
     else
-        out.WriteByte(data->Length());
+        out.WriteByte(length);
 
-    out.WriteBytes(*data);
+    if (length)
+        out.WriteBytes(*data);
 
     if (flags & Flags::RecvTS)
         out.WriteUInt32(recvTS);
@@ -101,6 +104,15 @@ void Packet::prepare(PacketManager &pm)
 void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId)
 {
     prepare(pm);
+    extraSignaling.v.clear();
+    for (auto &extra : currentExtras)
+    {
+        if (!extra.endpointId || extra.endpointId == endpointId)
+        {
+            extraSignaling.v.push_back(extra.data);
+            extra.seqs.Add(seq);
+        }
+    }
 }
 void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId, PacketManager &legacyPm, const int peerVersion)
 {
@@ -124,7 +136,7 @@ void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &cu
     extraSignaling.v.clear();
     for (auto &extra : currentExtras)
     {
-        if (!endpointId || extra.endpointId == endpointId)
+        if (!extra.endpointId || extra.endpointId == endpointId)
         {
             extraSignaling.v.push_back(extra.data);
             if (extra.data.d->chooseType(peerVersion) == PKT_NOP)
