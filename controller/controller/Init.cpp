@@ -35,13 +35,16 @@ VoIPController::VoIPController() : rawSendQueue(64)
     unackNopThreshold = ServerConfig::GetSharedInstance()->GetUInt("unack_nop_threshold", 10);
 
     //audioBitrateStepDecr /= 2;
-    auto stm = std::make_shared<OutgoingAudioStream>();
-    stm->codec = Codec::Opus;
-    stm->frameDuration = 60;
-    stm->packetSender = std::make_unique<AudioPacketSender>(this, stm, nullptr);
+    auto aStm = std::make_shared<OutgoingAudioStream>();
+    aStm->codec = Codec::Opus;
+    aStm->frameDuration = 60;
+    aStm->packetSender = std::make_unique<AudioPacketSender>(this, aStm, nullptr);
 
-    outgoingStreams.push_back(std::make_shared<OutgoingStream>(StreamId::Signaling, StreamType::Signaling));
-    outgoingStreams.push_back(dynamic_pointer_cast<OutgoingStream>(stm));
+    auto sStm = std::make_shared<OutgoingStream>(StreamId::Signaling, StreamType::Signaling);
+    sStm->packetSender = std::make_unique<PacketSender>(this, sStm);
+
+    outgoingStreams.push_back(sStm);
+    outgoingStreams.push_back(dynamic_pointer_cast<OutgoingStream>(aStm));
 }
 
 void VoIPController::InitializeTimers()

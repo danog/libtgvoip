@@ -35,6 +35,7 @@ std::shared_ptr<Extra> Extra::choose(const BufferInputStream &in, const VersionI
     unsigned char fullHash[SHA1_LENGTH];
     VoIPController::crypto.sha1(const_cast<uint8_t *>(in.GetRawBuffer()), in.Remaining(), fullHash);
 
+    LOGE("Got extra ID %hhu", id);
     std::shared_ptr<Extra> res;
     switch (id)
     {
@@ -75,6 +76,10 @@ std::shared_ptr<Extra> Extra::choose(const BufferInputStream &in, const VersionI
     if (res)
         res->hash = *reinterpret_cast<uint64_t *>(fullHash);
     return res;
+}
+void Extra::choose(BufferOutputStream &out, const VersionInfo &ver) const
+{
+    out.WriteByte(getID());
 }
 std::shared_ptr<Extra> Extra::chooseFromType(uint8_t type)
 {

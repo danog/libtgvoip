@@ -1,5 +1,6 @@
 #pragma once
 #include "../../../tools/Buffers.h"
+#include "../../../tools/logging.h"
 #include <memory>
 #include <type_traits>
 
@@ -16,6 +17,11 @@ struct SingleChoice
         return std::make_shared<T>();
     }
 
+    void choose(BufferOutputStream &out, const VersionInfo &ver) const
+    {
+        return;
+    }
+
     uint8_t getID() const
     {
         return 0;
@@ -27,14 +33,10 @@ struct SingleChoice
 template <typename T>
 struct MultiChoice
 {
-private:
-    static std::shared_ptr<T> __forceChoice(const BufferInputStream &in, const VersionInfo &ver)
-    {
-        return T::choose(in, ver);
-    }
-
 public:
     virtual ~MultiChoice() = default;
+
+    virtual void choose(BufferOutputStream &out, const VersionInfo &ver) const = 0;
 
     virtual uint8_t getID() const = 0;
 
@@ -183,7 +185,7 @@ struct Array : public Serializable, SingleChoice<Array<T>>
         for (auto i = 0; i < extraCount; i++)
         {
             auto data = T::choose(in, ver);
-            if (!data->parse(in, ver))
+            if (!data || !data->parse(in, ver))
             {
                 return false;
             }
@@ -196,6 +198,7 @@ struct Array : public Serializable, SingleChoice<Array<T>>
         out.WriteByte(v.size());
         for (auto &data : v)
         {
+            data.choose(out, ver);
             data.serialize(out, ver);
         }
     }
@@ -255,15 +258,22 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
         uint8_t len;
         if (!in.TryRead(len))
             return false;
-        d = T::choose(in, ver);
-        return d->parse(in.GetPartBuffer(len), ver);
+        LOGW("Got buffer of length %hhu", len);
+        auto buf = in.GetPartBuffer(len);
+        d = T::choose(buf, ver);
+        if (!d)
+            return false;
+        return d->parse(buf, ver);
     }
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
     {
         out.Advance(1);
         size_t len = out.GetOffset();
         if (d)
+        {
+            d->choose(out, ver);
             d->serialize(out, ver);
+        }
         len = out.GetOffset() - len;
         out.Rewind(len + 1);
         out.WriteByte(len);

@@ -4,13 +4,14 @@
 
 using namespace tgvoip;
 
-
 //std::random_device dev;
 //std::mt19937 rng(dev());
 //std::uniform_int_distribution<std::mt19937::result_type> dist6(0, 9); // distribution in range [1, 6]
 
 PendingOutgoingPacket VoIPController::PreparePacket(unsigned char *data, size_t len, Endpoint &ep, CongestionControlPacket &&pkt)
 {
+    LOGV("Preparing packet of length=%u, seq=%u, streamId=%hhu", (unsigned int)len, pkt.seq, pkt.streamId);
+
     BufferOutputStream out(len + 128);
     if (ep.IsReflector())
         out.WriteBytes((unsigned char *)ep.peerTag, 16);
@@ -35,6 +36,7 @@ void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, doub
     if (ver.isNew())
     {
         packet.prepare(pm, currentExtras, endpoint.id);
+        LOGW("Sending outgoing packet: %s", packet.print().c_str());
 
         //BufferOutputStream out(packet.getSize()); // Can precalc, should check if it's worth it
         BufferOutputStream out(1500);
@@ -54,8 +56,9 @@ void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, doub
     {
         PacketManager &legacyPm = outgoingStreams[StreamId::Signaling]->packetManager;
         packet.prepare(pm, currentExtras, endpoint.id, legacyPm, ver.peerVersion);
+        uint32_t seq = packet.legacySeq;
 
-        uint32_t seq = legacyPm.getLocalSeq();
+        LOGW("Sending (legacy) outgoing packet: %s", packet.print().c_str());
 
         std::vector<std::pair<Buffer, bool>> out;
         packet.serializeLegacy(out, ver, state, callID);
@@ -135,6 +138,9 @@ void VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueu
 
         unacknowledgedIncomingPacketCount = 0;
         outgoingStreams[pkt.pktInfo.streamId]->packetManager.addRecentOutgoingPacket(pkt);
+
+        LOGV("Sending: to=%s:%u, seq=%u, length=%u, streamId=%hhu", endpoint.GetAddress().ToString().c_str(), endpoint.port, pkt.pktInfo.seq, (unsigned int)pkt.packet->Length(), pkt.pktInfo.streamId);
+
 //LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
 #ifdef LOG_PACKETS
         //LOGV("Sending: to=%s:%u, seq=%u, length=%u, type=%s, streamId=%hhu", ep.GetAddress().ToString().c_str(), ep.port, seq, (unsigned int)out.GetLength(), GetPacketTypeString(type).c_str(), streamId);
@@ -185,12 +191,13 @@ void VoIPController::SendInit()
         p.seq = seq;
         p.ackSeq = pm.getLastRemoteSeq();
         p.ackMask = pm.getRemoteAckMask();
-        SendPacket(OutgoingPacket(std::move(p), e.id));
+        SendPacket(OutgoingPacket(std::move(p), e.id), 0.5, config.initTimeout, 0xFF);
     }
 
     if (state == STATE_WAIT_INIT)
         SetState(STATE_WAIT_INIT_ACK);
 
+    /*
     messageThread.Post(
         [this] {
             if (state == STATE_WAIT_INIT_ACK)
@@ -198,7 +205,7 @@ void VoIPController::SendInit()
                 SendInit();
             }
         },
-        0.5);
+        0.5);*/
 }
 
 void VoIPController::InitUDPProxy()
@@ -377,8 +384,6 @@ void VoIPController::SendRelayPings()
 
 void VoIPController::SendNopPacket(int64_t endpointId, double retryInterval, double timeout, uint8_t tries)
 {
-    if (state != STATE_ESTABLISHED)
-        return;
     SendPacket(OutgoingPacket(Packet(), endpointId), retryInterval, timeout, tries);
 }
 

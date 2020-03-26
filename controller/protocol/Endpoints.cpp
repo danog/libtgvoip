@@ -43,6 +43,7 @@ int64_t VoIPController::GetPreferredRelayID()
 
 void VoIPController::SetRemoteEndpoints(vector<Endpoint> endpoints, bool allowP2p, int32_t connectionMaxLayer)
 {
+    connectionMaxLayer = 110;
     LOGW("Set remote endpoints, allowP2P=%d, connectionMaxLayer=%u", allowP2p ? 1 : 0, connectionMaxLayer);
     assert(!runReceiver);
     preferredRelay = 0;

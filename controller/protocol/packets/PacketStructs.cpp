@@ -39,10 +39,13 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
             return false;
     }
 
-    data = std::make_unique<Buffer>(length);
-    if (in.TryRead(*data))
-        return false;
-
+    if (length)
+    {
+        data = std::make_unique<Buffer>(length);
+        if (!in.TryRead(*data))
+            return false;
+    }
+    
     if ((flags & Flags::RecvTS) && !in.TryRead(recvTS))
         return false;
     if ((flags & Flags::ExtraEC) && !in.TryRead(extraEC, ver))
@@ -99,6 +102,7 @@ void Packet::prepare(PacketManager &pm)
         seq = pm.nextLocalSeq();
         ackSeq = pm.getLastRemoteSeq();
         ackMask = pm.getRemoteAckMask();
+        streamId = pm.transportId;
     }
 }
 void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &currentExtras, const int64_t &endpointId)

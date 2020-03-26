@@ -44,9 +44,9 @@ void VoIPController::UpdateReliablePackets()
         {
             messageThread.Post(std::bind(&VoIPController::UpdateReliablePackets, this), qp->retryInterval);
             qp->lastSentTime = GetCurrentTime();
-#ifdef LOG_PACKETS
-            LOGD("Sending reliable queued packet, seq=%u, len=%lu", qp->seq, qp->data->Length());
-#endif
+//#ifdef LOG_PACKETS
+            LOGD("Sending reliable queued packet, seq=%u, len=%lu", qp->pkt.pktInfo.seq, qp->pkt.packet->Length());
+//#endif
             if (qp->firstSentTime == 0)
                 qp->firstSentTime = qp->lastSentTime;
 

@@ -30,10 +30,13 @@ struct VersionInfo
     inline bool isLegacy() const
     {
         return !isNew() && (peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92));
+        //return ((peerVersion >= 8 && peerVersion < PROTOCOL_RELIABLE) || (!peerVersion && connectionMaxLayer >= 92 && connectionMaxLayer < 110));
     }
     inline bool isLegacyLegacy() const
     {
         return !(peerVersion >= 8 || (!peerVersion && connectionMaxLayer >= 92));
+
+        //return peerVersion < 8 || (!peerVersion && connectionMaxLayer < 92);
     }
 };
 } // namespace tgvoip

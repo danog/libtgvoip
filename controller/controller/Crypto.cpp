@@ -116,6 +116,7 @@ void VoIPController::encryptPacket(unsigned char *data, size_t len, BufferOutput
 {
     if (useMTProto2)
     {
+        //LOGE("Using MTProto2");
         BufferOutputStream inner(len + 128);
         size_t sizeSize;
         if (!ver.isLegacyLegacy())
@@ -157,6 +158,7 @@ void VoIPController::encryptPacket(unsigned char *data, size_t len, BufferOutput
     }
     else
     {
+        //LOGE("Using MTProto1");
         BufferOutputStream inner(len + 128);
         inner.WriteInt32(static_cast<int32_t>(len));
         inner.WriteBytes(data, len);

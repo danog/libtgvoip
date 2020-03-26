@@ -1,4 +1,5 @@
 #include "../../VoIPController.h"
+#include "../../VoIPServerConfig.h"
 #include "packets/PacketManager.h"
 
 using namespace tgvoip;
@@ -70,12 +71,30 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
         }
     }
 
+    size_t offset = in.GetOffset();
     Packet packet;
     if (!packet.parse(in, ver))
     {
-        LOGW("Failure parsing incoming packet!");
+        LOGW("Failure parsing incoming packet! %s", ver.isNew() ? "(new mode)" : ver.isLegacy() ? "(legacy mode)" : "(legacylegacy mode)");
+        packet.clear();
+        in.Seek(offset);
+        VersionInfo ver(9, 92);
+        if (!packet.parse(in, ver))
+        {
+            LOGW("Failure parsing incoming packet! %s", ver.isNew() ? "(new mode)" : ver.isLegacy() ? "(legacy mode)" : "(legacylegacy mode)");
+            packet.clear();
+            in.Seek(offset);
+            VersionInfo ver(7, 91);
+            if (!packet.parse(in, ver))
+            {
+                LOGW("Failure parsing incoming packet! %s", ver.isNew() ? "(new mode)" : ver.isLegacy() ? "(legacy mode)" : "(legacylegacy mode)");
+                return;
+            }
+        }
         return;
     }
+    LOGW("Got%s incoming packet: %s", packet.legacy ? " legacy" : "", packet.print().c_str());
+
     packetsReceived++;
     ProcessIncomingPacket(packet, srcEndpoint);
 
@@ -287,7 +306,7 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
     auto type = _data.getID();
     if (_data.d->hash && lastReceivedExtrasByType[type] == _data.d->hash)
     {
-        LOGE("Received duplicate hash!");
+        LOGE("Received duplicate hash for extra=%s!", _data.print().c_str());
         return;
     }
     lastReceivedExtrasByType[type] = _data.d->hash;

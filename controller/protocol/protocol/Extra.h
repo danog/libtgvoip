@@ -20,6 +20,8 @@ struct Extra : public Serializable, MultiChoice<Extra>
     static std::shared_ptr<Extra> chooseFromType(uint8_t type);
     uint8_t chooseType(int peerVersion) const;
 
+    void choose(BufferOutputStream &out, const VersionInfo &ver) const override;
+
     std::string print() const override;
 
     uint64_t hash;

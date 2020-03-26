@@ -3,8 +3,8 @@
 #include "../../net/CongestionControl.h"
 #include "../protocol/Extra.h"
 #include "../protocol/Interface.h"
-#include <vector>
 #include <memory>
+#include <vector>
 //#include "../net/PacketSender.h"
 
 namespace tgvoip
@@ -36,9 +36,9 @@ struct ReliableOutgoingPacket
 struct RecentOutgoingPacket
 {
     RecentOutgoingPacket(const PendingOutgoingPacket &_pkt, double _sendTime) : pkt(_pkt.pktInfo),
-                                                                               size(_pkt.packet->Length()),
-                                                                               endpoint(_pkt.endpoint),
-                                                                               sendTime(_sendTime){};
+                                                                                size(_pkt.packet->Length()),
+                                                                                endpoint(_pkt.endpoint),
+                                                                                sendTime(_sendTime){};
     CongestionControlPacket pkt;
     size_t size;
 
@@ -135,17 +135,17 @@ public:
 public:
     operator bool()
     {
-        return data || extraEC || extraSignaling || nopPacket;
+        return (data && data->Length()) || extraEC || extraSignaling || nopPacket;
     }
     std::string print() const override
     {
         std::stringstream res;
-        res << (data ? "Data packet" : extraEC ? "EC packet" : extraSignaling ? "Signaling packet" : nopPacket ? "NOP packet" : "Empty packet");
-        res << "(streamId=" << streamId << ")";
+        res << ((data && data->Length()) ? "Data packet" : extraEC ? "EC packet" : extraSignaling ? "Signaling packet" : nopPacket ? "NOP packet" : "Empty packet");
+        res << " (seq=" << seq << ", legacySeq=" << legacySeq << ", streamId=" << int(streamId) << ")";
         if (extraEC)
             res << "; extraEC";
         if (extraSignaling)
-            res << "; signaling " + extraSignaling.print();
+            res << "; signaling " << extraSignaling.print();
         return res.str();
     }
     size_t getSize(const VersionInfo &ver) const override
@@ -158,10 +158,23 @@ public:
                sizeof(ackMask) +
                sizeof(streamId) +
                (streamId > StreamId::Extended ? sizeof(streamId) : 0) +
-               (data->Length() > 0xFF || eFlags ? 2 : 1) + // Length
+               ((data && data->Length() > 0xFF) || eFlags ? 2 : 1) + // Length
                (recvTS ? sizeof(recvTS) : 0) +
                (extraEC ? extraEC.getSize(ver) : 0) +
                (extraSignaling ? extraSignaling.getSize(ver) : 0);
+    }
+    void clear()
+    {
+        seq = 0;
+        ackSeq = 0;
+        ackMask = 0;
+        streamId = 0;
+        data = nullptr;
+        recvTS = 0;
+        for (auto &v : extraEC) {
+            v.d = nullptr;
+        }
+        extraSignaling.v.clear();
     }
 };
 
