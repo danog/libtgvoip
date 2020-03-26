@@ -65,7 +65,6 @@ private:
         bool isEC = 0;
         double recvTimeDiff = 0.0;
     };
-    void PutInternal(jitter_packet_t &pkt, bool overwriteExisting);
     int GetInternal(jitter_packet_t &pkt, bool advance);
     void Advance();
 
