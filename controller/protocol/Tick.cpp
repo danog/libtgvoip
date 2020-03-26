@@ -141,7 +141,6 @@ void VoIPController::TickJitterBufferAndCongestionControl()
     double packetLossTimeout = std::max(rtt * 2.0, 0.1);
     for (auto &stm : outgoingStreams)
     {
-        auto *sender = dynamic_cast<AudioPacketSender *>(stm->packetSender.get());
         for (RecentOutgoingPacket &pkt : stm->packetManager.getRecentOutgoingPackets())
         {
             if (pkt.ackTime || pkt.lost)
@@ -153,7 +152,7 @@ void VoIPController::TickJitterBufferAndCongestionControl()
                 LOGW("Outgoing packet lost: seq=%u, streamId=%hhu, size=%u", pkt.pkt.seq, pkt.pkt.streamId, (unsigned int)pkt.size);
 
                 conctl.PacketLost(pkt.pkt);
-                sender->PacketLost(pkt);
+                stm->packetSender->PacketLost(pkt);
             }
         }
     }

@@ -101,7 +101,7 @@ void JitterBuffer::PutInternal(jitter_packet_t &pkt, bool overwriteExisting)
 
     for (auto &slot : slots)
     {
-        if (slot.timestamp == pkt.timestamp && !slot.buffer->IsEmpty())
+        if (slot.timestamp == pkt.timestamp && slot.buffer)
         {
             if (overwriteExisting)
             {
@@ -126,7 +126,7 @@ void JitterBuffer::PutInternal(jitter_packet_t &pkt, bool overwriteExisting)
     for (auto &slot : slots)
     {
         // Clear packets older than the last packet pulled from jitter buffer
-        if (slot.timestamp < nextFetchTimestamp - 1 && !slot.buffer->IsEmpty())
+        if (slot.timestamp < nextFetchTimestamp - 1 && slot.buffer)
         {
             slot.buffer = nullptr;
         }
@@ -178,14 +178,14 @@ void JitterBuffer::PutInternal(jitter_packet_t &pkt, bool overwriteExisting)
 
     // If no free slots or too many used up slots to be useful
     auto slot = GetCurrentDelay() >= maxUsedSlots ? slots.end() : std::find_if(slots.begin(), slots.end(), [](const jitter_packet_t &a) -> bool {
-        return a.buffer->IsEmpty();
+        return !a.buffer;
     });
 
     if (slot == slots.end())
     {
         LOGW("No free slots!");
         slot = std::min_element(slots.begin(), slots.end(), [](const jitter_packet_t &a, const jitter_packet_t &b) -> bool {
-            return !a.buffer->IsEmpty() && a.timestamp < b.timestamp;
+            return a.buffer && a.timestamp < b.timestamp;
         });
         slot->buffer = nullptr;
         Advance();
@@ -238,7 +238,7 @@ std::unique_ptr<Buffer> JitterBuffer::HandleOutput(bool advance, int &playbackSc
                 auto slot = std::find_if(slots.begin(), slots.end(), [&](const jitter_packet_t &a) -> bool {
                     return a.timestamp == nextFetchTimestamp;
                 });
-                if (slot != slots.end() && !slot->buffer->IsEmpty())
+                if (slot != slots.end() && slot->buffer)
                 {
                     slot->buffer = nullptr;
                 }
@@ -288,7 +288,7 @@ int JitterBuffer::GetInternal(jitter_packet_t &pkt, bool advance)
     int64_t timestampToGet = nextFetchTimestamp;
 
     auto slot = std::find_if(slots.begin(), slots.end(), [timestampToGet](const jitter_packet_t &a) -> bool {
-        return a.timestamp == timestampToGet && !a.buffer->IsEmpty();
+        return a.timestamp == timestampToGet && a.buffer;
     });
 
     if (slot != slots.end())
@@ -347,7 +347,7 @@ void JitterBuffer::Advance()
 unsigned int JitterBuffer::GetCurrentDelay()
 {
     return std::count_if(slots.begin(), slots.end(), [](const jitter_packet_t &a) -> bool {
-        return !a.buffer->IsEmpty();
+        return !!a.buffer;
     });
 }
 

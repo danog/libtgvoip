@@ -258,7 +258,9 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
         uint8_t len;
         if (!in.TryRead(len))
             return false;
+#ifdef LOG_PACKETS
         LOGW("Got buffer of length %hhu", len);
+#endif
         auto buf = in.GetPartBuffer(len);
         d = T::choose(buf, ver);
         if (!d)

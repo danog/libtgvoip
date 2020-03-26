@@ -23,7 +23,7 @@ class VideoSource;
 class VideoPacketSender : public PacketSender
 {
 public:
-    VideoPacketSender(VoIPController *controller, const std::shared_ptr<OutgoingVideoStream> &stream, VideoSource *videoSource);
+    VideoPacketSender(VoIPController *controller, std::shared_ptr<OutgoingVideoStream> stream, VideoSource *videoSource);
     virtual ~VideoPacketSender();
     virtual void PacketAcknowledged(const RecentOutgoingPacket &packet) override;
     virtual void PacketLost(const RecentOutgoingPacket &packet) override;
@@ -58,7 +58,7 @@ private:
     double lastVideoResolutionChangeTime = 0.0;
     double sourceChangeTime = 0.0;
 
-    const std::shared_ptr<OutgoingVideoStream> &stream;
+    std::shared_ptr<OutgoingVideoStream> stream;
 
     std::vector<Buffer>
         packetsForFEC;

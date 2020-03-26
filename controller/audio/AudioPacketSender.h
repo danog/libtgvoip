@@ -13,7 +13,7 @@ class AudioPacketSender : public PacketSender
     friend class VoIPController;
 
 public:
-    AudioPacketSender(VoIPController *controller, const std::shared_ptr<OutgoingAudioStream> &stream, const std::shared_ptr<OpusEncoder> &encoder);
+    AudioPacketSender(VoIPController *controller, std::shared_ptr<OutgoingAudioStream> stream, const std::shared_ptr<OpusEncoder> &encoder);
     virtual ~AudioPacketSender() = default;
     virtual void PacketAcknowledged(const RecentOutgoingPacket &packet) override{};
     virtual void PacketLost(const RecentOutgoingPacket &packet) override{};
@@ -62,7 +62,7 @@ private:
 
     BufferPool<1024, 32> outgoingAudioBufferPool;
 
-    const std::shared_ptr<OutgoingAudioStream> &stream;
+    std::shared_ptr<OutgoingAudioStream> stream;
 
 #if defined(TGVOIP_USE_CALLBACK_AUDIO_IO)
     std::function<void(int16_t *, size_t)> audioPreprocDataCallback;

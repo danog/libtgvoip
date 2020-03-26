@@ -50,7 +50,7 @@ bool PacketManager::ackRemoteSeq(const uint32_t ackId)
     {
         if (ackId == lastRemoteSeq)
         {
-            LOGW("Received duplicated packet for seq %u, streamId=%hhu", ackId, transportId);
+            //LOGW("Received duplicated packet for seq %u, streamId=%hhu", ackId, transportId);
             return false;
         }
         else if (ackId > lastRemoteSeq)

@@ -91,9 +91,10 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
                 return;
             }
         }
-        return;
     }
+#ifdef LOG_PACKETS
     LOGW("Got%s incoming packet: %s", packet.legacy ? " legacy" : "", packet.print().c_str());
+#endif
 
     packetsReceived++;
     ProcessIncomingPacket(packet, srcEndpoint);
@@ -114,14 +115,8 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
 
     if (!manager.ackRemoteSeq(packet))
     {
-        LOGE("Failure acking remote seq!");
         return;
     }
-
-    LOGE("Received packet!");
-#ifdef LOG_PACKETS
-    LOGV("Received: from=%s:%u, seq=%u, length=%u, type=%s, transportId=%hhu", srcEndpoint.GetAddress().ToString().c_str(), srcEndpoint.port, pseq, (unsigned int)packet.data.Length(), GetPacketTypeString(type).c_str(), transportId);
-#endif
 
     for (auto &extra : packet.extraSignaling)
     {
@@ -306,7 +301,9 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
     auto type = _data.getID();
     if (_data.d->hash && lastReceivedExtrasByType[type] == _data.d->hash)
     {
+#ifdef LOG_PACKETS
         LOGE("Received duplicate hash for extra=%s!", _data.print().c_str());
+#endif
         return;
     }
     lastReceivedExtrasByType[type] = _data.d->hash;

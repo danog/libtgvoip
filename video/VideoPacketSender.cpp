@@ -11,7 +11,7 @@
 using namespace tgvoip;
 using namespace tgvoip::video;
 
-VideoPacketSender::VideoPacketSender(VoIPController *controller, const std::shared_ptr<OutgoingVideoStream> &_stream, VideoSource *videoSource) : PacketSender(controller, dynamic_pointer_cast<OutgoingStream>(_stream)), stream(_stream)
+VideoPacketSender::VideoPacketSender(VoIPController *controller, std::shared_ptr<OutgoingVideoStream> _stream, VideoSource *videoSource) : PacketSender(controller, dynamic_pointer_cast<OutgoingStream>(_stream)), stream(_stream)
 {
     SetSource(videoSource);
 }
@@ -318,7 +318,7 @@ void VideoPacketSender::SendFrame(const Buffer &_frame, uint32_t flags, uint32_t
 
 int VideoPacketSender::GetVideoResolutionForCurrentBitrate()
 {
-    
+
     int peerMaxVideoResolution = controller->ver.maxVideoResolution;
     int resolutionFromBitrate = INIT_VIDEO_RES_1080;
     if (VoIPController::GetCurrentTime() - sourceChangeTime > 10.0)

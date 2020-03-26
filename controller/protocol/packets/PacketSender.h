@@ -114,7 +114,7 @@ struct IncomingVideoStream : public VideoStreamInfo, public IncomingMediaStream
 class PacketSender
 {
 public:
-    PacketSender(VoIPController *_controller, const std::shared_ptr<OutgoingStream> &_stream);
+    PacketSender(VoIPController *_controller, std::shared_ptr<OutgoingStream> _stream);
     virtual ~PacketSender() = default;
 
     virtual void PacketAcknowledged(const RecentOutgoingPacket &packet){};

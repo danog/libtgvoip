@@ -10,7 +10,9 @@ using namespace tgvoip;
 
 PendingOutgoingPacket VoIPController::PreparePacket(unsigned char *data, size_t len, Endpoint &ep, CongestionControlPacket &&pkt)
 {
+#ifdef LOG_PACKETS
     LOGV("Preparing packet of length=%u, seq=%u, streamId=%hhu", (unsigned int)len, pkt.seq, pkt.streamId);
+#endif
 
     BufferOutputStream out(len + 128);
     if (ep.IsReflector())
@@ -36,7 +38,7 @@ void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, doub
     if (ver.isNew())
     {
         packet.prepare(pm, currentExtras, endpoint.id);
-        LOGW("Sending outgoing packet: %s", packet.print().c_str());
+        //LOGW("Sending outgoing packet: %s", packet.print().c_str());
 
         //BufferOutputStream out(packet.getSize()); // Can precalc, should check if it's worth it
         BufferOutputStream out(1500);
@@ -139,7 +141,7 @@ void VoIPController::SendOrEnqueuePacket(PendingOutgoingPacket &pkt, bool enqueu
         unacknowledgedIncomingPacketCount = 0;
         outgoingStreams[pkt.pktInfo.streamId]->packetManager.addRecentOutgoingPacket(pkt);
 
-        LOGV("Sending: to=%s:%u, seq=%u, length=%u, streamId=%hhu", endpoint.GetAddress().ToString().c_str(), endpoint.port, pkt.pktInfo.seq, (unsigned int)pkt.packet->Length(), pkt.pktInfo.streamId);
+        //LOGV("Sending: to=%s:%u, seq=%u, length=%u, streamId=%hhu", endpoint.GetAddress().ToString().c_str(), endpoint.port, pkt.pktInfo.seq, (unsigned int)pkt.packet->Length(), pkt.pktInfo.streamId);
 
 //LOGV("Sending %d bytes to %s:%d", out.GetLength(), ep.address.ToString().c_str(), ep.port);
 #ifdef LOG_PACKETS
