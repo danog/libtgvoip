@@ -126,14 +126,14 @@ void JitterBuffer::HandleInput(std::unique_ptr<Buffer> &&buf, uint32_t timestamp
 
     // Time deviation check
     double time = VoIPController::GetCurrentTime();
-    if (expectNextAtTime)
+    if (expectNextAtTimeMs)
     {
-        deviationHistory.Add(expectNextAtTime - time);
-        expectNextAtTime += step / 1000.0;
+        deviationHistory.Add(expectNextAtTimeMs - time);
+        expectNextAtTimeMs += step / 1000.0;
     }
     else
     {
-        expectNextAtTime = time + step / 1000.0;
+        expectNextAtTimeMs = time + step / 1000.0;
     }
 
     // Late packet check
@@ -174,9 +174,9 @@ void JitterBuffer::HandleInput(std::unique_ptr<Buffer> &&buf, uint32_t timestamp
         Advance();
     }
 
-    LOGW("Putting into jitter buffer");
+    /*LOGW("Putting into jitter buffer");
     std::string pad(slot - slots.begin(), ' ');
-    pad += '^';
+    pad += '^';*/
 
     slot->timestamp = timestamp;
     slot->size = size;
@@ -202,10 +202,10 @@ void JitterBuffer::Reset()
     adjustingDelay = false;
     lostSinceReset = 0;
     gotSinceReset = 0;
-    expectNextAtTime = 0;
+    expectNextAtTimeMs = 0;
     deviationHistory.Reset();
     outstandingDelayChange = 0;
-    dontChangeDelay = 0;
+    dontChangeDelayFor = 0;
 }
 
 std::unique_ptr<Buffer> JitterBuffer::HandleOutput(bool advance, int &playbackScaledDuration, bool &isEC)
@@ -236,7 +236,7 @@ std::unique_ptr<Buffer> JitterBuffer::HandleOutput(bool advance, int &playbackSc
 
     jitter_packet_t pkt;
     int result = GetInternal(pkt, advance);
-    if (outstandingDelayChange != 0)
+    if (outstandingDelayChange)
     {
         if (outstandingDelayChange < 0)
         {
@@ -280,17 +280,10 @@ int JitterBuffer::GetInternal(jitter_packet_t &pkt, bool advance)
 
     if (slot != slots.end())
     {
-        /*if (pkt.size < slot->size)
-        {
-            LOGE("jitter: packet won't fit into provided buffer of %d (need %d)", int(slot->size), int(pkt.size));
-        }
-        else
-        {*/
         pkt.size = slot->size;
         pkt.timestamp = slot->timestamp;
         pkt.buffer = std::move(slot->buffer);
         pkt.isEC = slot->isEC;
-        //}
         slot->buffer = nullptr;
         //LOGV("out ts=%d, ec=%d", pkt.timestamp, pkt.isEC);
         Advance();
@@ -313,11 +306,13 @@ int JitterBuffer::GetInternal(jitter_packet_t &pkt, bool advance)
         {
             LOGW("jitter: lost %d packets in a row, resetting", lostCount);
             //minDelay++;
-            dontIncMinDelay = 16;
-            dontDecMinDelay += 128;
+            dontIncMinDelayFor = 16;
+            dontDecMinDelayFor += 128;
             auto currentDelay = GetCurrentDelay();
+            LOGW("currentDelay=%u, minDelay=%lf, nextFetchTS=%lu", currentDelay, minDelay.load(), nextFetchTimestamp.load())
             if (currentDelay < minDelay)
-                nextFetchTimestamp -= static_cast<int64_t>(minDelay - currentDelay);
+                nextFetchTimestamp -= static_cast<int64_t>(minDelay - currentDelay) * step;
+            LOGW("currentDelay=%u, minDelay=%lf, nextFetchTS=%lu", currentDelay, minDelay.load(), nextFetchTimestamp.load())
             lostCount = 0;
             Reset();
         }
@@ -358,8 +353,8 @@ void JitterBuffer::Tick()
 
     if (absolutelyNoLatePackets)
     {
-        if (dontDecMinDelay > 0)
-            dontDecMinDelay--;
+        if (dontDecMinDelayFor > 0)
+            dontDecMinDelayFor--;
     }
 
     delayHistory.Add(GetCurrentDelay());
@@ -373,51 +368,55 @@ void JitterBuffer::Tick()
         stddev += (d * d);
     }
     stddev = sqrt(stddev / 64);
-    uint32_t stddevDelay = std::clamp((uint32_t)ceil(stddev * 2 * 1000 / step), minMinDelay, maxMinDelay);
+    uint32_t stddevDelay = std::clamp(static_cast<uint32_t>(ceil(stddev * 2 * 1000 / step)), minMinDelay, maxMinDelay);
+    //LOGW("Average delay diff of %lf s, stddev=%lf s, stddevPacket=%u (minDelayPacket=%lf)", avgDelay, stddev, stddevDelay, minDelay.load());
 
+    // The difference between estimated time of arrival and actual TOA (=packet jitter) is used to calculate standard deviation of packet jitter.
+    // if the packet jitter is normally and consistently bigger than the jitter buffer delay, increase the jitter buffer delay.
     if (stddevDelay != minDelay)
     {
         int32_t diff = std::clamp((int32_t)(stddevDelay - minDelay), -1, 1);
         if (diff > 0)
         {
-            dontDecMinDelay = 100;
+            dontDecMinDelayFor = 100;
         }
 
-        if ((diff > 0 && dontIncMinDelay == 0) || (diff < 0 && dontDecMinDelay == 0))
+        if ((diff > 0 && dontIncMinDelayFor == 0) || (diff < 0 && dontDecMinDelayFor == 0))
         {
             //nextFetchTimestamp+=diff*(int32_t)step;
             minDelay.store(minDelay + diff);
             outstandingDelayChange += diff * 60;
-            dontChangeDelay += 32;
+            dontChangeDelayFor += 32;
             //LOGD("new delay from stddev %f", minDelay);
             if (diff < 0)
             {
-                dontDecMinDelay += 25;
+                dontDecMinDelayFor += 25;
             }
             if (diff > 0)
             {
-                dontIncMinDelay = 25;
+                dontIncMinDelayFor = 25;
             }
         }
     }
     lastMeasuredJitter = stddev;
     lastMeasuredDelay = stddevDelay;
-    //LOGV("stddev=%.3f, avg=%.3f, ndelay=%d, dontDec=%u", stddev, avgdev, stddevDelay, dontDecMinDelay);
-    if (dontChangeDelay)
+    //LOGV("stddev=%.3f, avg=%.3f, ndelay=%d, dontDec=%u", stddev, avgdev, stddevDelay, dontDecMinDelayFor);
+    if (dontChangeDelayFor)
     {
-        --dontChangeDelay;
+        --dontChangeDelayFor;
     }
     else
     {
+        //LOGW("avgDelay=%lf, minDelay=%lf", avgDelay, minDelay.load());
         if (avgDelay > minDelay + 0.5)
         {
             outstandingDelayChange -= avgDelay > minDelay + 2 ? 60 : 20;
-            dontChangeDelay += 10;
+            dontChangeDelayFor += 10;
         }
         else if (avgDelay < minDelay - 0.3)
         {
             outstandingDelayChange += 20;
-            dontChangeDelay += 10;
+            dontChangeDelayFor += 10;
         }
     }
 

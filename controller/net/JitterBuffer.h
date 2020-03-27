@@ -90,16 +90,16 @@ private:
     bool adjustingDelay = false;
     unsigned int tickCount = 0;
     unsigned int latePacketCount = 0;
-    unsigned int dontIncMinDelay = 0;
-    unsigned int dontDecMinDelay = 0;
+    unsigned int dontIncMinDelayFor = 0;
+    unsigned int dontDecMinDelayFor = 0;
     int lostPackets = 0;
     double prevRecvTime = 0;
-    double expectNextAtTime = 0;
+    double expectNextAtTimeMs = 0;
     HistoricBuffer<double, 64> deviationHistory;
     double lastMeasuredJitter = 0;
     double lastMeasuredDelay = 0;
     int outstandingDelayChange = 0;
-    unsigned int dontChangeDelay = 0;
+    unsigned int dontChangeDelayFor = 0;
     double avgDelay = 0;
     bool first = true;
 #ifdef TGVOIP_DUMP_JITTER_STATS
