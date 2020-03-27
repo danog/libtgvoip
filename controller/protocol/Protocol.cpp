@@ -78,17 +78,24 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
         LOGW("Failure parsing incoming packet! %s", ver.isNew() ? "(new mode)" : ver.isLegacy() ? "(legacy mode)" : "(legacylegacy mode)");
         packet.clear();
         in.Seek(offset);
-        VersionInfo ver(9, 92);
+        VersionInfo ver(10, 110);
         if (!packet.parse(in, ver))
         {
             LOGW("Failure parsing incoming packet! %s", ver.isNew() ? "(new mode)" : ver.isLegacy() ? "(legacy mode)" : "(legacylegacy mode)");
             packet.clear();
             in.Seek(offset);
-            VersionInfo ver(7, 91);
+            VersionInfo ver(9, 92);
             if (!packet.parse(in, ver))
             {
                 LOGW("Failure parsing incoming packet! %s", ver.isNew() ? "(new mode)" : ver.isLegacy() ? "(legacy mode)" : "(legacylegacy mode)");
-                return;
+                packet.clear();
+                in.Seek(offset);
+                VersionInfo ver(7, 91);
+                if (!packet.parse(in, ver))
+                {
+                    LOGW("Failure parsing incoming packet! %s", ver.isNew() ? "(new mode)" : ver.isLegacy() ? "(legacy mode)" : "(legacylegacy mode)");
+                    return;
+                }
             }
         }
     }
@@ -201,7 +208,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
     //LOGD("recv: %u -> %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf, %.2lf", getLastRemoteSeq(), recvPacketTimes[0], recvPacketTimes[1], recvPacketTimes[2], recvPacketTimes[3], recvPacketTimes[4], recvPacketTimes[5], recvPacketTimes[6], recvPacketTimes[7]);
     //LOGI("RTT = %.3lf", GetAverageRTT());
     //LOGV("Packet %u type is %d", pseq, type);
-    if (packet.data && packet.data->Length())
+    if (packet.data)
     {
         if (!receivedFirstStreamPacket)
         {
@@ -249,7 +256,7 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
                     {
                         if (packet.extraEC.v[i])
                         {
-                            stm->jitterBuffer->HandleInput(std::move(packet.extraEC.v[i].get<Bytes>().data), pts - (8 - i) * stm->frameDuration, true);
+                            stm->jitterBuffer->HandleInput(std::move(packet.extraEC.v[i].get<OutputBytes>().data), pts - (8 - i) * stm->frameDuration, true);
                         }
                     }
                 }
@@ -400,8 +407,10 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
         {
             receivedInitAck = true;
 
+            LOGE("Canceling init timeout");
             messageThread.Cancel(initTimeoutID);
             initTimeoutID = MessageThread::INVALID_ID;
+            LOGE("Canceled init timeout");
 
             ver.peerVersion = data.peerVersion;
             if (data.minVersion > PROTOCOL_VERSION || data.peerVersion < MIN_PROTOCOL_VERSION)
@@ -547,7 +556,7 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
             stm->height = data.height;
             for (auto &v : data.data)
             {
-                stm->codecSpecificData.push_back(std::move(*v.data));
+                stm->codecSpecificData.push_back(std::move(*v.get<OutputBytes>().data));
             }
         }
     }

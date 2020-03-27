@@ -49,6 +49,7 @@ VoIPController::VoIPController() : rawSendQueue(64)
 
 void VoIPController::InitializeTimers()
 {
+    LOGE("Init timeout is %lf", config.initTimeout);
     initTimeoutID = messageThread.Post(
         [this] {
             LOGW("Init timeout, disconnecting");

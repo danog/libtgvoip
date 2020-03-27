@@ -11,7 +11,7 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
         return parseLegacy(in, ver);
     }
 
-    uint16_t length;
+    uint16_t length = 0;
     uint8_t flags;
     bool res = in.TryRead(seq) &&
                in.TryRead(ackSeq) &&
@@ -23,6 +23,11 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
     streamId = flags & 3;
     flags >>= 2;
 
+    if (!(flags & Flags::Reserved))
+    {
+        LOGW("No reserved flag in new flag, probably legacy packet");
+        return false;
+    }
     if (streamId == StreamId::Extended && !in.TryRead(streamId))
         return false;
     if (!(flags & Flags::Len16 ? in.TryRead(length) : in.TryReadCompat<uint8_t>(length)))
@@ -45,7 +50,7 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
         if (!in.TryRead(*data))
             return false;
     }
-    
+
     if ((flags & Flags::RecvTS) && !in.TryRead(recvTS))
         return false;
     if ((flags & Flags::ExtraEC) && !in.TryRead(extraEC, ver))
@@ -59,7 +64,7 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
 void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
     uint8_t shortStreamId = streamId > StreamId::Extended ? StreamId::Extended : streamId;
-    uint8_t flags = 0;
+    uint8_t flags = Flags::Reserved; // Always true, allows us to distinguish from legacy packets if the maxLayer is wrong.
     size_t length = data ? data->Length() : 0;
 
     if (length > 0xFF || eFlags)

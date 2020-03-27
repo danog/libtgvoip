@@ -36,6 +36,22 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         {
             ecAudioPackets.pop_front();
         }
+        if (shittyInternetMode)
+        {
+            uint8_t maxEC = std::min(
+                std::min(
+                    static_cast<uint8_t>(ecAudioPackets.size()),
+                    static_cast<uint8_t>(pkt->seq - 1)),
+                extraEcLevel);
+            uint8_t offset = 8 - maxEC;
+            for (uint8_t i = 0; i < maxEC; i++)
+            {
+                if (!packetManager.wasLocalAcked(pkt->seq - (i + 1)))
+                {
+                    pkt->extraEC.v[offset + i].d = std::make_shared<InputBytes>(ecAudioPackets[i]);
+                }
+            }
+        }
         /*
         uint8_t fecCount = std::min(static_cast<uint8_t>(ecAudioPackets.size()), extraEcLevel);
         pkt.WriteByte(fecCount);

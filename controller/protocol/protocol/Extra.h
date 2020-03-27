@@ -146,7 +146,7 @@ public:
     uint16_t width = 0;
     uint16_t height = 0;
 
-    Array<Bytes> data;
+    Array<Wrapped<Bytes>> data;
 
     uint8_t getID() const
     {

@@ -96,7 +96,7 @@ struct Mask : public Serializable, SingleChoice<Mask<T>>
         }
         for (uint8_t i = 0; i < 8; i++)
         {
-            if (!(i & (1 << i)))
+            if (!(mask & (1 << i)))
                 continue;
 
             if (!in.TryRead(v.at(i), ver))
@@ -186,9 +186,7 @@ struct Array : public Serializable, SingleChoice<Array<T>>
         {
             auto data = T::choose(in, ver);
             if (!data || !data->parse(in, ver))
-            {
                 return false;
-            }
             v.push_back(std::move(*data));
         }
         return true;
@@ -258,13 +256,17 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
         uint8_t len;
         if (!in.TryRead(len))
             return false;
+        if (in.Remaining() < len)
+            return false;
 #ifdef LOG_PACKETS
         LOGW("Got buffer of length %hhu", len);
 #endif
         auto buf = in.GetPartBuffer(len);
         d = T::choose(buf, ver);
         if (!d)
+        {
             return false;
+        }
         return d->parse(buf, ver);
     }
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
@@ -326,25 +328,25 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
     std::shared_ptr<T> d;
 };
 
+class OutputBytes;
 struct Bytes : public Serializable,
-               SingleChoice<Bytes>
+               SingleChoice<OutputBytes>
 {
     virtual ~Bytes() = default;
     Bytes() = default;
-    Bytes(Buffer &&_data) : data(std::make_unique<Buffer>(std::move(_data))){};
-    Bytes(Bytes &&_data) : data(std::move(_data.data)){};
+
     bool parse(const BufferInputStream &in, const VersionInfo &ver)
     {
-        data = std::make_unique<Buffer>(in.GetLength());
-        return in.TryRead(*data);
+        setData(std::make_unique<Buffer>(in.GetLength()));
+        return in.TryRead(*getData());
     }
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override
     {
-        out.WriteBytes(*data);
+        out.WriteBytes(*getData());
     }
     operator bool()
     {
-        return data && !data->IsEmpty();
+        return getData() && !getData()->IsEmpty();
     }
     std::string print() const override
     {
@@ -352,12 +354,60 @@ struct Bytes : public Serializable,
     }
     size_t getSize(const VersionInfo &ver) const override
     {
-        return data->Length();
+        return getData()->Length();
     }
-    std::unique_ptr<Buffer> data;
+
+    virtual Buffer *getData() = 0;
+    virtual const Buffer *getData() const = 0;
+    virtual void setData(std::unique_ptr<Buffer> &&) = 0;
 };
 
-struct UInt32 : public Serializable, SingleChoice<UInt32>
+struct OutputBytes : public Bytes
+{
+    virtual ~OutputBytes() = default;
+    OutputBytes() = default;
+    OutputBytes(Buffer &&_data) : data(std::make_unique<Buffer>(std::move(_data))){};
+
+    virtual Buffer *getData()
+    {
+        return data.get();
+    }
+    virtual const Buffer *getData() const
+    {
+        return data.get();
+    }
+
+    virtual void setData(std::unique_ptr<Buffer> &&buf)
+    {
+        data = std::move(buf);
+    }
+
+    std::unique_ptr<Buffer> data;
+};
+struct InputBytes : public Bytes
+{
+    virtual ~InputBytes() = default;
+    InputBytes() = default;
+    InputBytes(std::shared_ptr<Buffer> _data) : data(_data){};
+
+    virtual Buffer *getData()
+    {
+        return data.get();
+    }
+    virtual const Buffer *getData() const
+    {
+        return data.get();
+    }
+    virtual void setData(std::unique_ptr<Buffer> &&buf)
+    {
+        data = std::move(buf);
+    }
+
+    std::shared_ptr<Buffer> data;
+};
+
+struct UInt32 : public Serializable,
+                SingleChoice<UInt32>
 {
     virtual ~UInt32() = default;
     UInt32() = default;

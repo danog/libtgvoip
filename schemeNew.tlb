@@ -25,7 +25,8 @@ packet$_
     recvTS:flags.1?int
     extraFEC:flags.2?ExtraFEC
     extraSignaling:flags.3?Extras<ExtraSignaling>
-    
+    reserved:flags.4?true:true // Always true, allows us to distinguish from legacy packets if the maxLayer is wrong.
+
     = Packet;
 
 // ExtraFEC

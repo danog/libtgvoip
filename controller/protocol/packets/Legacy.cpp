@@ -142,6 +142,9 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
                 }
             }
         }
+    } else {
+        LOGW("Got unknown legacy packet type %hhu (probably new packet)", type);
+        return false;
     }
     return true;
 }

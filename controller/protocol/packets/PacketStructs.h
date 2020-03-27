@@ -92,7 +92,8 @@ public:
         Len16 = 1,
         RecvTS = 2,
         ExtraEC = 4,
-        ExtraSignaling = 8
+        ExtraSignaling = 8,
+        Reserved = 16
     };
     enum EFlags : uint8_t
     {
