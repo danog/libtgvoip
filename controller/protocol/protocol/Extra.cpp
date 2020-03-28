@@ -192,9 +192,9 @@ bool ExtraStreamFlags::parse(const BufferInputStream &in, const VersionInfo &ver
         return true;
     }
     return in.TryRead(streamId) &&
-                   ver.isNew()
-               ? in.TryRead(flags)
-               : in.TryReadCompat<uint32_t>(flags);
+           (ver.isNew()
+                ? in.TryRead(flags)
+                : in.TryReadCompat<uint32_t>(flags));
 }
 void ExtraStreamFlags::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
@@ -320,13 +320,11 @@ void ExtraPong::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 
 bool ExtraNetworkChanged::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
-    return in.TryRead(streamId) &&
-                   ver.isNew()
+    return ver.isNew()
                ? in.TryRead(flags)
                : in.TryReadCompat<uint32_t>(flags);
 }
 void ExtraNetworkChanged::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
-    out.WriteByte(streamId);
     ver.isNew() ? out.WriteByte(flags) : out.WriteUInt32(flags);
 }

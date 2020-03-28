@@ -171,7 +171,6 @@ struct ExtraNetworkChanged : public Extra
         DataSavingEnabled = 1
     };
 
-    uint8_t streamId = 0;
     uint8_t flags = 0;
 
     uint8_t getID() const
@@ -182,7 +181,7 @@ struct ExtraNetworkChanged : public Extra
 
     size_t getConstructorSize(const VersionInfo &ver) const override
     {
-        return sizeof(streamId) + (ver.isNew() ? sizeof(flags) : 4);
+        return (ver.isNew() ? sizeof(flags) : 4);
     }
     virtual ~ExtraNetworkChanged() = default;
 };

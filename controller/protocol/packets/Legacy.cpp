@@ -494,7 +494,7 @@ void Packet::writePacketHeaderLegacyLegacy(BufferOutputStream &out, const Versio
                 out.WriteByte(static_cast<unsigned char>(extras.size()));
                 for (auto &x : extras)
                 {
-                    LOGV("Writing extra into header: type %u", x.getID());
+                    //LOGV("Writing extra into header: type %u", x.getID());
                     out.Write(x, ver);
                 }
             }
