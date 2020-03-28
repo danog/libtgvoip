@@ -99,9 +99,6 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
             }
         }
     }
-#ifdef LOG_PACKETS
-    LOGW("Got%s incoming packet: %s", packet.legacy ? " legacy" : "", packet.print().c_str());
-#endif
 
     packetsReceived++;
     ProcessIncomingPacket(packet, srcEndpoint);
@@ -117,6 +114,10 @@ void VoIPController::ProcessIncomingPacket(NetworkPacket &npacket, Endpoint &src
 
 void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint)
 {
+#ifdef LOG_PACKETS
+    LOGW("Got%s incoming packet: %s", packet.legacy ? " legacy" : "", packet.print().c_str());
+#endif
+
     // Use packet manager of outgoing stream
     PacketManager &manager = outgoingStreams[packet.legacy ? StreamId::Signaling : packet.streamId]->packetManager;
 
@@ -407,14 +408,13 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
         {
             receivedInitAck = true;
 
-            LOGE("Canceling init timeout");
             messageThread.Cancel(initTimeoutID);
             initTimeoutID = MessageThread::INVALID_ID;
-            LOGE("Canceled init timeout");
 
             ver.peerVersion = data.peerVersion;
             if (data.minVersion > PROTOCOL_VERSION || data.peerVersion < MIN_PROTOCOL_VERSION)
             {
+                LOGE("Got incompatible protocol in initAck (minVersion %u, peerVersion %u)", data.minVersion, data.peerVersion);
                 lastError = ERROR_INCOMPATIBLE;
 
                 SetState(STATE_FAILED);

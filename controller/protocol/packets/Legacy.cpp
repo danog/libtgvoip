@@ -82,7 +82,7 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
     }
     else if (type == PKT_STREAM_DATA || type == PKT_STREAM_DATA_X2 || type == PKT_STREAM_DATA_X3)
     {
-        for (uint8_t count = PKT_STREAM_DATA ? 1 : PKT_STREAM_DATA_X2 ? 2 : 3; count > 0; --count)
+        for (uint8_t count = type == PKT_STREAM_DATA ? 1 : type == PKT_STREAM_DATA_X2 ? 2 : 3; count > 0; --count)
         {
             Packet *packet = this;
             if (count > 1)
@@ -94,15 +94,16 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
 
             uint8_t flags;
             uint16_t len;
-            if (!(in.TryRead(packet->streamId) &&
-                          in.TryRead(flags) &&
-                          flags & STREAM_DATA_FLAG_LEN16
-                      ? in.TryRead(len)
-                      : in.TryReadCompat<uint8_t>(len) &&
-                            in.TryRead(packet->seq))) // damn you autoindentation
+            if (!(in.TryRead(flags) &&
+                  (flags & STREAM_DATA_FLAG_LEN16
+                       ? in.TryRead(len)
+                       : in.TryReadCompat<uint8_t>(len)) &&
+                  in.TryRead(packet->seq)))
                 return false;
 
+            packet->streamId = flags & 0x3F;
             packet->seq /= 60; // Constant frame duration
+            packet->seq += 1; // Account for seqs starting at 1
 
             bool fragmented = static_cast<bool>(len & STREAM_DATA_XFLAG_FRAGMENTED);
             bool extraFEC = static_cast<bool>(len & STREAM_DATA_XFLAG_EXTRA_FEC);
@@ -142,7 +143,9 @@ bool Packet::parseLegacy(const BufferInputStream &in, const VersionInfo &ver)
                 }
             }
         }
-    } else {
+    }
+    else
+    {
         LOGW("Got unknown legacy packet type %hhu (probably new packet)", type);
         return false;
     }
@@ -170,7 +173,9 @@ void Packet::serializeLegacy(std::vector<std::pair<Buffer, bool>> &outArray, con
 
         uint8_t type = extra.d->chooseType(ver.peerVersion);
 
+#ifdef LOG_PACKETS
         LOGW("Serializing separate legacy packet of type %s", VoIPController::GetPacketTypeString(type).c_str());
+#endif
 
         if (ver.peerVersion >= 8 || (!ver.peerVersion && ver.connectionMaxLayer >= 92))
         {
@@ -228,7 +233,7 @@ void Packet::serializeLegacy(std::vector<std::pair<Buffer, bool>> &outArray, con
     }
     if (data)
     {
-        LOGW("Serializing legacy data len %u", (unsigned int)data->Length());
+        //LOGW("Serializing legacy data len %u", (unsigned int)data->Length());
 
         BufferOutputStream out(1500);
 
@@ -253,10 +258,8 @@ void Packet::serializeLegacy(std::vector<std::pair<Buffer, bool>> &outArray, con
             out.WriteByte(static_cast<uint8_t>(data->Length()));
         }
 
-        out.WriteInt32(seq * 60);
+        out.WriteInt32((seq - 1) * 60); // Account for seq starting at 1
         out.WriteBytes(*data);
-
-        //LOGE("SEND: For pts %u = seq %u, using seq %u", audioTimestampOut, audioTimestampOut/60 + 1, packetManager.getLocalSeq());
 
         if (hasExtraFEC)
         {

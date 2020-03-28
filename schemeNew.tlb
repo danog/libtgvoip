@@ -2,14 +2,14 @@
 // Try unifying all flags, lengths and so on
 
 packet$_
-    seq:# ackSeq:# ackMask:# // Different sequence for each streamId
-
     streamId:(## 2) // Max 2 streams, we don't need much anyway (0 and 3 are reserved values)
                     // If 0, is a pure-service message 
                     // If 1, is an audio packet 
                     // If 2, is a video packet
                     // If 3, is packet from one of the group call streams
     flags:(## 6)
+
+    seq:# ackSeq:# ackMask:# // Different sequence for each streamId
 
     streamIdExtended:(streamId == 3 ? (## 8) : false) // Extended stream ID for group calls
 

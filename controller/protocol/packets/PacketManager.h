@@ -6,6 +6,7 @@
 namespace tgvoip
 {
 
+#define PRINT_MASK(mask) (std::bitset<sizeof(mask) * 8>{mask}).to_string('-', '*').c_str()
 #define SEQ_MAX 0xFFFFFFFF
 
 inline bool seqgt(uint32_t s1, uint32_t s2)
@@ -89,6 +90,12 @@ public:
 
     // Check if local seq was acked
     bool wasLocalAcked(uint32_t seq) const;
+
+    // Get last mask returned from remote
+    inline uint32_t getLocalAckMask() const
+    {
+        return lastAckedSeqsMask;
+    }
 
 private:
     // Seqno of last acked packet

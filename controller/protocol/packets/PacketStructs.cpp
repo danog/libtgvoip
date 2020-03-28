@@ -13,10 +13,10 @@ bool Packet::parse(const BufferInputStream &in, const VersionInfo &ver)
 
     uint16_t length = 0;
     uint8_t flags;
-    bool res = in.TryRead(seq) &&
+    bool res = in.TryRead(flags) &&
+               in.TryRead(seq) &&
                in.TryRead(ackSeq) &&
-               in.TryRead(ackMask) &&
-               in.TryRead(flags);
+               in.TryRead(ackMask);
     if (!res)
         return false;
 
@@ -76,10 +76,10 @@ void Packet::serialize(BufferOutputStream &out, const VersionInfo &ver) const
     if (extraSignaling)
         flags |= Flags::ExtraSignaling;
 
+    out.WriteByte(shortStreamId | (flags << 2));
     out.WriteUInt32(seq);
     out.WriteUInt32(ackSeq);
     out.WriteUInt32(ackMask);
-    out.WriteByte(shortStreamId | (flags << 2));
 
     if (shortStreamId == StreamId::Extended)
         out.WriteByte(streamId);
@@ -131,8 +131,8 @@ void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &cu
         if (pm != legacyPm)
         {
             legacySeq = legacyPm.nextLocalSeq();
-            ackSeq = pm.getLastRemoteSeq();
-            ackMask = pm.getRemoteAckMask();
+            ackSeq = legacyPm.getLastRemoteSeq();
+            ackMask = legacyPm.getRemoteAckMask();
         }
         else
         {
@@ -150,10 +150,16 @@ void Packet::prepare(PacketManager &pm, std::vector<UnacknowledgedExtraData> &cu
             extraSignaling.v.push_back(extra.data);
             if (extra.data.d->chooseType(peerVersion) == PKT_NOP)
             {
+#ifdef LOG_PACKETS
+                LOGW("Adding legacy seq %u to extra %s", seq, extra.data.print().c_str());
+#endif
                 extra.seqs.Add(seq);
             }
             else
             {
+#ifdef LOG_PACKETS
+                LOGW("Adding legacy seq %u to extra %s", tmpLegacySeq, extra.data.print().c_str());
+#endif
                 extra.seqs.Add(tmpLegacySeq++);
             }
         }

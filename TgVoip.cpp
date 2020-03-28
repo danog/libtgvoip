@@ -187,7 +187,7 @@ public:
         setNetworkType(initialNetworkType);
 
         controller_->SetEncryptionKey(encryptionKey.value, encryptionKey.isOutgoing);
-        controller_->SetRemoteEndpoints(mappedEndpoints, config.enableP2P, 110);
+        controller_->SetRemoteEndpoints(mappedEndpoints, config.enableP2P, config.maxApiLayer);
 
         controller_->Start();
 

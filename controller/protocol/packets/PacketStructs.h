@@ -3,6 +3,7 @@
 #include "../../net/CongestionControl.h"
 #include "../protocol/Extra.h"
 #include "../protocol/Interface.h"
+#include "PacketManager.h"
 #include <memory>
 #include <vector>
 //#include "../net/PacketSender.h"
@@ -10,7 +11,6 @@
 namespace tgvoip
 {
 class PacketSender;
-class PacketManager;
 struct PendingOutgoingPacket
 {
     PendingOutgoingPacket(std::shared_ptr<Buffer> &&_packet, CongestionControlPacket &&_pktInfo, int64_t _endpoint) : packet(std::move(_packet)),
@@ -142,7 +142,11 @@ public:
     {
         std::stringstream res;
         res << ((data && data->Length()) ? "Data packet" : extraEC ? "EC packet" : extraSignaling ? "Signaling packet" : nopPacket ? "NOP packet" : "Empty packet");
-        res << " (seq=" << seq << ", legacySeq=" << legacySeq << ", streamId=" << int(streamId) << ")";
+        res << " (seq=" << seq << ", legacySeq=" << legacySeq;
+#ifdef LOG_PACKETS
+        res << ", ackSeq=" << ackSeq << ", ackMask=" << PRINT_MASK(ackMask);
+#endif
+        res << ", streamId=" << int(streamId) << ")";
         if (extraEC)
             res << "; extraEC";
         if (extraSignaling)
@@ -172,6 +176,7 @@ public:
         streamId = 0;
         data = nullptr;
         recvTS = 0;
+        legacy = false;
         for (auto &v : extraEC) {
             v.d = nullptr;
         }

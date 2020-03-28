@@ -38,7 +38,9 @@ void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, doub
     if (ver.isNew())
     {
         packet.prepare(pm, currentExtras, endpoint.id);
-        //LOGW("Sending outgoing packet: %s", packet.print().c_str());
+#ifdef LOG_PACKETS
+        LOGW("Sending outgoing packet: %s", packet.print().c_str());
+#endif
 
         //BufferOutputStream out(packet.getSize()); // Can precalc, should check if it's worth it
         BufferOutputStream out(1500);
@@ -60,7 +62,9 @@ void VoIPController::SendPacket(OutgoingPacket &&pkt, double retryInterval, doub
         packet.prepare(pm, currentExtras, endpoint.id, legacyPm, ver.peerVersion);
         uint32_t seq = packet.legacySeq;
 
-        LOGW("Sending (legacy) outgoing packet: %s", packet.print().c_str());
+#ifdef LOG_PACKETS
+        LOGW("Sending legacy outgoing packet: %s", packet.print().c_str());
+#endif
 
         std::vector<std::pair<Buffer, bool>> out;
         packet.serializeLegacy(out, ver, state, callID);

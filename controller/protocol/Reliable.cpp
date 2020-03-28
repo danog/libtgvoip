@@ -6,7 +6,7 @@ void VoIPController::SendPacketReliably(PendingOutgoingPacket &pkt, double retry
 {
     ENFORCE_MSG_THREAD;
 #ifdef LOG_PACKETS
-    LOGV("Send reliably, type=%u, len=%u, retry=%.3f, timeout=%.3f, tries=%hhu", type, unsigned(len), retryInterval, timeout, tries);
+    LOGV("Send reliably, seqNo=%hhu, streamId=%u, len=%u, retry=%.3f, timeout=%.3f, tries=%hhu", pkt.pktInfo.seq, pkt.pktInfo.streamId, unsigned(pkt.packet->Length()), retryInterval, timeout, tries);
 #endif
     reliablePackets.push_back(ReliableOutgoingPacket{std::move(pkt),
                                                      retryInterval,
