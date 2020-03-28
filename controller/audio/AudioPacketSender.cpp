@@ -22,48 +22,17 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
     if (controller->stopping)
         return;
 
-    std::shared_ptr<Packet> pkt = std::make_shared<Packet>();
-    pkt->prepare(packetManager); // Populate seqno (aka PTS), ack mask if viable
+    std::shared_ptr<Packet> pkt;
     pkt->data = std::make_unique<Buffer>(len);
     pkt->data->CopyFrom(data, 0, len);
 
+    std::shared_ptr<Buffer> secondaryPtr;
     if (secondaryLen)
     {
-        std::shared_ptr<Buffer> secondaryPtr = std::make_shared<Buffer>(secondaryLen);
         secondaryPtr->CopyFrom(secondaryData, 0, secondaryLen);
-        ecAudioPackets.push_back(std::move(secondaryPtr));
-        if (ecAudioPackets.size() == 9)
-        {
-            ecAudioPackets.pop_front();
-        }
-        if (shittyInternetMode)
-        {
-            uint8_t maxEC = std::min(
-                std::min(
-                    static_cast<uint8_t>(ecAudioPackets.size()),
-                    static_cast<uint8_t>(pkt->seq - 1)),
-                extraEcLevel);
-            uint8_t offset = 8 - maxEC;
-            for (uint8_t i = 0; i < maxEC; i++)
-            {
-                if (!packetManager.wasLocalAcked(pkt->seq - (i + 1)))
-                {
-                    pkt->extraEC.v[offset + i].d = std::make_shared<InputBytes>(ecAudioPackets[i]);
-                }
-            }
-        }
-        /*
-        uint8_t fecCount = std::min(static_cast<uint8_t>(ecAudioPackets.size()), extraEcLevel);
-        pkt.WriteByte(fecCount);
-        for (auto ecData = ecAudioPackets.end() - fecCount; ecData != ecAudioPackets.end(); ++ecData)
-        {
-            pkt.WriteByte(static_cast<uint8_t>(ecData->Length()));
-            pkt.WriteBytes(*ecData);
-        }*/
     }
-    //LOGE("SEND: For pts %u = seq %u, using seq %u", audioTimestampOut, audioTimestampOut/60 + 1, packetManager.getLocalSeq());
 
-    controller->messageThread.Post([this, pkt]() {
+    controller->messageThread.Post([this, pkt, secondaryPtr]() {
         /*
         unsentStreamPacketsHistory.Add(static_cast<unsigned int>(unsentStreamPackets));
         if (unsentStreamPacketsHistory.Average() >= maxUnsentStreamPackets && !videoPacketSender)
@@ -81,6 +50,35 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
         //LOGV("Audio packet size %u", (unsigned int)len);
         if (!controller->receivedInitAck)
             return;
+
+        pkt->prepare(packetManager); // Populate seqno (aka PTS), ack mask if viable
+
+        if (secondaryPtr)
+        {
+            if (shittyInternetMode)
+            {
+                uint8_t maxEC = std::min(
+                    std::min(
+                        static_cast<uint8_t>(ecAudioPackets.size()),
+                        static_cast<uint8_t>(pkt->seq - 1)),
+                    extraEcLevel);
+
+                for (auto ecPkt = std::prev(ecAudioPackets.end(), maxEC); ecPkt != ecAudioPackets.end(); ecPkt++)
+                {
+                    auto distance = std::distance(ecPkt, ecAudioPackets.end());
+                    if (!packetManager.wasLocalAcked(pkt->seq - distance))
+                    {
+                        pkt->extraEC.v[8 - distance].d = std::make_shared<InputBytes>(*ecPkt);
+                    }
+                }
+            }
+            ecAudioPackets.push_back(std::move(secondaryPtr));
+            if (ecAudioPackets.size() == 9)
+            {
+                ecAudioPackets.pop_front();
+            }
+        }
+        //LOGE("SEND: For pts %u = seq %u, using seq %u", audioTimestampOut, audioTimestampOut/60 + 1, packetManager.getLocalSeq());
 
         if (!packetLoss)
         {
