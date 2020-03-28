@@ -22,13 +22,14 @@ void AudioPacketSender::SendFrame(unsigned char *data, size_t len, unsigned char
     if (controller->stopping)
         return;
 
-    std::shared_ptr<Packet> pkt;
+    std::shared_ptr<Packet> pkt = std::make_shared<Packet>();
     pkt->data = std::make_unique<Buffer>(len);
     pkt->data->CopyFrom(data, 0, len);
 
     std::shared_ptr<Buffer> secondaryPtr;
     if (secondaryLen)
     {
+        secondaryPtr = std::make_shared<Buffer>(secondaryLen);
         secondaryPtr->CopyFrom(secondaryData, 0, secondaryLen);
     }
 

@@ -31,8 +31,8 @@ struct AudioStreamInfo
 {
     virtual ~AudioStreamInfo() = default;
 
-    bool extraECEnabled;
-    uint16_t frameDuration;
+    bool extraECEnabled = false;
+    uint16_t frameDuration = 60;
 };
 struct VideoStreamInfo
 {
