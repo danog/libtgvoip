@@ -376,7 +376,8 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
 
         for (const auto &stream : outgoingStreams)
         {
-            ack->streams.v.push_back(stream->getStreamInfo());
+            if (ver.isNew() || stream->type == StreamType::Audio)
+                ack->streams.v.push_back(stream->getStreamInfo());
         }
 
         LOGI("Sending init ack");
@@ -422,6 +423,10 @@ void VoIPController::ProcessExtraData(const Wrapped<Extra> &_data, Endpoint &src
             }
 
             LOGI("peer version from init ack %d", ver.peerVersion);
+            if (!ver.isNew())
+            {
+                incomingStreams.push_back(std::make_shared<IncomingStream>(StreamId::Signaling, StreamType::Signaling));
+            }
 
             shared_ptr<IncomingAudioStream> incomingAudioStream;
             for (const auto &stmInfo : data.streams)

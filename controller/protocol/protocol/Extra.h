@@ -22,7 +22,7 @@ struct Extra : public Serializable, MultiChoice<Extra>
 
     void choose(BufferOutputStream &out, const VersionInfo &ver) const override;
 
-    std::string print() const override;
+    virtual std::string print() const override;
 
     uint64_t hash;
 
@@ -91,7 +91,7 @@ public:
     std::string print() const override
     {
         std::stringstream ss;
-        ss << "StreamInfo id=" << streamId << ", type=" << type << ", codec=" << codec.print() << ", frameDuration=" << frameDuration << ", enabled=" << enabled;
+        ss << "StreamInfo id=" << (int)streamId << ", type=" << type << ", codec=" << codec.print() << ", frameDuration=" << frameDuration << ", enabled=" << enabled;
         return ss.str();
     }
 
@@ -325,6 +325,12 @@ struct ExtraInitAck : public Extra
     }
     static const uint8_t ID = 9;
 
+    std::string print() const override
+    {
+        std::stringstream s;
+        s << "ExtraInitAck (peerVersion=" << peerVersion << ", minVersion=" << minVersion << ", streams: " << streams.print() << ")";
+        return s.str();
+    }
     size_t getConstructorSize(const VersionInfo &ver) const override
     {
         return sizeof(peerVersion) + sizeof(minVersion) + streams.getSize(ver);
