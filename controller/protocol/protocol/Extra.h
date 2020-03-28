@@ -7,7 +7,7 @@
 
 #define FOURCC(a, b, c, d) ((uint32_t)d | ((uint32_t)c << 8) | ((uint32_t)b << 16) | ((uint32_t)a << 24))
 #define PRINT_FOURCC(x) (char)(x >> 24), (char)(x >> 16), (char)(x >> 8), (char)x
-#define STRING_FOURCC(x) std::string((char *)&x, 4)
+#define STREAM_FOURCC(x) (char)(x >> 24) << (char)(x >> 16) << (char)(x >> 8) << (char)x
 
 namespace tgvoip
 {
@@ -57,7 +57,9 @@ public:
     };
     std::string print() const override
     {
-        return STRING_FOURCC(codec);
+        std::ostringstream s;
+        s << STREAM_FOURCC(codec);
+        return s.str();
     }
     size_t getSize(const VersionInfo &ver) const override
     {
@@ -90,7 +92,7 @@ public:
 
     std::string print() const override
     {
-        std::stringstream ss;
+        std::ostringstream ss;
         ss << "StreamInfo id=" << (int)streamId << ", type=" << type << ", codec=" << codec.print() << ", frameDuration=" << frameDuration << ", enabled=" << enabled;
         return ss.str();
     }
@@ -326,7 +328,7 @@ struct ExtraInitAck : public Extra
 
     std::string print() const override
     {
-        std::stringstream s;
+        std::ostringstream s;
         s << "ExtraInitAck (peerVersion=" << peerVersion << ", minVersion=" << minVersion << ", streams: " << streams.print() << ")";
         return s.str();
     }

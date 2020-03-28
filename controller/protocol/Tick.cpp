@@ -169,6 +169,7 @@ void VoIPController::UpdateRTT()
     {
         waitingForAcks = false;
     }
+    LOGI("RTT=%lf", rttHistory[0])
     //LOGI("%.3lf/%.3lf, rtt diff %.3lf, waiting=%d, queue=%d", rttHistory[0], rttHistory[8], v, waitingForAcks, sendQueue->Size());
     for (auto &stm : incomingStreams)
     {

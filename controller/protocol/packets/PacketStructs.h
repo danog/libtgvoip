@@ -140,7 +140,7 @@ public:
     }
     std::string print() const override
     {
-        std::stringstream res;
+        std::ostringstream res;
         res << ((data && data->Length()) ? "Data packet" : extraEC ? "EC packet" : extraSignaling ? "Signaling packet" : nopPacket ? "NOP packet" : "Empty packet");
         res << " (seq=" << seq << ", legacySeq=" << legacySeq;
 #ifdef LOG_PACKETS
