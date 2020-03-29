@@ -19,12 +19,14 @@
 #include "../../os/android/VideoRendererAndroid.h"
 #include "../../audio/Resampler.h"
 #include "../../os/android/JNIUtilities.h"
-#include "../../controller/PrivateDefines.h"
+#include "../../VoIPController.h"
 #include "../../tools/logging.h"
 
 #ifdef TGVOIP_HAS_CONFIG
 #include <tgvoip_config.h>
 #endif
+
+#define TGVOIP_NO_GROUP_CALLS 1
 
 JavaVM* sharedJVM;
 jfieldID audioRecordInstanceFld=NULL;
@@ -71,6 +73,7 @@ namespace tgvoip {
 		jni::AttachAndCallVoidMethod(setSignalBarsMethod, impl->javaObject, count);
 	}
 
+	/*
 	void updateGroupCallStreams(VoIPGroupController *cntrlr, unsigned char *streams, size_t len){
 		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
 		if(!impl->javaObject)
@@ -84,7 +87,7 @@ namespace tgvoip {
 				env->CallVoidMethod(impl->javaObject, setSelfStreamsMethod, jstreams);
 			}
 		});
-	}
+	}*/
 
 	void groupCallKeyReceived(VoIPController *cntrlr, const unsigned char *key){
 		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
@@ -110,23 +113,24 @@ namespace tgvoip {
 		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
 		jni::AttachAndCallVoidMethod(callUpgradeRequestReceivedMethod, impl->javaObject);
 	}
+	/*
 
 	void updateParticipantAudioState(VoIPGroupController *cntrlr, int32_t userID, bool enabled){
 		ImplDataAndroid *impl=(ImplDataAndroid *) cntrlr->implData;
 		jni::AttachAndCallVoidMethod(setParticipantAudioEnabledMethod, impl->javaObject, userID, enabled);
-	}
+	}*/
 
 #pragma mark - VoIPController
 
 	uint32_t AndroidCodecToFOURCC(std::string mime){
 		if(mime=="video/avc")
-			return CODEC_AVC;
+			return Codec::Avc;
 		else if(mime=="video/hevc")
-			return CODEC_HEVC;
+			return Codec::Hevc;
 		else if(mime=="video/x-vnd.on2.vp8")
-			return CODEC_VP8;
+			return Codec::Vp8;
 		else if(mime=="video/x-vnd.on2.vp9")
-			return CODEC_VP9;
+			return Codec::Vp9;
 		return 0;
 	}
 
@@ -202,7 +206,7 @@ namespace tgvoip {
 
 	void VoIPController_nativeSetEncryptionKey(JNIEnv* env, jobject thiz, jlong inst, jbyteArray key, jboolean isOutgoing){
 		jbyte* akey=env->GetByteArrayElements(key, NULL);
-		((VoIPController*)(intptr_t)inst)->SetEncryptionKey((char *) akey, isOutgoing);
+		((VoIPController*)(intptr_t)inst)->SetEncryptionKey(std::vector<uint8_t>(akey, akey+256), isOutgoing);
 		env->ReleaseByteArrayElements(key, akey, JNI_ABORT);
 	}
 
@@ -304,7 +308,6 @@ namespace tgvoip {
 	}
 
 	void VoIPController_nativeDebugCtl(JNIEnv* env, jobject thiz, jlong inst, jint request, jint param){
-		((VoIPController*)(intptr_t)inst)->DebugCtl(request, param);
 	}
 
 	jstring VoIPController_nativeGetVersion(JNIEnv* env, jclass clasz){
@@ -404,6 +407,7 @@ namespace tgvoip {
 	jint Resampler_convert48to44(JNIEnv* env, jclass cls, jobject from, jobject to){
 		return (jint)tgvoip::audio::Resampler::Convert48To44((int16_t *) env->GetDirectBufferAddress(from), (int16_t *) env->GetDirectBufferAddress(to), (size_t) (env->GetDirectBufferCapacity(from)/2), (size_t) (env->GetDirectBufferCapacity(to)/2));
 	}
+
 
 #pragma mark - VoIPGroupController
 
@@ -571,7 +575,7 @@ namespace tgvoip {
 
 extern "C" void tgvoipRegisterNatives(JNIEnv* env){
 	jclass controller=env->FindClass(TGVOIP_PACKAGE_PATH "/VoIPController");
-	jclass groupController=env->FindClass(TGVOIP_PACKAGE_PATH "/VoIPGroupController");
+	//jclass groupController=env->FindClass(TGVOIP_PACKAGE_PATH "/VoIPGroupController");
 	if(env->ExceptionCheck()){
 		env->ExceptionClear(); // is returning NULL from FindClass not enough?
 	}

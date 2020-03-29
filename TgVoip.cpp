@@ -11,7 +11,9 @@
 extern "C"
 {
 #include <openssl/aes.h>
+#ifndef ANDROID
 #include <openssl/modes.h>
+#endif
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 }
@@ -49,7 +51,11 @@ void tgvoip_openssl_aes_ctr_encrypt(uint8_t *inout, size_t length, uint8_t *key,
 {
     AES_KEY akey;
     AES_set_encrypt_key(key, 32 * 8, &akey);
+#ifdef ANDROID
+    AES_ctr128_encrypt(inout, inout, length, &akey, iv, ecount, num);
+#else
     CRYPTO_ctr128_encrypt(inout, inout, length, &akey, iv, ecount, num, (block128_f)AES_encrypt);
+#endif
 }
 
 void tgvoip_openssl_aes_cbc_encrypt(uint8_t *in, uint8_t *out, size_t length, uint8_t *key, uint8_t *iv)

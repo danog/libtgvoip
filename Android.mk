@@ -20,31 +20,34 @@ endif
 
 LOCAL_CFLAGS += $(TGVOIP_ADDITIONAL_CFLAGS)
 
-LOCAL_SRC_FILES := \
-./tools/logging.cpp \
+LOCAL_SRC_FILES := ./TgVoip.cpp \
 ./VoIPController.cpp \
 ./tools/Buffers.cpp \
-./tools/BlockingQueue.cpp \
-./audio/AudioInput.cpp \
-./os/android/AudioInputOpenSLES.cpp \
-./controller/MediaStreamItf.cpp \
-./audio/AudioOutput.cpp \
-./controller/audio/OpusEncoder.cpp \
-./os/android/AudioOutputOpenSLES.cpp \
-./controller/net/JitterBuffer.cpp \
-./controller/audio/OpusDecoder.cpp \
-./os/android/OpenSLEngineWrapper.cpp \
-./os/android/AudioInputAndroid.cpp \
-./os/android/AudioOutputAndroid.cpp \
-./controller/audio/EchoCanceller.cpp \
 ./controller/net/CongestionControl.cpp \
-./VoIPServerConfig.cpp \
-./audio/Resampler.cpp \
-./controller/net/NetworkSocket.cpp \
-./os/posix/NetworkSocketPosix.cpp \
-./controller/PacketReassembler.cpp \
+./controller/audio/EchoCanceller.cpp \
+./controller/net/JitterBuffer.cpp \
+./tools/logging.cpp \
+./controller/media/MediaStreamItf.cpp \
 ./tools/MessageThread.cpp \
-./tools/json11.cpp \
+./controller/net/NetworkSocket.cpp \
+./controller/net/Endpoint.cpp \
+./controller/audio/OpusDecoder.cpp \
+./controller/audio/OpusEncoder.cpp \
+./controller/audio/AudioPacketSender.cpp \
+./controller/net/PacketReassembler.cpp \
+./controller/protocol/packets/PacketManager.cpp \
+./controller/protocol/packets/PacketSender.cpp \
+./controller/protocol/packets/PacketStructs.cpp \
+./controller/protocol/Stream.cpp \
+./controller/protocol/protocol/Extra.cpp \
+./VoIPServerConfig.cpp \
+./audio/AudioIO.cpp \
+./audio/AudioInput.cpp \
+./audio/AudioOutput.cpp \
+./audio/Resampler.cpp \
+./audio/AudioInputTester.cpp \
+./os/posix/NetworkSocketPosix.cpp \
+\
 ./audio/AudioIO.cpp \
 ./video/VideoRenderer.cpp \
 ./video/VideoSource.cpp \
@@ -55,7 +58,13 @@ LOCAL_SRC_FILES := \
 ./video/cm256/gf256.$(CPP_NEON) \
 ./os/android/VideoSourceAndroid.cpp \
 ./os/android/VideoRendererAndroid.cpp \
-./client/android/tg_voip_jni.cpp
+./client/android/tg_voip_jni.cpp \
+./os/android/AudioInputOpenSLES.cpp \
+./os/android/AudioOutputOpenSLES.cpp \
+./os/android/OpenSLEngineWrapper.cpp \
+./os/android/AudioInputAndroid.cpp \
+./os/android/AudioOutputAndroid.cpp \
+./tools/json11.cpp
 
 # WebRTC signal processing
 

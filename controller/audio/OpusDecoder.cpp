@@ -7,8 +7,9 @@
 #include "controller/audio/OpusDecoder.h"
 #include "audio/Resampler.h"
 #include "tools/logging.h"
-#include <assert.h>
-#include <math.h>
+#include <cassert>
+#include <cmath>
+#include <cstdlib>
 #include <algorithm>
 
 #if defined HAVE_CONFIG_H || defined TGVOIP_USE_INSTALLED_OPUS
@@ -52,7 +53,11 @@ void tgvoip::OpusDecoder::Initialize(bool isAsync, bool needEC)
 		ecDec = opus_decoder_create(48000, 1, NULL);
 	else
 		ecDec = NULL;
-	buffer = reinterpret_cast<unsigned char*>(aligned_alloc(2, 8192));
+#ifdef ANDROID
+	buffer = reinterpret_cast<unsigned char*>(std::malloc(8192));
+#else
+	buffer = reinterpret_cast<unsigned char*>(std::aligned_alloc(2, 8192));
+#endif
 	lastDecoded = NULL;
 	outputBufferSize = 0;
 	echoCanceller = NULL;

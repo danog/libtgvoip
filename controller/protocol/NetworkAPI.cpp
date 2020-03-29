@@ -477,12 +477,12 @@ void VoIPController::SendExtra(Wrapped<Extra> &&extra, int64_t endpointId)
 
     auto type = extra.getID();
     LOGV("Sending extra type %s", extra.print().c_str());
-    for (auto &extra : currentExtras)
+    for (auto &curExtra : currentExtras)
     {
-        if (extra.data.getID() == type && extra.endpointId == endpointId)
+        if (curExtra.data.getID() == type && curExtra.endpointId == endpointId)
         {
-            extra.seqs.Reset();
-            extra.data = std::move(extra.data);
+            curExtra.seqs.Reset();
+            curExtra.data = std::move(extra);
             return;
         }
     }

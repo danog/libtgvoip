@@ -5,7 +5,7 @@
 #include "VideoSourceAndroid.h"
 #include "JNIUtilities.h"
 #include "../../tools/logging.h"
-#include "../../controller/PrivateDefines.h"
+#include "../../VoIPController.h"
 
 using namespace tgvoip;
 using namespace tgvoip::video;
@@ -58,16 +58,16 @@ void VideoSourceAndroid::Reset(uint32_t codec, int maxResolution){
 	jni::DoWithJNI([&](JNIEnv* env){
 		std::string codecStr="";
 		switch(codec){
-			case CODEC_AVC:
+			case Codec::Avc:
 				codecStr="video/avc";
 				break;
-			case CODEC_HEVC:
+			case Codec::Hevc:
 				codecStr="video/hevc";
 				break;
-			case CODEC_VP8:
+			case Codec::Vp8:
 				codecStr="video/x-vnd.on2.vp8";
 				break;
-			case CODEC_VP9:
+			case Codec::Vp9:
 				codecStr="video/x-vnd.on2.vp9";
 				break;
 		}

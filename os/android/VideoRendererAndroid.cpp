@@ -4,7 +4,7 @@
 
 #include "VideoRendererAndroid.h"
 #include "JNIUtilities.h"
-#include "../../controller/PrivateDefines.h"
+#include "../../VoIPController.h"
 #include "../../tools/logging.h"
 
 using namespace tgvoip;
@@ -112,16 +112,16 @@ void VideoRendererAndroid::RunThread(){
 			}
 			std::string codecStr="";
 			switch(codec){
-				case CODEC_AVC:
+				case Codec::Avc:
 					codecStr="video/avc";
 					break;
-				case CODEC_HEVC:
+				case Codec::Hevc:
 					codecStr="video/hevc";
 					break;
-				case CODEC_VP8:
+				case Codec::Vp8:
 					codecStr="video/x-vnd.on2.vp8";
 					break;
-				case CODEC_VP9:
+				case Codec::Vp9:
 					codecStr="video/x-vnd.on2.vp9";
 					break;
 			}
