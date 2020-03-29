@@ -24,8 +24,8 @@ namespace tgvoip
 {
 class Buffer;
 class NetworkAddress;
-class Serializable;
-class VersionInfo;
+struct Serializable;
+struct VersionInfo;
 
 class BufferInputStream
 {

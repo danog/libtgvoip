@@ -32,7 +32,7 @@ struct tgvoip_congestionctl_packet_t
 };
 typedef struct tgvoip_congestionctl_packet_t tgvoip_congestionctl_packet_t;
 
-class Packet;
+struct Packet;
 struct CongestionControlPacket
 {
     CongestionControlPacket(uint32_t _seq, uint8_t _streamId);

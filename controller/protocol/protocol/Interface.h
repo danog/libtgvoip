@@ -328,7 +328,7 @@ struct Wrapped : public Serializable, SingleChoice<Wrapped<T>>
     std::shared_ptr<T> d;
 };
 
-class OutputBytes;
+struct OutputBytes;
 struct Bytes : public Serializable,
                SingleChoice<OutputBytes>
 {

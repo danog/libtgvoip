@@ -19,9 +19,9 @@ inline bool seqgte(uint32_t s1, uint32_t s2)
     return s1 == s2 || seqgt(s1, s2);
 }
 
-class RecentOutgoingPacket;
-class PendingOutgoingPacket;
-class Packet;
+struct RecentOutgoingPacket;
+struct PendingOutgoingPacket;
+struct Packet;
 // Local and remote packet history management
 class PacketManager final
 {
