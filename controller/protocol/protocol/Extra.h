@@ -57,6 +57,9 @@ public:
     };
     std::string print() const override
     {
+        if (!codec) {
+            return "empty";
+        }
         std::ostringstream s;
         s << STREAM_FOURCC(codec);
         return s.str();

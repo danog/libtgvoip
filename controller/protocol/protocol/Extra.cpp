@@ -6,7 +6,7 @@ using namespace tgvoip;
 
 bool Codec::parse(const BufferInputStream &in, const VersionInfo &ver)
 {
-    if (ver.peerVersion >= 5)
+    if (ver.peerVersion >= 5 || ver.isNew())
         return in.TryRead(codec);
 
     if (!in.TryReadCompat<uint8_t>(codec))
@@ -19,7 +19,7 @@ bool Codec::parse(const BufferInputStream &in, const VersionInfo &ver)
 
 void Codec::serialize(BufferOutputStream &out, const VersionInfo &ver) const
 {
-    if (ver.peerVersion >= 5)
+    if (ver.peerVersion >= 5 || ver.isNew())
         return out.WriteUInt32(codec);
 
     out.WriteByte(codec == Codec::Opus ? 1 : 0);
