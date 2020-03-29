@@ -189,7 +189,7 @@ void Packet::serializeLegacy(std::vector<std::pair<Buffer, bool>> &outArray, con
             writePacketHeaderLegacyLegacy(out, ver, legacySeq, ackSeq, ackMask, type, accumulator.GetLength(), allowedExtras, state, callID);
             out.WriteBytes(accumulator.GetBuffer(), accumulator.GetLength());
         }
-        outArray.push_back(std::make_pair(Buffer(std::move(out)), true));
+        outArray.push_back(std::make_pair(Buffer(std::move(out)), !(type == PKT_PING || type == PKT_PONG)));
         legacySeq++;
     }
     // Convert from mask to array
@@ -318,7 +318,7 @@ void Packet::writePacketHeaderLegacy(BufferOutputStream &out, const VersionInfo 
         out.WriteByte(static_cast<unsigned char>(extras.size()));
         for (auto &x : extras)
         {
-            LOGV("Writing extra into header: type %u", x.getID());
+            //LOGV("Writing extra into header: type %u", x.getID());
             out.Write(x, ver);
         }
     }

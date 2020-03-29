@@ -283,6 +283,7 @@ void VoIPController::UpdateAudioBitrate()
         }
         else if (act == TGVOIP_CONCTL_ACT_DECREASE)
         {
+            LOGE("==== DECREASING BITRATE ======");
             uint32_t bitrate = encoder->GetBitrate();
             if (bitrate > 8000)
                 encoder->SetBitrate(bitrate < (minAudioBitrate + audioBitrateStepDecr) ? minAudioBitrate : (bitrate - audioBitrateStepDecr));
