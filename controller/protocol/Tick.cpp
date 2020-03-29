@@ -279,7 +279,7 @@ void VoIPController::UpdateAudioBitrate()
         int act = conctl.GetBandwidthControlAction();
         if (dynamic_cast<AudioPacketSender *>(GetStreamByType<OutgoingAudioStream>()->packetSender.get())->getShittyInternetMode())
         {
-            encoder->SetBitrate(8000);
+            //encoder->SetBitrate(8000);
         }
         else if (act == TGVOIP_CONCTL_ACT_DECREASE)
         {

@@ -105,7 +105,8 @@ void tgvoip::OpusEncoder::Stop()
 
 void tgvoip::OpusEncoder::SetBitrate(uint32_t bitrate)
 {
-	requestedBitrate = bitrate;
+	LOGE("=============== SETTING BITRATE TO %u ===============", bitrate);
+	requestedBitrate = 20000;
 }
 
 void tgvoip::OpusEncoder::Encode(int16_t *data, size_t len)
