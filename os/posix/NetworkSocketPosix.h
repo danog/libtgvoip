@@ -24,7 +24,7 @@ class SocketSelectCancellerPosix : public SocketSelectCanceller
 public:
 	SocketSelectCancellerPosix();
 	virtual ~SocketSelectCancellerPosix();
-	virtual void CancelSelect();
+	virtual void CancelSelect() override;
 
 private:
 	int pipeRead;

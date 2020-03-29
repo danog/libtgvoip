@@ -169,17 +169,17 @@ class NetworkSocketTCPObfuscated : public NetworkSocketWrapper
 public:
     NetworkSocketTCPObfuscated(const std::shared_ptr<NetworkSocket> &wrapped);
     virtual ~NetworkSocketTCPObfuscated();
-    virtual std::shared_ptr<NetworkSocket> GetWrapped();
-    virtual void InitConnection();
+    virtual std::shared_ptr<NetworkSocket> GetWrapped() override;
+    virtual void InitConnection() override;
     virtual void Send(NetworkPacket &&packet) override;
     virtual NetworkPacket Receive(size_t maxLen) override;
-    virtual void Open();
-    virtual void Close();
-    virtual void Connect(const NetworkAddress address, uint16_t port);
-    virtual bool OnReadyToSend();
+    virtual void Open() override;
+    virtual void Close() override;
+    virtual void Connect(const NetworkAddress address, uint16_t port) override;
+    virtual bool OnReadyToSend() override;
 
-    virtual bool IsFailed();
-    virtual bool IsReadyToSend()
+    virtual bool IsFailed() override;
+    virtual bool IsReadyToSend() override
     {
         return readyToSend && wrapped->IsReadyToSend();
     };
@@ -199,15 +199,15 @@ public:
     virtual void Send(NetworkPacket &&packet) override;
     virtual NetworkPacket Receive(size_t maxLen) override;
     virtual void Open() override;
-    virtual void Close();
-    virtual void Connect(const NetworkAddress address, uint16_t port);
-    virtual std::shared_ptr<NetworkSocket> GetWrapped();
-    virtual void InitConnection();
-    virtual bool IsFailed();
-    virtual NetworkAddress GetConnectedAddress();
-    virtual uint16_t GetConnectedPort();
-    virtual bool OnReadyToSend();
-    virtual bool OnReadyToReceive();
+    virtual void Close() override;
+    virtual void Connect(const NetworkAddress address, uint16_t port) override;
+    virtual std::shared_ptr<NetworkSocket> GetWrapped() override;
+    virtual void InitConnection() override;
+    virtual bool IsFailed() override;
+    virtual NetworkAddress GetConnectedAddress() override;
+    virtual uint16_t GetConnectedPort() override;
+    virtual bool OnReadyToSend() override;
+    virtual bool OnReadyToReceive() override;
 
     bool NeedSelectForSending();
 

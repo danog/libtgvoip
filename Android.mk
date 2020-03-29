@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 
 LOCAL_MODULE := voip
-LOCAL_CPPFLAGS := -Wall -std=c++11 -DANDROID -finline-functions -ffast-math -Os -fno-strict-aliasing -O3 -frtti -D__STDC_LIMIT_MACROS -Wno-unknown-pragmas
+LOCAL_CPPFLAGS := -Wall -std=c++17 -DANDROID -finline-functions -ffast-math -Os -fno-strict-aliasing -O3 -frtti -D__STDC_LIMIT_MACROS -Wno-unknown-pragmas
 LOCAL_CFLAGS := -O3 -DUSE_KISS_FFT -fexceptions -DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX -DWEBRTC_ANDROID -D__STDC_LIMIT_MACROS -DFIXED_POINT -DWEBRTC_NS_FLOAT
 LOCAL_EXPORT_LDLIBS := -llog -lOpenSLES
 
@@ -23,7 +23,6 @@ LOCAL_CFLAGS += $(TGVOIP_ADDITIONAL_CFLAGS)
 LOCAL_SRC_FILES := \
 ./tools/logging.cpp \
 ./VoIPController.cpp \
-./VoIPGroupController.cpp \
 ./tools/Buffers.cpp \
 ./tools/BlockingQueue.cpp \
 ./audio/AudioInput.cpp \

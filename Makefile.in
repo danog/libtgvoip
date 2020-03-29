@@ -2274,9 +2274,10 @@ CCAS = @CCAS@
 CCASDEPMODE = @CCASDEPMODE@
 CCASFLAGS = @CCASFLAGS@ $(am__append_9) $(am__append_20)
 CCDEPMODE = @CCDEPMODE@
-CFLAGS = -Wall -DHAVE_CONFIG_H -Wno-unknown-pragmas -g $(am__append_8) \
-	$(am__append_11) $(am__append_13) $(am__append_15) \
-	$(am__append_19) $(am__append_24)
+CFLAGS = -Wall -DHAVE_CONFIG_H -Wno-unknown-pragmas -g \
+	-Wsuggest-override $(am__append_8) $(am__append_11) \
+	$(am__append_13) $(am__append_15) $(am__append_19) \
+	$(am__append_24)
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@

@@ -10,10 +10,10 @@
 #ifndef TGVOIP_USE_CUSTOM_CRYPTO
 extern "C"
 {
-#include <openssl/sha.h>
 #include <openssl/aes.h>
 #include <openssl/modes.h>
 #include <openssl/rand.h>
+#include <openssl/sha.h>
 }
 
 void tgvoip_openssl_aes_ige_encrypt(uint8_t *in, uint8_t *out, size_t length, uint8_t *key, uint8_t *iv)
@@ -198,13 +198,13 @@ public:
     {
     }
 
-    void setOnStateUpdated(std::function<void(TgVoipState)> onStateUpdated)
+    void setOnStateUpdated(std::function<void(TgVoipState)> onStateUpdated) override
     {
         std::lock_guard<std::mutex> lock(m_onStateUpdated);
         onStateUpdated_ = onStateUpdated;
     }
 
-    void setOnSignalBarsUpdated(std::function<void(int)> onSignalBarsUpdated)
+    void setOnSignalBarsUpdated(std::function<void(int)> onSignalBarsUpdated) override
     {
         std::lock_guard<std::mutex> lock(m_onSignalBarsUpdated);
         onSignalBarsUpdated_ = onSignalBarsUpdated;

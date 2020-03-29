@@ -55,7 +55,7 @@ public:
 		return input;
 	}
 
-	virtual std::shared_ptr<AudioOutput> *GetOutput()
+	virtual std::shared_ptr<AudioOutput> GetOutput()
 	{
 		return output;
 	}

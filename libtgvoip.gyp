@@ -756,7 +756,7 @@
           [
             '"<(OS)" == "mac"', {
               'xcode_settings': {
-                'CLANG_CXX_LANGUAGE_STANDARD': 'c++11',
+                'CLANG_CXX_LANGUAGE_STANDARD': 'c++17',
                 'ALWAYS_SEARCH_USER_PATHS': 'NO',
               },
               'defines': [

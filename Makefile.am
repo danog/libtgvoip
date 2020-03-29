@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-CFLAGS = -Wall -DHAVE_CONFIG_H -Wno-unknown-pragmas -g
+CFLAGS = -Wall -DHAVE_CONFIG_H -Wno-unknown-pragmas -g -Wsuggest-override
 
 lib_LTLIBRARIES = libtgvoip.la
 

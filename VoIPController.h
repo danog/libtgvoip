@@ -13,12 +13,6 @@
 #include "controller/protocol/VersionInfo.h"
 #include "controller/protocol/protocol/Index.h"
 
-#if defined HAVE_CONFIG_H || defined TGVOIP_USE_INSTALLED_OPUS
-#include <opus/opus.h>
-#else
-#include <opus/opus.h>
-#endif
-
 #ifdef __ANDROID__
 #include "controller/net/NetworkSocket.h"
 #include "os/android/AudioInputAndroid.h"

@@ -120,7 +120,7 @@ public:
     uint8_t streamId;
     uint8_t flags = 0;
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -150,7 +150,7 @@ public:
 
     Array<Wrapped<Bytes>> data;
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -175,7 +175,7 @@ struct ExtraNetworkChanged : public Extra
 
     uint8_t flags = 0;
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -197,7 +197,7 @@ public:
     NetworkAddress address;
     uint16_t port = 0;
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -218,7 +218,7 @@ struct ExtraIpv6Endpoint : public Extra
     NetworkAddress address;
     uint16_t port = 0;
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -240,7 +240,7 @@ struct ExtraGroupCallKey : public Extra
 
     Buffer key;
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -258,7 +258,7 @@ struct ExtraGroupCallUpgrade : public Extra
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override { return true; };
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override{};
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -293,7 +293,7 @@ struct ExtraInit : public Extra
     Array<UInt32> decoders;
     uint8_t maxResolution;
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -320,7 +320,7 @@ struct ExtraInitAck : public Extra
 
     Array<ExtraStreamInfo> streams;
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -344,7 +344,7 @@ struct ExtraPing : public Extra
     bool parse(const BufferInputStream &in, const VersionInfo &ver) override { return true; };
     void serialize(BufferOutputStream &out, const VersionInfo &ver) const override{};
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }
@@ -363,7 +363,7 @@ struct ExtraPong : public Extra
 
     uint32_t seq = 0;
 
-    uint8_t getID() const
+    uint8_t getID() const override
     {
         return ID;
     }

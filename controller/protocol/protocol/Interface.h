@@ -335,7 +335,7 @@ struct Bytes : public Serializable,
     virtual ~Bytes() = default;
     Bytes() = default;
 
-    bool parse(const BufferInputStream &in, const VersionInfo &ver)
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override
     {
         setData(std::make_unique<Buffer>(in.GetLength()));
         return in.TryRead(*getData());
@@ -368,16 +368,16 @@ struct OutputBytes : public Bytes
     OutputBytes() = default;
     OutputBytes(Buffer &&_data) : data(std::make_unique<Buffer>(std::move(_data))){};
 
-    virtual Buffer *getData()
+    virtual Buffer *getData() override
     {
         return data.get();
     }
-    virtual const Buffer *getData() const
+    virtual const Buffer *getData() const override
     {
         return data.get();
     }
 
-    virtual void setData(std::unique_ptr<Buffer> &&buf)
+    virtual void setData(std::unique_ptr<Buffer> &&buf) override
     {
         data = std::move(buf);
     }
@@ -390,15 +390,15 @@ struct InputBytes : public Bytes
     InputBytes() = default;
     InputBytes(std::shared_ptr<Buffer> _data) : data(_data){};
 
-    virtual Buffer *getData()
+    virtual Buffer *getData() override
     {
         return data.get();
     }
-    virtual const Buffer *getData() const
+    virtual const Buffer *getData() const override
     {
         return data.get();
     }
-    virtual void setData(std::unique_ptr<Buffer> &&buf)
+    virtual void setData(std::unique_ptr<Buffer> &&buf) override
     {
         data = std::move(buf);
     }
@@ -416,7 +416,7 @@ struct UInt32 : public Serializable,
     {
         return data;
     }
-    bool parse(const BufferInputStream &in, const VersionInfo &ver)
+    bool parse(const BufferInputStream &in, const VersionInfo &ver) override
     {
         return in.TryRead(data);
     }
