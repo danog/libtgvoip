@@ -71,7 +71,7 @@ private:
     //BufferPool<JITTER_SLOT_SIZE, JITTER_SLOT_COUNT> bufferPool;
     Mutex mutex;
     int64_t lastMain = 0;
-
+    uint32_t step;
     std::array<jitter_packet_t, JITTER_SLOT_COUNT> slots;
     std::atomic<int64_t> nextFetchTimestamp{0}; // What frame to read next (protected for GetSeqTooLate)
     std::atomic<double> minDelay{6};
