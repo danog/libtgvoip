@@ -13,11 +13,8 @@
 #include <map>
 #include <stdlib.h>
 
-#define TGVOIP_CONCTL_ACT_INCREASE 1
-#define TGVOIP_CONCTL_ACT_DECREASE 2
-#define TGVOIP_CONCTL_ACT_NONE 0
-
 #define TGVOIP_CONCTL_LOST_AFTER 2
+#define TGVOIP_CONCTL_ACT_AFTER 2
 
 namespace tgvoip
 {
@@ -47,6 +44,14 @@ public:
     CongestionControl();
     ~CongestionControl();
 
+    enum Action : uint8_t
+    {
+        None = 0,
+        Increase = 1,
+        Decrease = 2,
+        Min = 3
+    };
+
     void PacketSent(const CongestionControlPacket &pkt, size_t size);
     void PacketLost(const CongestionControlPacket &pkt);
     void PacketAcknowledged(const CongestionControlPacket &pkt);
@@ -57,14 +62,17 @@ public:
     size_t GetCongestionWindow();
     size_t GetAcknowledgedDataSize();
     void Tick();
-    int GetBandwidthControlAction();
+    Action GetBandwidthControlAction(int netMode, double multiply = 1.0);
     uint32_t GetSendLossCount();
+
 
 private:
     HistoricBuffer<double, 100> rttHistory;
     HistoricBuffer<size_t, 30> inflightHistory;
     std::array<tgvoip_congestionctl_packet_t, 100> inflightPackets{};
     uint32_t lossCount = 0;
+    Action lastAction = None;
+    uint8_t lastActionCount = 0;
     double tmpRtt = 0.0;
     double lastActionTime = 0;
     double lastActionRtt = 0;
@@ -75,8 +83,6 @@ private:
     size_t inflightDataSize = 0;
 
     size_t cwnd;
-    size_t max;
-    size_t min;
 };
 } // namespace tgvoip
 

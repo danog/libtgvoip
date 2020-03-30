@@ -18,9 +18,7 @@ using namespace tgvoip;
 CongestionControlPacket::CongestionControlPacket(uint32_t _seq, uint8_t _streamId) : seq(_seq), streamId(_streamId){};
 CongestionControlPacket::CongestionControlPacket(const Packet &pkt) : seq(pkt.seq), streamId(pkt.streamId){};
 
-CongestionControl::CongestionControl() : cwnd(static_cast<size_t>(ServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024))),
-                                         max(cwnd * 1.1),
-                                         min(cwnd * 0.9)
+CongestionControl::CongestionControl() : cwnd(static_cast<size_t>(ServerConfig::GetSharedInstance()->GetInt("audio_congestion_window", 1024)))
 {
 }
 
@@ -145,23 +143,59 @@ void CongestionControl::Tick()
     inflightHistory.Add(inflightDataSize);
 }
 
-int CongestionControl::GetBandwidthControlAction()
+CongestionControl::Action CongestionControl::GetBandwidthControlAction(int netMode, double multiply)
 {
     if (VoIPController::GetCurrentTime() - lastActionTime < 1)
-        return TGVOIP_CONCTL_ACT_NONE;
+        return None;
 
+    Action action;
     size_t inflightAvg = GetInflightDataSize();
+    size_t max = (cwnd * multiply) * 1.1;
+    size_t min = (cwnd * multiply) * 0.9;
+    LOGW("inflightAvg=%lu, max=%lu, min=%lu", inflightAvg, max, min);
     if (inflightAvg < min)
     {
-        lastActionTime = VoIPController::GetCurrentTime();
-        return TGVOIP_CONCTL_ACT_INCREASE;
+        action = Increase;
     }
-    if (inflightAvg > max)
+    else if (inflightAvg > max)
     {
-        lastActionTime = VoIPController::GetCurrentTime();
-        return TGVOIP_CONCTL_ACT_DECREASE;
+        action = Decrease;
     }
-    return TGVOIP_CONCTL_ACT_NONE;
+    else
+    {
+        action = None;
+    }
+
+    uint8_t actAfter = 3;
+    if (netMode < NET_TYPE_LTE)
+    {
+        actAfter--;
+    }
+    if (netMode <= NET_TYPE_GPRS)
+    {
+        actAfter--;
+    }
+    if (netMode <= NET_TYPE_EDGE)
+    {
+        actAfter--;
+    }
+    if (action == lastAction)
+    {
+        LOGE("Would act on %hhu, current tries %hhu, act after %hhu", action, lastActionCount, actAfter);
+        if (lastActionCount++ == actAfter)
+        {
+            lastActionTime = VoIPController::GetCurrentTime();
+            lastActionCount = 0;
+            return action;
+        }
+    }
+    else
+    {
+        lastActionCount = 0;
+        LOGE("Would act on %hhu, current tries %hhu, act after %hhu", action, lastActionCount, actAfter);
+    }
+    lastAction = action;
+    return None;
 }
 
 uint32_t CongestionControl::GetSendLossCount()

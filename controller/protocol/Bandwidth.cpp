@@ -2,7 +2,6 @@
 
 using namespace tgvoip;
 
-
 #pragma mark - Bandwidth management
 
 double VoIPController::GetAverageRTT()
@@ -117,21 +116,25 @@ void VoIPController::UpdateAudioBitrateLimit()
         if (dataSavingMode || dataSavingRequestedByPeer)
         {
             maxBitrate = maxAudioBitrateSaving;
+            LOGE("=============== SETTING BITRATE FROM BANDWIDTH CONTROLLER: saving %u ===============", initAudioBitrateSaving);
             encoder->SetBitrate(initAudioBitrateSaving);
         }
         else if (networkType == NET_TYPE_GPRS)
         {
             maxBitrate = maxAudioBitrateGPRS;
+            LOGE("=============== SETTING BITRATE FROM BANDWIDTH CONTROLLER: GPRS %u ===============", initAudioBitrateGPRS);
             encoder->SetBitrate(initAudioBitrateGPRS);
         }
         else if (networkType == NET_TYPE_EDGE)
         {
             maxBitrate = maxAudioBitrateEDGE;
+            LOGE("=============== SETTING BITRATE FROM BANDWIDTH CONTROLLER: EDGE %u ===============", initAudioBitrateEDGE);
             encoder->SetBitrate(initAudioBitrateEDGE);
         }
         else
         {
             maxBitrate = maxAudioBitrate;
+            LOGE("=============== SETTING BITRATE FROM BANDWIDTH CONTROLLER: NORMAL %u ===============", initAudioBitrate);
             encoder->SetBitrate(initAudioBitrate);
         }
         encoder->SetVadMode(dataSavingMode || dataSavingRequestedByPeer);

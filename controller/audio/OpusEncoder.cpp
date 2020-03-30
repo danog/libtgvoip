@@ -47,8 +47,9 @@ tgvoip::OpusEncoder::OpusEncoder(const std::shared_ptr<MediaStreamItf> &source, 
 	opus_encoder_ctl(enc, OPUS_SET_INBAND_FEC(1));
 	opus_encoder_ctl(enc, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
 	opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_AUTO));
+	opus_encoder_ctl(enc, OPUS_SET_BITRATE(OPUS_AUTO));
 	requestedBitrate = 20000;
-	currentBitrate = 0;
+	currentBitrate = 20000;
 	running = false;
 	echoCanceller = NULL;
 	complexity = 10;
@@ -106,7 +107,7 @@ void tgvoip::OpusEncoder::Stop()
 void tgvoip::OpusEncoder::SetBitrate(uint32_t bitrate)
 {
 	LOGE("=============== SETTING BITRATE TO %u ===============", bitrate);
-	requestedBitrate = 20000;
+	requestedBitrate = bitrate;
 }
 
 void tgvoip::OpusEncoder::Encode(int16_t *data, size_t len)
@@ -117,6 +118,7 @@ void tgvoip::OpusEncoder::Encode(int16_t *data, size_t len)
 		currentBitrate = requestedBitrate;
 		LOGV("opus_encoder: setting bitrate to %u", currentBitrate);
 	}
+
 	if (levelMeter)
 		levelMeter->Update(data, len);
 	if (secondaryEncoderEnabled != wasSecondaryEncoderEnabled)

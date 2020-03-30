@@ -41,6 +41,11 @@ public:
         return extraEcLevel;
     }
 
+    inline const double getResendCount() const
+    {
+        return resendCount;
+    }
+
     inline void setShittyInternetMode(bool shittyInternetMode)
     {
         this->shittyInternetMode = shittyInternetMode;

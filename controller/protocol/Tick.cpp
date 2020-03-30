@@ -3,7 +3,6 @@
 
 using namespace tgvoip;
 
-
 void VoIPController::SetState(int state)
 {
     this->state = state;
@@ -276,24 +275,39 @@ void VoIPController::UpdateAudioBitrate()
             SetState(STATE_FAILED);
         }
 
-        int act = conctl.GetBandwidthControlAction();
-        if (dynamic_cast<AudioPacketSender *>(GetStreamByType<OutgoingAudioStream>()->packetSender.get())->getShittyInternetMode())
+        auto *sender = dynamic_cast<AudioPacketSender *>(GetStreamByType<OutgoingAudioStream>()->packetSender.get());
+        double multiple = 1.0;
+        double resendCount = sender->getResendCount();
+        uint8_t ecLevel = sender->getExtraEcLevel();
+        if (ecLevel)
+        {
+            multiple *= ecLevel / 2;
+        }
+        if (resendCount)
+        {
+            multiple *= resendCount;
+        }
+
+        auto act = conctl.GetBandwidthControlAction(sender->getShittyInternetMode(), multiple);
+        if (act == CongestionControl::Min)
         {
             //encoder->SetBitrate(8000);
         }
-        else if (act == TGVOIP_CONCTL_ACT_DECREASE)
+        else if (act == CongestionControl::Decrease)
         {
-            LOGE("==== DECREASING BITRATE ======");
+            LOGE("=============== DECREASING BITRATE ===============");
             uint32_t bitrate = encoder->GetBitrate();
             if (bitrate > 8000)
                 encoder->SetBitrate(bitrate < (minAudioBitrate + audioBitrateStepDecr) ? minAudioBitrate : (bitrate - audioBitrateStepDecr));
         }
-        else if (act == TGVOIP_CONCTL_ACT_INCREASE)
+        else if (act == CongestionControl::Increase)
         {
+            LOGE("=============== INCREASING BITRATE ===============");
             uint32_t bitrate = encoder->GetBitrate();
             if (bitrate < maxBitrate)
                 encoder->SetBitrate(bitrate + audioBitrateStepIncr);
         }
+        LOGE("========= CURRENT BITRATE=%u =========", encoder->GetBitrate())
 
         if (state == STATE_ESTABLISHED && time - lastRecvPacketTime >= reconnectingTimeout)
         {

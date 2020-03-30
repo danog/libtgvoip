@@ -34,6 +34,8 @@ VoIPController::VoIPController() : rawSendQueue(64)
     maxUnsentStreamPackets = ServerConfig::GetSharedInstance()->GetUInt("max_unsent_stream_packets", 2);
     unackNopThreshold = ServerConfig::GetSharedInstance()->GetUInt("unack_nop_threshold", 10);
 
+    initAudioBitrate = 20000;
+    
     //audioBitrateStepDecr /= 2;
     auto aStm = std::make_shared<OutgoingAudioStream>();
     aStm->codec = Codec::Opus;
