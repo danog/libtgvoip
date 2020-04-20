@@ -19,13 +19,47 @@
 #include <vector>
 
 #define JITTER_SLOT_COUNT 64
-#define JITTER_SLOT_SIZE 1024
 #define JR_OK 1
 #define JR_MISSING 2
 #define JR_BUFFERING 3
 
+#define INVALID_SEQ 0xFFFFFFFF
+
 namespace tgvoip
 {
+
+struct JitterArray
+{
+    JitterArray(bool isEC);
+
+private:
+    inline uint8_t getOffset(uint32_t seq)
+    {
+        return (back + (seq - backSeq)) % JITTER_SLOT_COUNT;
+    }
+
+public:
+    bool has(uint32_t seq);
+    uint32_t put(uint32_t seq, std::unique_ptr<Buffer> &&buffer);
+    std::array<std::unique_ptr<Buffer>, JITTER_SLOT_COUNT>::iterator get(uint32_t seq);
+    void advance(uint32_t seq);
+    void clear();
+    uint8_t count();
+    bool empty();
+    auto end()
+    {
+        return slots.end();
+    }
+
+    uint8_t front = 0;
+    uint8_t back = 0;
+
+    uint32_t frontSeq = INVALID_SEQ;
+    uint32_t backSeq = INVALID_SEQ;
+
+    bool isEC = false;
+    std::array<std::unique_ptr<Buffer>, JITTER_SLOT_COUNT> slots;
+};
 class JitterBuffer
 {
 public:
@@ -46,34 +80,22 @@ public:
 
     double GetTimeoutWindow();
 
-    // Get minimum refetchable seq for (reverse) NACK logic.
-    // Any sequence numbers smaller than this cannot possibly arrive in time for playing.
-    inline uint32_t GetSeqTooLate(double rtt)
-    {
-        //LOGE("Next fetch timestamp: %ld, rtt %lf, step %d", nextFetchTimestamp.load(), rtt * 1000, step)
-        // The absolute minimum time(stamp) that will (barely) be accepted by the jitter buffer in time + RTT time
-        // Then convert timestamp into a seqno: remember, in protocol >= PROTOCOL_RELIABLE, seq = ts * step + 1
-        return ((nextFetchTimestamp + (rtt * 1000)) / static_cast<uint64_t>(step) + 1) - lostCount; // Seqs start at 1
-    }
-
 private:
     struct jitter_packet_t
     {
         std::unique_ptr<Buffer> buffer;
         uint32_t timestamp = 0;
-        size_t size = 0;
-        bool isEC = 0;
-        double recvTimeDiff = 0.0;
+        bool isEC = false;
     };
     int GetInternal(jitter_packet_t &pkt, bool advance);
-    void Advance();
 
-    //BufferPool<JITTER_SLOT_SIZE, JITTER_SLOT_COUNT> bufferPool;
     Mutex mutex;
     int64_t lastMain = 0;
+    JitterArray slotsMain{false};
+    JitterArray slotsEc{true};
+
     uint32_t step;
-    std::array<jitter_packet_t, JITTER_SLOT_COUNT> slots;
-    std::atomic<int64_t> nextFetchTimestamp{0}; // What frame to read next (protected for GetSeqTooLate)
+    int32_t nextFetchTimestamp = 0; // What frame to read next (protected for GetSeqTooLate)
     std::atomic<double> minDelay{6};
     uint32_t minMinDelay;
     uint32_t maxMinDelay;

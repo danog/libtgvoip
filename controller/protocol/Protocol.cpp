@@ -247,17 +247,17 @@ void VoIPController::ProcessIncomingPacket(Packet &packet, Endpoint &srcEndpoint
         if (_stm->type == StreamType::Audio)
         {
             auto *stm = dynamic_cast<IncomingAudioStream *>(_stm);
-            uint32_t pts = (packet.seq - 1) * stm->frameDuration; // Account for seq starting at 1
+            uint32_t seq = packet.seq - 1; // Account for seq starting at 1
             if (stm->jitterBuffer)
             {
-                stm->jitterBuffer->HandleInput(std::move(packet.data), pts, false);
+                stm->jitterBuffer->HandleInput(std::move(packet.data), seq, false);
                 if (packet.extraEC)
                 {
                     for (uint8_t i = 0; i < 8; i++)
                     {
                         if (packet.extraEC.v[i])
                         {
-                            stm->jitterBuffer->HandleInput(std::move(packet.extraEC.v[i].get<OutputBytes>().data), pts - (8 - i) * stm->frameDuration, true);
+                            stm->jitterBuffer->HandleInput(std::move(packet.extraEC.v[i].get<OutputBytes>().data), seq - (8 - i), true);
                         }
                     }
                 }
