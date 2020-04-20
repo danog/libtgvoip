@@ -70,7 +70,7 @@ void JitterArray::advance(uint32_t seq)
         clear();
         return;
     }
-    if (seq < backSeq) 
+    if (seq < backSeq)
     {
         LOGW("Can't clear, seq=%u < backSeq=%u", seq, backSeq);
         return;
@@ -269,7 +269,7 @@ void JitterBuffer::Reset()
     dontChangeDelayFor = 0;
 }
 
-std::unique_ptr<Buffer> JitterBuffer::HandleOutput(bool advance, int &playbackScaledDuration, bool &isEC)
+std::pair<std::unique_ptr<Buffer>, std::unique_ptr<Buffer>> JitterBuffer::HandleOutput(int &playbackScaledDuration)
 {
     MutexGuard m(mutex);
 
@@ -287,8 +287,6 @@ std::unique_ptr<Buffer> JitterBuffer::HandleOutput(bool advance, int &playbackSc
         }
     }
 
-    jitter_packet_t pkt;
-    int result = GetInternal(pkt, advance);
     if (outstandingDelayChange)
     {
         if (outstandingDelayChange < 0)
@@ -303,7 +301,7 @@ std::unique_ptr<Buffer> JitterBuffer::HandleOutput(bool advance, int &playbackSc
         }
         //LOGV("outstanding delay change: %d", outstandingDelayChange);
     }
-    else if (advance && GetCurrentDelay() == 0)
+    else if (GetCurrentDelay() == 0)
     {
         //LOGV("stretching packet because the next one is late");
         playbackScaledDuration = 80;
@@ -312,41 +310,26 @@ std::unique_ptr<Buffer> JitterBuffer::HandleOutput(bool advance, int &playbackSc
     {
         playbackScaledDuration = 60;
     }
-    
-    if (result == JR_OK)
-    {
-        isEC = pkt.isEC;
-        return std::move(pkt.buffer);
-    }
-    else
-    {
-        return nullptr;
-    }
-}
 
-int JitterBuffer::GetInternal(jitter_packet_t &pkt, bool advance)
-{
-    bool hasMain = slotsMain.has(nextFetchTimestamp);
-    bool hasEc = slotsEc.has(nextFetchTimestamp);
+    auto main = slotsMain.get(nextFetchTimestamp);
+    auto ec = slotsEc.get(nextFetchTimestamp);
+    bool hasMain = main != slotsMain.end();
+    bool hasEc = ec != slotsEc.end();
     if (hasMain || hasEc)
     {
-        auto slot = hasMain ? slotsMain.get(nextFetchTimestamp) : slotsEc.get(nextFetchTimestamp);
-
-        pkt.timestamp = nextFetchTimestamp;
-        pkt.buffer = std::move(*slot);
-        pkt.isEC = !hasMain;
-
         nextFetchTimestamp++;
 
         lostCount = 0;
         needBuffering = false;
-        return JR_OK;
+
+        return std::make_pair<>(
+            hasMain ? std::move(*main) : nullptr,
+            hasEc ? std::move(*ec) : nullptr);
     }
 
     LOGV("jitter: found no packet for timestamp %lld (last put = %d, lost = %d)", (long long int)nextFetchTimestamp, lastPutTimestamp, lostCount);
 
-    if (advance)
-        nextFetchTimestamp++;
+    nextFetchTimestamp++;
 
     if (!needBuffering)
     {
@@ -367,10 +350,13 @@ int JitterBuffer::GetInternal(jitter_packet_t &pkt, bool advance)
             lostCount = 0;
             Reset();
         }
-
-        return JR_MISSING;
     }
-    return JR_BUFFERING;
+    return std::make_pair<>(nullptr, nullptr);
+}
+
+bool JitterBuffer::haveNext(bool ec)
+{
+    return ec ? slotsEc.has(nextFetchTimestamp) : slotsMain.has(nextFetchTimestamp);
 }
 
 unsigned int JitterBuffer::GetCurrentDelay()

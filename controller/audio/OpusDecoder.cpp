@@ -235,20 +235,55 @@ void tgvoip::OpusDecoder::RunThread()
 int tgvoip::OpusDecoder::DecodeNextFrame()
 {
     int playbackDuration = 0;
-    bool isEC = false;
-    auto ptr = jitterBuffer->HandleOutput(true, playbackDuration, isEC);
-    bool fec = false;
-    if (!ptr)
-    {
-        fec = true;
-        ptr = jitterBuffer->HandleOutput(false, playbackDuration, isEC);
-        /*if (len)
-			LOGV("Trying FEC...");*/
-    }
+    auto ptr = jitterBuffer->HandleOutput(playbackDuration);
+
+    auto main = std::move(ptr.first);
+    auto ec = std::move(ptr.second);
+
+    bool hasMain = main != nullptr;
+    bool hasEc = ec != nullptr;
+
     int size;
-    if (ptr)
+    if (hasMain || hasEc)
     {
-        size = opus_decode(isEC ? ecDec : dec, **ptr, ptr->Length(), (opus_int16 *)decodeBuffer, packetsPerFrame * 960, fec ? 1 : 0);
+        if (hasMain)
+        {
+            if (hasEc)
+            {
+                size = opus_decode(ecDec, **ec, ec->Length(), reinterpret_cast<opus_int16 *>(decodeBuffer), packetsPerFrame * 960, 1);
+                LOGW("Decoded EC");
+            }
+
+            // Switch to main stream only if:
+            // The jitter buffer already has the next main frame OR
+            // The previously decoded frame was main OR
+            // We don't have an EC frame
+            bool canSwitch = jitterBuffer->haveNext(false) || !prevWasEC || !hasEc;
+
+            int mainSize = opus_decode(dec, **main, main->Length(), reinterpret_cast<opus_int16 *>(canSwitch ? decodeBuffer : nextBuffer), packetsPerFrame * 960, 0);
+            LOGW("Decoded MAIN");
+
+            if (canSwitch)
+            {
+                LOGW("Chose MAIN");
+                prevWasEC = false;
+                size = mainSize;
+            }
+            else
+            {
+                LOGW("Chose EC");
+                prevWasEC = true;
+            }
+        }
+        else
+        {
+            prevWasEC = true;
+            size = opus_decode(ecDec, **ec, ec->Length(), reinterpret_cast<opus_int16 *>(decodeBuffer), packetsPerFrame * 960, 1);
+            LOGW("Decoded EC");
+            LOGW("Chose EC");
+        }
+
+        /*
         consecutiveLostPackets = 0;
         if (prevWasEC != isEC && size)
         {
@@ -270,11 +305,14 @@ int tgvoip::OpusDecoder::DecodeNextFrame()
                 }
             }
         }
-        prevWasEC = isEC;
-        prevLastSample = decodeBuffer[size - 1];
+
+        */
+        //prevLastSample = decodeBuffer[size - 1];
     }
     else
     { // do packet loss concealment
+        LOGW("Decoded NONE");
+
         if (++consecutiveLostPackets > 2 && enableDTX)
         {
             silentPacketCount += packetsPerFrame;
@@ -282,11 +320,12 @@ int tgvoip::OpusDecoder::DecodeNextFrame()
         }
         else
         {
-            size = opus_decode(prevWasEC ? ecDec : dec, NULL, 0, (opus_int16 *)decodeBuffer, packetsPerFrame * 960, 0);
+            size = opus_decode(prevWasEC ? ecDec : dec, NULL, 0, reinterpret_cast<opus_int16 *>(decodeBuffer), packetsPerFrame * 960, 0);
             LOGE("========== JITTER: OPUS PLC ==========");
             //LOGV("PLC");
         }
     }
+
     if (size < 0)
         LOGW("decoder: opus_decode error %d", size);
     remainingDataLen = size;

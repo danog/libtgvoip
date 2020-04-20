@@ -71,7 +71,10 @@ public:
     double GetAverageDelay();
     void Reset();
     void HandleInput(std::unique_ptr<Buffer> &&buf, uint32_t timestamp, bool isEC);
-    std::unique_ptr<Buffer> HandleOutput(bool advance, int &playbackScaledDuration, bool &isEC);
+    std::pair<std::unique_ptr<Buffer>, std::unique_ptr<Buffer>> HandleOutput(int &playbackScaledDuration);
+
+    bool haveNext(bool ec);
+
     void Tick();
     void GetAverageLateCount(double *out);
     int GetAndResetLostPacketCount();
@@ -81,14 +84,6 @@ public:
     double GetTimeoutWindow();
 
 private:
-    struct jitter_packet_t
-    {
-        std::unique_ptr<Buffer> buffer;
-        uint32_t timestamp = 0;
-        bool isEC = false;
-    };
-    int GetInternal(jitter_packet_t &pkt, bool advance);
-
     Mutex mutex;
     int64_t lastMain = 0;
     JitterArray slotsMain{false};
