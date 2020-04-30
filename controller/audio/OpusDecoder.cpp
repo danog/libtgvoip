@@ -260,7 +260,7 @@ int tgvoip::OpusDecoder::DecodeNextFrame()
             // We don't have an EC frame
             bool canSwitch = jitterBuffer->haveNext(false) || !prevWasEC || !hasEc;
 
-            int mainSize = opus_decode(dec, **main, main->Length(), reinterpret_cast<opus_int16 *>(canSwitch ? decodeBuffer : nextBuffer), packetsPerFrame * 960, 0);
+            int mainSize = opus_decode(dec, **main, main->Length(), reinterpret_cast<opus_int16 *>(canSwitch ? decodeBuffer : nextBuffer), packetsPerFrame * 960, 1);
             LOGW("Decoded MAIN");
 
             if (canSwitch)
