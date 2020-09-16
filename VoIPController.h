@@ -91,6 +91,7 @@ enum
 
 enum
 {
+    STATE_CREATED = 0,
     STATE_WAIT_INIT = 1,
     STATE_WAIT_INIT_ACK,
     STATE_ESTABLISHED,
