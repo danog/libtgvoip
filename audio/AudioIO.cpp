@@ -70,7 +70,7 @@ std::unique_ptr<AudioIO> AudioIO::Create(std::string inputDevice, std::string ou
 #ifndef WITHOUT_PULSE
 	if (AudioPulse::Load())
 	{
-		auto io = std::unique_ptr<AudioIO>{new AudioPulse(inputDevice, outputDevice);
+		auto io = std::unique_ptr<AudioIO>{new AudioPulse(inputDevice, outputDevice)};
 		if (!io->Failed() && io->GetInput()->IsInitialized() && io->GetOutput()->IsInitialized())
 			return io;
 		LOGW("PulseAudio available but not working; trying ALSA");

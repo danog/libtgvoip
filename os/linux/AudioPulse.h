@@ -27,7 +27,7 @@ public:
 	AudioPulse(std::string inputDevice, std::string outputDevice);
 	virtual ~AudioPulse();
 	virtual std::shared_ptr<AudioInput> GetInput();
-	virtual std::shared_ptr<AudioInput> GetOutput();
+	virtual std::shared_ptr<AudioOutput> GetOutput();
 
 	static bool Load();
 	static bool DoOneOperation(std::function<pa_operation *(pa_context *)> f);

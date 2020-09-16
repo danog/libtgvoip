@@ -240,7 +240,7 @@ AudioPulse::~AudioPulse()
 		pa_threaded_mainloop_free(mainloop);
 }
 
-std::shared_ptr<AudioInput> AudioPulse::GetOutput()
+std::shared_ptr<AudioOutput> AudioPulse::GetOutput()
 {
 	return output;
 }
